@@ -16,6 +16,7 @@ import type {
   ProjectionFact,
   RankedClient,
 } from "./contracts";
+import type { Authorship } from "./evidence";
 import { WhyButton } from "./shared";
 
 /**
@@ -254,9 +255,11 @@ export function DashboardHeader({
 export function InsightsPanel({
   preRead,
   facts,
+  authorship,
 }: {
   preRead: ClientPreRead;
   facts: ProjectionFact[];
+  authorship: Authorship;
 }) {
   const styles = useStyles();
   // A fact counts as changed when a "what changed" line cites it, or when the
@@ -333,6 +336,8 @@ export function InsightsPanel({
           <WhyButton
             citations={preRead.opening.citations}
             clientId={preRead.client_id}
+            claim={preRead.opening.text}
+            authorship={authorship}
           />
         </div>
       </section>
@@ -343,6 +348,8 @@ export function InsightsPanel({
           <WhyButton
             citations={preRead.uncertainty.citations}
             clientId={preRead.client_id}
+            claim={preRead.uncertainty.text}
+            authorship={authorship}
           />
         </div>
       </section>

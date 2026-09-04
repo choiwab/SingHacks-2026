@@ -10,9 +10,8 @@ import {
   MemoryPanel,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
+import type { Authorship } from "./evidence";
 import { CitedList, WhyButton, WorkflowList } from "./shared";
-
-type ReviewState = "Unreviewed" | "Approved" | "Edited" | "Rejected";
 
 /** Lower-dashboard tabs required by PRD 5.6. */
 const TABS = [
@@ -32,7 +31,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
   const [editedOpening, setEditedOpening] = useState(
     preRead?.opening.text ?? "",
   );
-  const [reviewState, setReviewState] = useState<ReviewState>("Unreviewed");
+  const [reviewState, setReviewState] = useState<Authorship>("Unreviewed");
   const [receipt, setReceipt] = useState("");
   const [toast, setToast] = useState("");
   const [saving, setSaving] = useState(false);
@@ -72,7 +71,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
       const text = action === "Edit" ? editedOpening.trim() : currentOpening;
       const response = await saveReview({ client_id: clientId, action, text });
       if (action === "Edit") setEditing(false);
-      const labels: Record<ReviewAction, ReviewState> = {
+      const labels: Record<ReviewAction, Authorship> = {
         Approve: "Approved",
         Edit: "Edited",
         Reject: "Rejected",
@@ -151,7 +150,11 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
 
       <div role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {tab === "insights" && (
-          <InsightsPanel preRead={preRead} facts={facts} />
+          <InsightsPanel
+            preRead={preRead}
+            facts={facts}
+            authorship={reviewState}
+          />
         )}
         {tab === "data" && <DataPanel facts={facts} clientId={clientId} />}
         {tab === "memory" && (
@@ -171,6 +174,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
                 <CitedList
                   items={preRead.what_changed}
                   clientId={clientId}
+                  authorship={reviewState}
                   className="change-list"
                 />
               </section>
@@ -194,6 +198,8 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
                     <WhyButton
                       citations={preRead.gap.citations}
                       clientId={clientId}
+                      claim={preRead.gap.data}
+                      authorship={reviewState}
                       inverse
                     />
                   </div>
@@ -211,6 +217,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
                 <CitedList
                   items={preRead.rules_money}
                   clientId={clientId}
+                  authorship={reviewState}
                   className="rule-list"
                 />
               </section>
@@ -228,6 +235,8 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
                 <WhyButton
                   citations={preRead.opening.citations}
                   clientId={clientId}
+                  claim={currentOpening}
+                  authorship={reviewState}
                   inverse
                 />
               </section>
@@ -244,6 +253,8 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
                 <WhyButton
                   citations={preRead.uncertainty.citations}
                   clientId={clientId}
+                  claim={preRead.uncertainty.text}
+                  authorship={reviewState}
                 />
               </section>
             </div>

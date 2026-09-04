@@ -24,6 +24,16 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.getByRole("button", { name: "Approve pre-read" }).click();
   await expect(page.getByRole("status").last()).toContainText("Approved");
 
+  // The evidence trail reports who authored the approved claim (PRD 5.7).
+  await page.getByRole("button", { name: "Why?" }).first().click();
+  await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+    "Approved by the RM",
+  );
+  await page
+    .getByRole("dialog", { name: "Why?" })
+    .getByRole("button", { name: "Close source trail" })
+    .click();
+
   await page.goto("/clients/CL-0019/scenario");
   await expect(
     page.locator("#main").getByText("Precomputed · Abdullah Al-Mansoori"),

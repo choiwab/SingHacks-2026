@@ -151,7 +151,23 @@ describe("Monday Brief", () => {
     await user.click(why);
     const dialog = screen.getByRole("dialog", { name: "Why?" });
     expect(dialog).toBeVisible();
-    expect(screen.getByText("Current equity holding")).toBeVisible();
+    // The claim, its review state, the calculation inputs, and the exact source
+    // row are all required by PRD 5.7.
+    expect(within(dialog).getByText("Equity increased.")).toBeVisible();
+    expect(
+      within(dialog).getByText("Generated · awaiting RM review"),
+    ).toBeVisible();
+    expect(within(dialog).getByText("gap pct")).toBeVisible();
+    expect(within(dialog).getByText("41.5")).toBeVisible();
+    expect(
+      within(dialog).getByText(
+        "Confidence high · as of 2026-08-26 · fact CL-0003:fact:gap",
+      ),
+    ).toBeVisible();
+    expect(within(dialog).getByText("Current equity holding")).toBeVisible();
+    expect(
+      within(dialog).getByText("data/holdings.csv · row holding:1"),
+    ).toBeVisible();
     await user.click(
       within(dialog).getByRole("button", { name: "Close source trail" }),
     );

@@ -1,8 +1,23 @@
 import {
+  Badge,
+  Body1,
+  Body1Strong,
+  Button,
+  Caption1,
+  DrawerBody,
+  DrawerHeader,
+  DrawerHeaderTitle,
+  OverlayDrawer,
+  Subtitle2,
+  makeStyles,
+  shorthands,
+  tokens,
+} from "@fluentui/react-components";
+import { DismissRegular } from "@fluentui/react-icons";
+import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -15,25 +30,86 @@ import type {
   ProjectionFact,
 } from "./contracts";
 
+/** Review state of a generated claim, as PRD 5.7 asks the drawer to show it. */
+export type Authorship = "Unreviewed" | "Approved" | "Edited" | "Rejected";
+
 interface EvidenceRequest {
   citations: CitationId[];
   clientId: string;
-  trigger: HTMLElement;
+  claim?: string;
+  authorship?: Authorship;
 }
 
 interface EvidenceControls {
-  openEvidence: (
-    citations: CitationId[],
-    clientId: string,
-    trigger: HTMLElement,
-  ) => void;
+  openEvidence: (request: EvidenceRequest) => void;
 }
 
 type ExpandedEvidence =
   | { type: "fact"; value: ProjectionFact }
   | { type: "evidence"; value: MondayBriefProjection["evidence"][string] };
 
+const AUTHORSHIP: Record<
+  Authorship,
+  { label: string; color: "warning" | "success" | "brand" | "danger" }
+> = {
+  Unreviewed: { label: "Generated · awaiting RM review", color: "warning" },
+  Approved: { label: "Approved by the RM", color: "success" },
+  Edited: { label: "Edited by the RM", color: "brand" },
+  Rejected: { label: "Rejected by the RM", color: "danger" },
+};
+
 const EvidenceContext = createContext<EvidenceControls | null>(null);
+
+const useStyles = makeStyles({
+  body: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalL,
+  },
+  claim: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: tokens.spacingVerticalXS,
+    ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    backgroundColor: tokens.colorNeutralBackground3,
+  },
+  record: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: tokens.spacingVerticalXS,
+    ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  factRecord: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    borderTopColor: tokens.colorBrandStroke1,
+    borderTopWidth: tokens.strokeWidthThicker,
+  },
+  fields: {
+    display: "grid",
+    gridTemplateColumns: "minmax(6rem, 0.4fr) 1fr",
+    columnGap: tokens.spacingHorizontalM,
+    rowGap: tokens.spacingVerticalXXS,
+    width: "100%",
+    ...shorthands.margin(0),
+  },
+  term: {
+    ...shorthands.margin(0),
+    color: tokens.colorNeutralForeground3,
+    fontSize: tokens.fontSizeBase200,
+    textTransform: "capitalize",
+  },
+  value: {
+    ...shorthands.margin(0),
+    fontSize: tokens.fontSizeBase200,
+    fontVariantNumeric: "tabular-nums",
+    overflowWrap: "anywhere",
+  },
+});
 
 function expandCitations(
   projection: MondayBriefProjection,
@@ -65,30 +141,64 @@ function expandCitations(
   return records;
 }
 
-function EvidenceItem({ item }: { item: ExpandedEvidence }) {
+function formatValue(value: unknown) {
+  if (value === null || value === undefined) return "Not recorded";
+  if (typeof value === "number")
+    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return String(value);
+}
+
+function Fields({ record }: { record: Record<string, unknown> }) {
+  const styles = useStyles();
+  return (
+    <dl className={styles.fields}>
+      {Object.entries(record).map(([key, value]) => (
+        <div key={key} style={{ display: "contents" }}>
+          <dt className={styles.term}>{key.replaceAll("_", " ")}</dt>
+          <dd className={styles.value}>{formatValue(value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function EvidenceItem({
+  item,
+  asOf,
+}: {
+  item: ExpandedEvidence;
+  asOf: string;
+}) {
+  const styles = useStyles();
+
   if (item.type === "fact") {
+    const fact = item.value;
     return (
-      <article className="evidence-record fact-record">
-        <p className="record-type">Computed fact</p>
-        <h3>{item.value.what}</h3>
-        <p className="evidence-source">Confidence: {item.value.confidence}</p>
+      <article className={`${styles.record} ${styles.factRecord}`}>
+        <Badge appearance="filled" color="brand">
+          Deterministic fact
+        </Badge>
+        <Subtitle2 as="h3">{fact.what}</Subtitle2>
+        <Caption1>Calculation inputs and result</Caption1>
+        <Fields record={fact.numbers} />
+        <Caption1>
+          Confidence {fact.confidence} · as of {asOf} · fact {fact.id}
+        </Caption1>
       </article>
     );
   }
 
+  const evidence = item.value;
   return (
-    <article className="evidence-record">
-      <p className="record-type">{item.value.kind || "Source row"}</p>
-      <h3>{item.value.title}</h3>
-      <p className="evidence-source">{item.value.source}</p>
-      <dl>
-        {Object.entries(item.value.record).map(([key, value]) => (
-          <div key={key} style={{ display: "contents" }}>
-            <dt>{key.replaceAll("_", " ")}</dt>
-            <dd>{value === null ? "Not recorded" : String(value)}</dd>
-          </div>
-        ))}
-      </dl>
+    <article className={styles.record}>
+      <Badge appearance="outline" color="informative">
+        {evidence.kind || "Source row"}
+      </Badge>
+      <Body1Strong>{evidence.title}</Body1Strong>
+      <Caption1>
+        {evidence.source} · row {evidence.id}
+      </Caption1>
+      <Fields record={evidence.record} />
     </article>
   );
 }
@@ -100,82 +210,84 @@ export function EvidenceProvider({
   projection: MondayBriefProjection;
   children: ReactNode;
 }) {
+  const styles = useStyles();
   const [request, setRequest] = useState<EvidenceRequest | null>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-
-  const closeEvidence = useCallback(() => {
-    request?.trigger.focus();
-    setRequest(null);
-  }, [request]);
-
-  useEffect(() => {
-    if (!request) return;
-    closeButton.current?.focus();
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeEvidence();
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [closeEvidence, request]);
-
+  // Tabster does not restore focus for a drawer opened without a DialogTrigger,
+  // so the "Why?" button that opened the trail is refocused on close.
+  const trigger = useRef<HTMLElement | null>(null);
   const controls = useMemo<EvidenceControls>(
     () => ({
-      openEvidence: (citations, clientId, trigger) =>
-        setRequest({ citations, clientId, trigger }),
+      openEvidence: (next) => {
+        trigger.current = document.activeElement as HTMLElement | null;
+        setRequest(next);
+      },
     }),
     [],
   );
+  const close = useCallback(() => {
+    setRequest(null);
+    trigger.current?.focus();
+  }, []);
   const records = request
     ? expandCitations(projection, request.clientId, request.citations)
     : [];
+  const authorship = request?.authorship && AUTHORSHIP[request.authorship];
 
   return (
     <EvidenceContext.Provider value={controls}>
       {children}
-      <button
-        className="drawer-scrim"
-        type="button"
-        aria-label="Close source trail"
-        hidden={!request}
-        onClick={closeEvidence}
-      />
-      <aside
-        className={`evidence-drawer${request ? " is-open" : ""}`}
-        aria-labelledby="evidence-title"
-        aria-hidden={!request}
-        aria-modal={request ? "true" : undefined}
-        role="dialog"
-        inert={!request}
+      <OverlayDrawer
+        aria-label="Why?"
+        position="end"
+        size="medium"
+        open={Boolean(request)}
+        onOpenChange={(_, data) => {
+          if (!data.open) close();
+        }}
       >
-        <header>
-          <div>
-            <p className="eyebrow accent">Exact source rows</p>
-            <h2 id="evidence-title">Why?</h2>
-          </div>
-          <button
-            ref={closeButton}
-            className="close-drawer"
-            type="button"
-            aria-label="Close source trail"
-            onClick={closeEvidence}
+        <DrawerHeader>
+          <DrawerHeaderTitle
+            action={
+              <Button
+                appearance="subtle"
+                aria-label="Close source trail"
+                icon={<DismissRegular />}
+                onClick={close}
+              />
+            }
           >
-            ×
-          </button>
-        </header>
-        <p className="drawer-rule">
-          Cited facts, holdings, events, market inputs, and note rows appear
-          below.
-        </p>
-        <div>
+            Why?
+          </DrawerHeaderTitle>
+          <Caption1>
+            Cited facts, holdings, events, market inputs, and note rows appear
+            below.
+          </Caption1>
+        </DrawerHeader>
+        <DrawerBody className={styles.body}>
+          {request?.claim && (
+            <section className={styles.claim} aria-label="Generated claim">
+              <Caption1>The claim on the dashboard</Caption1>
+              <Body1>{request.claim}</Body1>
+              {authorship && (
+                <Badge appearance="tint" color={authorship.color}>
+                  {authorship.label}
+                </Badge>
+              )}
+            </section>
+          )}
           {records.length > 0 ? (
             records.map((item) => (
-              <EvidenceItem key={`${item.type}:${item.value.id}`} item={item} />
+              <EvidenceItem
+                key={`${item.type}:${item.value.id}`}
+                item={item}
+                asOf={projection.as_of}
+              />
             ))
           ) : (
-            <p>No source row is attached to this line.</p>
+            <Body1>No source row is attached to this line.</Body1>
           )}
-        </div>
-      </aside>
+        </DrawerBody>
+      </OverlayDrawer>
     </EvidenceContext.Provider>
   );
 }
