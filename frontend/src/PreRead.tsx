@@ -528,6 +528,7 @@ export function PreRead({
         ref={reviewBar}
         role="region"
         aria-label="RM checkpoint"
+        aria-describedby="review-session-guidance"
         tabIndex={-1}
         aria-busy={pending !== null}
       >
@@ -537,6 +538,10 @@ export function PreRead({
             {editing
               ? "Save or cancel your edit before approving or rejecting."
               : "Only this decision is logged."}
+          </span>
+          <span id="review-session-guidance">
+            In this demo, reloading restores the generated opening and
+            unreviewed status. Saved decisions remain in the review log.
           </span>
         </div>
         <div className="review-actions">
