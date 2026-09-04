@@ -103,6 +103,11 @@ class ArtifactStore:
     def load_change_report(self, client_id: str, *, run_id: str | None = None) -> ChangeReport:
         return self._client_artifact(client_id, run_id, "change_report", ChangeReport)
 
+    def load_evidence_map(self, *, run_id: str | None = None) -> EvidenceMap:
+        """Load the complete evidence registry for a pinned run."""
+        manifest = self.load_manifest(run_id)
+        return self._read(manifest.run_id, "evidence_map.json", EvidenceMap)
+
     def load_evidence(
         self,
         evidence_ids: Iterable[str],
@@ -180,3 +185,7 @@ def load_data_quality_report(
     client_id: str | None = None,
 ) -> DataQualityReport:
     return _store().load_data_quality_report(run_id=run_id, client_id=client_id)
+
+
+def load_evidence_map(*, run_id: str | None = None) -> EvidenceMap:
+    return _store().load_evidence_map(run_id=run_id)
