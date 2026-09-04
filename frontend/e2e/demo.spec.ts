@@ -1,6 +1,75 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`pending opening saves protect wording and recover at ${width}px`, async ({
+    page,
+  }) => {
+    let finishReview!: () => void;
+    let failSave = true;
+    const submitted: string[] = [];
+    await page.route("**/api/reviews", async (route) => {
+      const request = route.request().postDataJSON();
+      submitted.push(request.text);
+      await new Promise<void>((resolve) => {
+        finishReview = resolve;
+      });
+      await route.fulfill({
+        status: failSave ? 503 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          failSave
+            ? { detail: "Ledger unavailable" }
+            : {
+                review: {
+                  ...request,
+                  review_id: "pending-edit",
+                  rm: "Priscilla Ong",
+                  timestamp: "2026-09-05T09:00:00+00:00",
+                },
+              },
+        ),
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    await edit.click();
+    const editor = page.getByLabel("Edit the opening line");
+    const checkpoint = page.getByRole("region", { name: "RM checkpoint" });
+    await editor.fill("Submitted wording");
+    for (const wording of ["Submitted wording", "Corrected wording"]) {
+      await page.getByRole("button", { name: "Save edit" }).click();
+      await expect(checkpoint).toHaveAttribute("aria-busy", "true");
+      await expect.poll(() => submitted.at(-1)).toBe(wording);
+      await expect(editor).not.toBeEditable();
+      await editor.focus();
+      await editor.press("End");
+      await page.keyboard.type(" extra unsaved wording");
+      await expect(editor).toHaveValue(wording);
+      finishReview();
+      await expect(checkpoint).toHaveAttribute("aria-busy", "false");
+      if (failSave) {
+        await expect(page.getByRole("alert")).toContainText(
+          "Ledger unavailable",
+        );
+        await expect(editor).toBeEditable();
+        await expect(editor).toBeFocused();
+        await editor.fill("Corrected wording");
+        failSave = false;
+      }
+    }
+    await expect(editor).toHaveCount(0);
+    await expect(edit).toBeFocused();
+    await expect(edit).toBeInViewport();
+    await expect(
+      page.getByRole("region", { name: "Suggested opening" }),
+    ).toContainText("Corrected wording");
+    expect(submitted).toEqual(["Submitted wording", "Corrected wording"]);
+    await edit.click();
+    await expect(editor).toBeEditable();
+    await expect(editor).toHaveValue("Corrected wording");
+  });
+
   test(`blank opening edits preserve the brief at ${width}px`, async ({
     page,
   }) => {

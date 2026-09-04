@@ -149,6 +149,7 @@ export function PreRead({
   const [tab, setTab] = useState<TabValue>("overview");
   const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
+  const editPanel = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
   const reviewBar = useRef<HTMLElement>(null);
 
@@ -188,7 +189,13 @@ export function PreRead({
     try {
       const text = action === "Edit" ? editedOpening.trim() : currentOpening;
       const response = await saveReview({ client_id: clientId, action, text });
-      if (action === "Edit") setEditing(false);
+      if (action === "Edit") {
+        const restoreFocus = editPanel.current?.contains(
+          document.activeElement,
+        );
+        flushSync(() => setEditing(false));
+        if (restoreFocus) editButton.current?.focus();
+      }
       const labels: Record<ReviewAction, Authorship> = {
         Approve: "Approved",
         Edit: "Edited",
@@ -390,7 +397,7 @@ export function PreRead({
       </div>
 
       {editing && (
-        <div className="edit-panel">
+        <div className="edit-panel" ref={editPanel}>
           <Field
             label="Edit the opening line"
             hint="Saved to the review log as your wording."
@@ -404,6 +411,7 @@ export function PreRead({
               id="edited-opening"
               resize="vertical"
               rows={4}
+              readOnly={pending !== null}
               value={editedOpening}
               onChange={(_event, data) => {
                 setEditedOpening(data.value);
