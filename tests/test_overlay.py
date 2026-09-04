@@ -77,3 +77,25 @@ def test_overlay_rejects_partial_rows(tmp_path):
     (tmp_path / "planned_cash_needs.csv").write_text("need_id,amount\nCN-004,3400000\n")
     with pytest.raises(ValueError, match="complete source columns"):
         apply_overlay(base.tables, base.notes, tmp_path)
+
+
+def test_overlay_parses_the_same_bytes_it_hashes(tmp_path, monkeypatch):
+    from hashlib import sha256
+
+    base = ingest_sources(DATA, as_of=AS_OF)
+    original = (DATA / "fixtures/update/planned_cash_needs.csv").read_bytes()
+    path = tmp_path / "planned_cash_needs.csv"
+    path.write_bytes(original)
+    read_bytes = Path.read_bytes
+
+    def change_after_read(candidate):
+        raw = read_bytes(candidate)
+        if candidate == path:
+            candidate.write_bytes(raw.replace(b"2026-09-01", b"2026-09-15"))
+        return raw
+
+    monkeypatch.setattr(Path, "read_bytes", change_after_read)
+    result = apply_overlay(base.tables, base.notes, tmp_path)
+    need = result.tables["planned_cash_needs"].set_index("need_id").loc["CN-004"]
+    assert need["due_from"] == "2026-09-01"
+    assert result.overlay_hashes["planned_cash_needs.csv"] == sha256(original).hexdigest()

@@ -255,10 +255,6 @@ OPTIONAL_FIELDS = {
     "unrealised_pnl_base",
     "unrealised_pnl_pct",
     "underlying_reference",
-    "quantity",
-    "price_local",
-    "instrument_id",
-    "instrument_name",
 }
 DATE_FIELDS = {
     "snapshot_date",
@@ -304,7 +300,10 @@ def coerce_source_table(
                 pd.Series, pd.to_numeric(frame[column].replace("", None), errors="coerce")
             )
             for index, value in cast(Any, frame[column]).items():
-                if (value != "" or column not in OPTIONAL_FIELDS) and (
+                optional = column in OPTIONAL_FIELDS or (
+                    table == "transactions" and column in {"quantity", "price_local"}
+                )
+                if (value != "" or not optional) and (
                     bool(pd.isna(cast(Any, parsed[index])))
                     or not float("-inf") < float(cast(Any, parsed[index])) < float("inf")
                 ):
@@ -317,6 +316,18 @@ def coerce_source_table(
                             field=column,
                         )
                     )
+            if table == "clients" and column in {"age", "risk_tolerance_score"}:
+                for index, value in cast(Any, parsed).items():
+                    if not pd.isna(value) and float(value).is_integer() is False:
+                        diagnostics.append(
+                            SourceDiagnostic(
+                                filename,
+                                "invalid_integer",
+                                "expected a whole number",
+                                row=int(str(index)) + 2,
+                                field=column,
+                            )
+                        )
             frame[column] = parsed.astype("Float64")
         elif column in DATE_FIELDS:
             for index, value in cast(Any, frame[column]).items():

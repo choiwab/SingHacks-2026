@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from contextlib import suppress
 from datetime import date
 from typing import Any, cast
@@ -107,6 +108,20 @@ def validate_sources(sources: IngestedSources) -> DataQualityReport:
             )
         )
         for table, frame in tables.items():
+            identities: dict[str, str] = {}
+            for index, row in cast(Any, frame).iterrows():
+                identifier = evidence_id(table, row)
+                canonical = json.dumps(
+                    {str(key): native(value) for key, value in row.items()}, sort_keys=True
+                )
+                if identifier in identities and identities[identifier] != canonical:
+                    error(
+                        f"{table}.csv",
+                        "evidence_identity_collision",
+                        f"distinct records share {identifier}",
+                        int(str(index)) + 2,
+                    )
+                identities[identifier] = canonical
             keys = KEYS.get(table, [])
             if keys:
                 for index, row in cast(Any, frame).iterrows():
@@ -229,6 +244,8 @@ def validate_sources(sources: IngestedSources) -> DataQualityReport:
         market = tables["market_context"]
         snapshots = sorted(set(tables["holdings"]["snapshot_date"]) | set(market["snapshot_date"]))
         for snapshot in snapshots:
+            if snapshot > sources.as_of.isoformat():
+                continue
             fx = market[(market["snapshot_date"] == snapshot) & (market["category"] == "FX")]
             quotes = set(fx["series_id"])
             for index, row in fx.iterrows():

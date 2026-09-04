@@ -82,3 +82,44 @@ def test_broken_instrument_key_and_note_date_are_structural_errors():
     with pytest.raises(QualityValidationError) as caught:
         validate_sources(sources)
     assert {"orphan_reference", "invalid_date"} <= {d.code for d in caught.value.diagnostics}
+
+
+def test_historical_quality_does_not_disclose_future_fx_snapshot():
+    from app.pipeline.stages.validate import validate_sources
+
+    sources = ingest_sources(DATA, as_of=date(2026, 6, 30))
+    market = sources.tables["market_context"]
+    sources.tables["market_context"] = market.loc[
+        ~((market["snapshot_date"] == "2026-08-26") & (market["series_id"] == "EURUSD"))
+    ]
+    report = validate_sources(sources)
+    assert not any(f.code == "MISSING_FX_PATH" for f in report.findings)
+
+
+def test_distinct_mandate_rows_cannot_share_an_evidence_identity():
+    import pandas as pd
+    import pytest
+
+    from app.pipeline.stages.validate import QualityValidationError, validate_sources
+
+    sources = ingest_sources(DATA, as_of=AS_OF)
+    row = sources.tables["mandates"].iloc[[0]].copy()
+    row["asset_class"] = row["asset_class"].str.replace(" ", "-", regex=False)
+    sources.tables["mandates"] = pd.concat([sources.tables["mandates"], row], ignore_index=True)
+    with pytest.raises(QualityValidationError, match="evidence_identity_collision"):
+        validate_sources(sources)
+
+
+def test_required_holdings_quantity_and_integer_profile_values_fail_validation():
+    import pandas as pd
+
+    from app.pipeline.stages.ingest import coerce_source_table
+
+    holdings = pd.read_csv(DATA / "holdings.csv", dtype=str, keep_default_na=False)
+    holdings.loc[0, "quantity"] = ""
+    _, diagnostics = coerce_source_table("holdings", holdings)
+    assert any(d.field == "quantity" and d.code == "invalid_number" for d in diagnostics)
+    clients = pd.read_csv(DATA / "clients.csv", dtype=str, keep_default_na=False)
+    clients.loc[0, "age"] = "34.5"
+    _, diagnostics = coerce_source_table("clients", clients)
+    assert any(d.field == "age" and d.code == "invalid_integer" for d in diagnostics)

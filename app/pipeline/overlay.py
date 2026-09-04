@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from hashlib import sha256
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +101,7 @@ def apply_overlay(
                 raise ValueError("rm_notes.json: expected a list of objects")
             result.notes, keys = _merge(table, result.notes, updates)
         else:
-            overlay = pd.read_csv(path, dtype=str, keep_default_na=False)
+            overlay = pd.read_csv(BytesIO(raw), dtype=str, keep_default_na=False)
             if table not in result.tables:
                 raise ValueError(f"{table}: base source missing")
             base = result.tables[table]
