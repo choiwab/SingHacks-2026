@@ -148,6 +148,7 @@ export function PreRead({
   const [tab, setTab] = useState<TabValue>("overview");
   const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
   const reviewBar = useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -397,6 +398,17 @@ export function PreRead({
               onChange={(_event, data) => setEditedOpening(data.value)}
             />
           </Field>
+          <Button
+            disabledFocusable={pending !== null}
+            onClick={() => {
+              setEditedOpening(currentOpening);
+              setEditing(false);
+              setReviewError("");
+              editButton.current?.focus();
+            }}
+          >
+            Cancel edit
+          </Button>
         </div>
       )}
 
@@ -442,6 +454,7 @@ export function PreRead({
           <Button
             disabledFocusable={pending !== null}
             icon={pending === "Edit" ? <Spinner size="tiny" /> : undefined}
+            ref={editButton}
             onClick={handleEdit}
           >
             {editing ? "Save edit" : "Edit"}

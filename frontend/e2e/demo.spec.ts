@@ -1,6 +1,43 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`cancel opening edit restores wording and focus at ${width}px`, async ({
+    page,
+  }) => {
+    let reviewRequests = 0;
+    page.on("request", (request) => {
+      if (request.url().endsWith("/api/reviews")) reviewRequests += 1;
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    await edit.click();
+    const editor = page.getByLabel("Edit the opening line");
+    const original = await editor.inputValue();
+    await editor.fill("Discard this unsaved draft");
+    const cancel = page.getByRole("button", { name: "Cancel edit" });
+    await cancel.focus();
+    await cancel.press("Enter");
+    await expect(editor).toHaveCount(0);
+    await expect(edit).toBeFocused();
+    await expect(edit).toBeInViewport();
+    await expect(
+      page.getByRole("region", { name: "Suggested opening" }),
+    ).toContainText(original);
+    await expect(
+      page.getByText("Generated · awaiting RM review"),
+    ).toBeVisible();
+    await edit.press("Enter");
+    await expect(editor).toHaveValue(original);
+    await expect(cancel).toBeInViewport();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+    expect(reviewRequests).toBe(0);
+  });
+
   test(`review shortcut reaches the checkpoint from every tab at ${width}px`, async ({
     page,
   }) => {

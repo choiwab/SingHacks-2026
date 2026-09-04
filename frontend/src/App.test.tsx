@@ -501,6 +501,17 @@ describe("Monday Brief", () => {
     expect(opening()).toHaveTextContent(saved);
     expect(opening()).not.toHaveTextContent("Unsaved replacement");
 
+    const requestCount = requests.length;
+    await user.click(screen.getByRole("button", { name: "Cancel edit" }));
+    expect(screen.queryByLabelText("Edit the opening line")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus();
+    expect(screen.getByText("Edited by the RM")).toBeVisible();
+    expect(requests).toHaveLength(requestCount);
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Edit the opening line")).toHaveValue(saved);
+    await user.click(screen.getByRole("button", { name: "Cancel edit" }));
+
     failSave = false;
     await user.click(screen.getByRole("button", { name: "Approve pre-read" }));
     await screen.findByText("Approved by the RM");
