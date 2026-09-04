@@ -1096,15 +1096,21 @@ blockquote {
     padding: 2rem;
   }
 
-  .changed-block,
-  .gap-block,
-  .rules-block {
-    grid-column: 1 / -1;
-  }
-
+  .summary-block,
+  .topics-block,
   .changed-block,
   .gap-block,
   .rules-block,
+  .commitments-block {
+    grid-column: 1 / -1;
+  }
+
+  .summary-block,
+  .topics-block,
+  .changed-block,
+  .gap-block,
+  .rules-block,
+  .commitments-block,
   .opening-block {
     border-right: 1px solid var(--rule);
   }

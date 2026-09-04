@@ -195,6 +195,25 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontVariantNumeric: "tabular-nums",
   },
+  summary: {
+    maxWidth: "68ch",
+    ...shorthands.margin(0),
+  },
+  topics: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalL,
+    listStyleType: "none",
+    ...shorthands.margin(0),
+    ...shorthands.padding(0),
+  },
+  topic: {
+    // Fluent Text renders inline; the column makes each line its own row.
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: tokens.spacingVerticalXS,
+  },
 });
 
 function formatNumber(value: unknown) {
@@ -227,6 +246,64 @@ function dataHealth(facts: ProjectionFact[]) {
     return { label: "Needs confirmation", color: "warning" as const };
   if (facts.length === 0) return { label: "Stale", color: "danger" as const };
   return { label: "Current", color: "success" as const };
+}
+
+type FactOf<K extends ProjectionFact["kind"]> = Extract<
+  ProjectionFact,
+  { kind: K }
+>;
+
+const factOfKind =
+  <K extends ProjectionFact["kind"]>(kind: K) =>
+  (fact: ProjectionFact): fact is FactOf<K> =>
+    fact.kind === kind;
+
+function formatMoney(amount: number, currency: string | null | undefined) {
+  const rounded = Math.round(amount);
+  if (!currency) return formatNumber(rounded);
+  return rounded.toLocaleString(undefined, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  });
+}
+
+/**
+ * The quantified stake behind a fact, in one line. The Overview ledger states
+ * what the fact is; an agenda item has to say how much of it there is, so this
+ * reads the calculation inputs the fact engine already emitted.
+ */
+function stake(fact: ProjectionFact, currency?: string): string {
+  switch (fact.kind) {
+    case "mandate_gap": {
+      const n = fact.numbers;
+      return `${n.asset_class} sits at ${n.actual_pct}% against a ${n.limit_pct}% ${n.boundary}, ${Math.abs(n.gap_pct).toFixed(1)} points out, measured ${n.scope}.`;
+    }
+    case "deadline": {
+      const n = fact.numbers;
+      const cover =
+        n.coverage_pct === null || n.coverage_pct === undefined
+          ? ""
+          : ` Liquid assets cover ${Math.round(n.coverage_pct)}% of it.`;
+      return `${formatMoney(n.amount, n.currency)} falls due in ${n.days} days.${cover}`;
+    }
+    case "facility": {
+      const n = fact.numbers;
+      return `Loan-to-value is ${n.ltv_pct}% against a ${n.trigger_pct}% margin-call trigger, ${Math.abs(n.gap_pct).toFixed(1)} points of headroom.`;
+    }
+    case "concentration": {
+      const n = fact.numbers;
+      return `${n.weight_pct}% of the portfolio, ${formatMoney(n.value, currency)}.`;
+    }
+    case "change": {
+      const n = fact.numbers;
+      return `${n.instrument} moved by ${formatMoney(n.delta, n.currency)} since the last snapshot.`;
+    }
+    case "profile": {
+      const n = fact.numbers;
+      return `${n.life_stage}, resident in ${n.residence}, booked in ${n.booking_centre}.`;
+    }
+  }
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -492,6 +569,182 @@ export function InsightsPanel({
           />
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * PRD 5.5's two-minute client summary. Every sentence is assembled from a field
+ * the projection already carries, and the Why? link carries the union of their
+ * citations so the whole paragraph stays traceable.
+ */
+export function TwoMinuteSummary({
+  preRead,
+  ranked,
+  facts,
+  authorship,
+}: {
+  preRead: ClientPreRead;
+  ranked: RankedClient | undefined;
+  facts: ProjectionFact[];
+  authorship: Authorship;
+}) {
+  const styles = useStyles();
+  const profile = facts.find(factOfKind("profile"));
+  const deadline = facts.find(factOfKind("deadline"));
+  const sentences: { text: string; citations: string[] }[] = [];
+
+  if (profile)
+    sentences.push({
+      text: `${profile.what} ${stake(profile)} Reporting runs in ${profile.numbers.currency} and ${profile.numbers.language}.`,
+      citations: [profile.id],
+    });
+  // The ranking reason is often the gap verbatim; only add it when it says
+  // something the "data says" sentence below does not.
+  const reason =
+    ranked?.reason && ranked.reason !== preRead.gap.data
+      ? ` ${ranked.reason}`
+      : "";
+  sentences.push({
+    text: ranked?.meeting
+      ? `You meet ${preRead.name} on ${ranked.meeting}.${reason}`
+      : `No meeting is booked with ${preRead.name} this week.${reason}`,
+    citations: ranked?.citations ?? [],
+  });
+  sentences.push({
+    text: `The client told us “${preRead.gap.belief}” The data says ${preRead.gap.data}`,
+    citations: preRead.gap.citations,
+  });
+  if (deadline)
+    sentences.push({ text: stake(deadline), citations: [deadline.id] });
+  if (preRead.what_changed.length > 0)
+    sentences.push({
+      text: `${preRead.what_changed.length} position${preRead.what_changed.length === 1 ? "" : "s"} moved since the last snapshot.`,
+      citations: preRead.what_changed.flatMap((item) => item.citations),
+    });
+
+  return (
+    <>
+      <Body1 as="p" className={styles.summary}>
+        {sentences.map((sentence) => sentence.text).join(" ")}
+      </Body1>
+      <div className={styles.headerActions}>
+        <WhyButton
+          citations={[
+            ...new Set(sentences.flatMap((sentence) => sentence.citations)),
+          ]}
+          clientId={preRead.client_id}
+          claim={sentences.map((sentence) => sentence.text).join(" ")}
+          authorship={authorship}
+        />
+      </div>
+    </>
+  );
+}
+
+/**
+ * PRD 5.5's three discussion topics: the agenda, severity-ranked, each with the
+ * quantified stake pulled from the fact's own calculation inputs.
+ */
+export function DiscussionTopics({
+  facts,
+  clientId,
+}: {
+  facts: ProjectionFact[];
+  clientId: string;
+}) {
+  const styles = useStyles();
+  const currency = facts.find(factOfKind("profile"))?.numbers.currency;
+  const topics = facts
+    .filter((fact) => fact.kind !== "profile")
+    .sort((a, b) => SEVERITY[a.kind].rank - SEVERITY[b.kind].rank)
+    .slice(0, 3);
+
+  if (topics.length === 0)
+    return (
+      <Body1 className={styles.empty}>
+        No deterministic fact reached the agenda threshold for this client.
+      </Body1>
+    );
+
+  return (
+    <ol className={styles.topics}>
+      {topics.map((fact, index) => (
+        <li className={styles.topic} key={fact.id}>
+          <div className={styles.cardMeta}>
+            <Badge appearance="filled" color={SEVERITY[fact.kind].color}>
+              Topic {index + 1}
+            </Badge>
+            <Badge appearance="outline" color="informative">
+              {FACT_GROUP[fact.kind]}
+            </Badge>
+          </div>
+          <Subtitle2 as="h3">{fact.what}</Subtitle2>
+          <Body1 as="p" className={styles.summary}>
+            {stake(fact, currency)}
+          </Body1>
+          <div className={styles.headerActions}>
+            <WhyButton citations={[fact.id]} clientId={clientId} />
+          </div>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
+ * PRD 5.5's open commitments: the planned cash needs the client's own facts
+ * cite, so the RM sees what money is already spoken for before advising.
+ */
+export function OpenCommitments({
+  facts,
+  evidence,
+  clientId,
+}: {
+  facts: ProjectionFact[];
+  evidence: MondayBriefProjection["evidence"];
+  clientId: string;
+}) {
+  const styles = useStyles();
+  const commitments = [...new Set(facts.flatMap((fact) => fact.source_rows))]
+    .filter((row) => row.startsWith("planned_cash_needs:"))
+    .map((row) => evidence[row])
+    .filter(Boolean)
+    .sort((a, b) =>
+      String(a.record.due_from).localeCompare(String(b.record.due_from)),
+    );
+
+  if (commitments.length === 0)
+    return (
+      <Body1 className={styles.empty}>
+        No planned cash need is recorded against this client.
+      </Body1>
+    );
+
+  return (
+    <div className={styles.cards}>
+      {commitments.map((commitment) => {
+        const record = commitment.record;
+        const amount =
+          typeof record.amount === "number"
+            ? formatMoney(record.amount, String(record.currency ?? ""))
+            : "Amount not recorded";
+        return (
+          <article className={styles.card} key={commitment.id}>
+            <Body1Strong>
+              {String(record.description ?? commitment.title)}
+            </Body1Strong>
+            <Subtitle2 as="p">{amount}</Subtitle2>
+            <Caption1>
+              Due {String(record.due_from)} to {String(record.due_to)} ·{" "}
+              {String(record.certainty ?? "Certainty not recorded")}
+            </Caption1>
+            <div className={styles.action}>
+              <WhyButton citations={[commitment.id]} clientId={clientId} />
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

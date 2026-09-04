@@ -135,6 +135,63 @@ describe("Monday Brief", () => {
     expect(screen.getByText("\u201cKeep it safe.\u201d")).toBeVisible();
   });
 
+  it("opens the meeting brief with the PRD 5.5 summary, agenda and commitments", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(projectionResponse())),
+    );
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const summary = await screen.findByRole("region", {
+      name: "Two-minute summary",
+    });
+    // Assembled from the profile fact, the ranking, the gap, the deadline and
+    // the snapshot deltas - nothing the projection does not already carry.
+    expect(
+      within(summary).getByText(
+        /Recently widowed, resident in Singapore, booked in Singapore/,
+      ),
+    ).toBeVisible();
+    expect(
+      within(summary).getByText(
+        /You meet Margarethe Voss-Brenner on Mon 10:30/,
+      ),
+    ).toBeVisible();
+    expect(within(summary).getByText(/1 position moved/)).toBeVisible();
+
+    // The agenda is severity-ranked, so the mandate gap leads the deadline.
+    const topics = screen.getByRole("region", {
+      name: "Three discussion topics",
+    });
+    const headings = within(topics).getAllByRole("heading", { level: 3 });
+    expect(headings.map((heading) => heading.textContent)).toEqual([
+      "Equity is above the mandate limit.",
+      "German inheritance tax instalment starts in 36 days.",
+    ]);
+    expect(
+      within(topics).getByText(
+        "Equity sits at 71.5% against a 30% maximum, 41.5 points out, measured Household look-through; strictest applicable band.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(topics).getByText(/Liquid assets cover 528% of it\./),
+    ).toBeVisible();
+
+    const commitments = screen.getByRole("region", {
+      name: "Open commitments",
+    });
+    expect(
+      within(commitments).getByText("German inheritance tax instalment"),
+    ).toBeVisible();
+    expect(
+      within(commitments).getByText("Due 2026-10-01 to 2026-12-31 · Confirmed"),
+    ).toBeVisible();
+  });
+
   it("expands evidence and restores focus to the Why button", async () => {
     vi.stubGlobal(
       "fetch",
@@ -147,7 +204,10 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
-    const why = (await screen.findAllByRole("button", { name: "Why?" }))[0];
+    // Scoped to the "What changed" block: the two-minute summary above it now
+    // owns the first Why? on the page.
+    const changed = await screen.findByRole("region", { name: "What changed" });
+    const why = within(changed).getAllByRole("button", { name: "Why?" })[0];
     await user.click(why);
     const dialog = screen.getByRole("dialog", { name: "Why?" });
     expect(dialog).toBeVisible();

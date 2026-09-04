@@ -7,8 +7,11 @@ import {
   CompactCalendar,
   DashboardHeader,
   DataPanel,
+  DiscussionTopics,
   InsightsPanel,
   MemoryPanel,
+  OpenCommitments,
+  TwoMinuteSummary,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
 import type { Authorship } from "./evidence";
@@ -179,11 +182,38 @@ export function PreRead({
           <>
             <div className="pre-read-ledger">
               <section
+                className="brief-block summary-block"
+                aria-labelledby="summary-title"
+              >
+                <div className="block-heading">
+                  <p>01</p>
+                  <h2 id="summary-title">Two-minute summary</h2>
+                </div>
+                <TwoMinuteSummary
+                  preRead={preRead}
+                  ranked={rankedClient}
+                  facts={facts}
+                  authorship={reviewState}
+                />
+              </section>
+
+              <section
+                className="brief-block topics-block"
+                aria-labelledby="topics-title"
+              >
+                <div className="block-heading">
+                  <p>02</p>
+                  <h2 id="topics-title">Three discussion topics</h2>
+                </div>
+                <DiscussionTopics facts={facts} clientId={clientId} />
+              </section>
+
+              <section
                 className="brief-block changed-block"
                 aria-labelledby="changed-title"
               >
                 <div className="block-heading">
-                  <p>01</p>
+                  <p>03</p>
                   <h2 id="changed-title">What changed</h2>
                 </div>
                 <CitedList
@@ -199,7 +229,7 @@ export function PreRead({
                 aria-labelledby="gap-title"
               >
                 <div className="block-heading">
-                  <p>02</p>
+                  <p>04</p>
                   <h2 id="gap-title">You said / Data says</h2>
                 </div>
                 <div className="gap-pair">
@@ -226,7 +256,7 @@ export function PreRead({
                 aria-labelledby="rules-title"
               >
                 <div className="block-heading">
-                  <p>03</p>
+                  <p>05</p>
                   <h2 id="rules-title">Rules &amp; money</h2>
                 </div>
                 <CitedList
@@ -238,11 +268,26 @@ export function PreRead({
               </section>
 
               <section
+                className="brief-block commitments-block"
+                aria-labelledby="commitments-title"
+              >
+                <div className="block-heading">
+                  <p>06</p>
+                  <h2 id="commitments-title">Open commitments</h2>
+                </div>
+                <OpenCommitments
+                  facts={facts}
+                  evidence={projection.evidence}
+                  clientId={clientId}
+                />
+              </section>
+
+              <section
                 className="brief-block opening-block"
                 aria-labelledby="opening-title"
               >
                 <div className="block-heading">
-                  <p>04</p>
+                  <p>07</p>
                   <h2 id="opening-title">Suggested opening</h2>
                 </div>
                 <p className="language">{preRead.language}</p>
@@ -261,7 +306,7 @@ export function PreRead({
                 aria-labelledby="unsure-title"
               >
                 <div className="block-heading">
-                  <p>05</p>
+                  <p>08</p>
                   <h2 id="unsure-title">What we are not sure about</h2>
                 </div>
                 <p>{preRead.uncertainty.text}</p>

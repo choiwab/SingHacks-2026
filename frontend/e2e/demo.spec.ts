@@ -6,7 +6,23 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await switcher
     .getByRole("button", { name: /Margarethe Voss-Brenner/ })
     .click();
-  await page.getByRole("button", { name: "Why?" }).first().click();
+  // The meeting brief opens on PRD 5.5's summary, agenda and commitments.
+  const summary = page.getByRole("region", { name: "Two-minute summary" });
+  await expect(summary).toContainText("You meet Margarethe Voss-Brenner");
+  await expect(
+    page
+      .getByRole("region", { name: "Three discussion topics" })
+      .getByRole("listitem"),
+  ).toHaveCount(3);
+  await expect(
+    page.getByRole("region", { name: "Open commitments" }),
+  ).toContainText("German inheritance tax instalment");
+
+  await page
+    .getByRole("region", { name: "What changed" })
+    .getByRole("button", { name: "Why?" })
+    .first()
+    .click();
   await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
     "data/holdings.csv",
   );
@@ -36,7 +52,11 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   ).toContainText("Needs review");
 
   // The evidence trail reports who authored the approved claim (PRD 5.7).
-  await page.getByRole("button", { name: "Why?" }).first().click();
+  await page
+    .getByRole("region", { name: "What changed" })
+    .getByRole("button", { name: "Why?" })
+    .first()
+    .click();
   await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
     "Approved by the RM",
   );
