@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install Python dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Install Node.js dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Python formatting
+        run: uv run ruff format --check .
+
+      - name: Lint Python
+        run: uv run ruff check .
+
+      - name: Test Python
+        run: uv run pytest
+
+      - name: Check frontend formatting
+        run: pnpm format:check
+
+      - name: Lint frontend
+        run: pnpm lint
+
+      - name: Type-check frontend
+        run: pnpm typecheck
+
+      - name: Test frontend
+        run: pnpm test
+
+      - name: Verify generated contract
+        run: pnpm check:contract
+
+      - name: Build frontend
+        run: pnpm build
+
+      - name: Install Playwright browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run end-to-end test
+        run: pnpm test:e2e
