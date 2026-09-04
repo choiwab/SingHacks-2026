@@ -1340,7 +1340,7 @@ export function MemoryPanel({
       String(a.record.note_date).localeCompare(String(b.record.note_date)),
     );
   const noteText = (note: (typeof notes)[number]) =>
-    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")} ${String(note.record.note_id ?? "")}`;
+    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")} ${String(note.record.note_id ?? "")} ${String(note.record.rm_name ?? "")}`;
 
   const matchedNotes = retrieve(notes, terms, noteText);
   const matchedBeliefs = retrieve(
@@ -1429,7 +1429,11 @@ export function MemoryPanel({
                   text={String(note.record.channel ?? "Note")}
                   terms={terms}
                 />{" "}
-                · {String(note.record.rm_name ?? "RM")}
+                ·{" "}
+                <Highlight
+                  text={String(note.record.rm_name ?? "RM")}
+                  terms={terms}
+                />
               </Caption1>
               <Body1>
                 <Highlight

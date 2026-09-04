@@ -1,6 +1,55 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory retrieves notes by their RM author at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Memory" });
+    const search = panel.getByRole("searchbox");
+    const notes = panel.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of ["Priscilla", "PRISCILLA", "Ong"]) {
+      await search.fill(query);
+      await expect(panel.getByRole("status")).toHaveText(
+        `2 of 2 notes and 0 of 1 belief mention ${query.toLowerCase()}.`,
+      );
+      await expect(notes.locator("mark")).toHaveText(
+        query === "Ong" ? ["Ong", "Ong"] : ["Priscilla", "Priscilla"],
+      );
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+      await expect(notes).toContainText("N-005");
+      await expect(notes).toContainText("N-006");
+    }
+    const why = notes
+      .getByRole("button", { name: "Why?", exact: true })
+      .first();
+    await why.click();
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    await expect(drawer).toContainText("Priscilla Ong");
+    await expect(drawer).toContainText("N-005");
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    await search.fill("Alex");
+    await expect(panel.getByRole("status")).toHaveText(
+      "0 of 2 notes and 0 of 1 belief mention alex.",
+    );
+    await expect(panel.locator("mark")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Clear note search" }).click();
+    await expect(search).toBeFocused();
+    await expect(
+      notes.getByRole("button", { name: "Why?", exact: true }),
+    ).toHaveCount(2);
+    await expect(panel.locator("mark")).toHaveCount(0);
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`Memory retrieves complete note references at ${width}px`, async ({
     page,
   }) => {
