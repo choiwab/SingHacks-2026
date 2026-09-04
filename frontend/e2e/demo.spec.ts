@@ -598,6 +598,75 @@ for (const width of [1280, 390]) {
     ]);
   });
 
+  test(`dismissing review failures returns focus for retry at ${width}px`, async ({
+    page,
+  }) => {
+    const submitted: { action: string; text: string }[] = [];
+    await page.route("**/api/reviews", async (route) => {
+      submitted.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Review ledger unavailable" }),
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const opening = page.getByRole("region", { name: "Suggested opening" });
+    const original = await opening.innerText();
+
+    for (const [action, label] of [
+      ["Approve", "Approve pre-read"],
+      ["Reject", "Reject"],
+      ["Edit", "Save edit"],
+    ]) {
+      if (action === "Edit") {
+        await page.getByRole("button", { name: "Edit", exact: true }).click();
+        await page.getByLabel("Edit the opening line").fill("Retained draft");
+      }
+      const retry = page.getByRole("button", { name: label, exact: true });
+      await retry.click();
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const alert = page.getByRole("alert");
+        await expect(alert).toContainText("Review ledger unavailable");
+        const requestCount = submitted.length;
+        const dismiss = alert.getByRole("button", {
+          name: "Dismiss the review error",
+        });
+        await dismiss.focus();
+        await page.keyboard.press("Enter");
+        await expect(alert).toHaveCount(0);
+        await expect(retry).toBeFocused();
+        await expect(retry).toBeInViewport();
+        expect(submitted).toHaveLength(requestCount);
+        expect(submitted.at(-1)?.action).toBe(action);
+        expect(await opening.innerText()).toBe(original);
+        await expect(
+          page.getByText("Generated · awaiting RM review", { exact: true }),
+        ).toBeVisible();
+        if (action === "Edit") {
+          await expect(page.getByLabel("Edit the opening line")).toHaveValue(
+            "Retained draft",
+          );
+        }
+        if (attempt === 0) await page.keyboard.press("Enter");
+      }
+    }
+    expect(submitted.map((request) => request.action)).toEqual([
+      "Approve",
+      "Approve",
+      "Reject",
+      "Reject",
+      "Edit",
+      "Edit",
+    ]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`pending opening saves protect wording and recover at ${width}px`, async ({
     page,
   }) => {

@@ -149,7 +149,10 @@ export function PreRead({
   const [toast, setToast] = useState("");
   // A failed review is kept until the RM dismisses it; only the confirmation
   // is allowed to disappear on its own.
-  const [reviewError, setReviewError] = useState("");
+  const [reviewError, setReviewError] = useState<{
+    message: string;
+    action: ReviewAction;
+  } | null>(null);
   const [emptyOpening, setEmptyOpening] = useState(false);
   const [pending, setPending] = useState<ReviewAction | null>(null);
   const [tab, setTab] = useState<TabValue>("overview");
@@ -159,6 +162,8 @@ export function PreRead({
   const editField = useRef<HTMLTextAreaElement>(null);
   const editPanel = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
+  const approveButton = useRef<HTMLButtonElement>(null);
+  const rejectButton = useRef<HTMLButtonElement>(null);
   const reviewBar = useRef<HTMLElement>(null);
   const briefPanel = useRef<HTMLDivElement>(null);
 
@@ -194,7 +199,7 @@ export function PreRead({
       return;
     }
     setPending(action);
-    setReviewError("");
+    setReviewError(null);
     try {
       const text = action === "Edit" ? editedOpening.trim() : currentOpening;
       const response = await saveReview({ client_id: clientId, action, text });
@@ -219,11 +224,13 @@ export function PreRead({
       setReceipt(`Review log · ${label} · ${time} · ${response.review.rm}`);
       setToast(`${label} for ${preRead.name}.`);
     } catch (error) {
-      setReviewError(
-        error instanceof Error
-          ? error.message
-          : "The review could not be saved.",
-      );
+      setReviewError({
+        message:
+          error instanceof Error
+            ? error.message
+            : "The review could not be saved.",
+        action,
+      });
     } finally {
       setPending(null);
     }
@@ -456,7 +463,7 @@ export function PreRead({
             onClick={() => {
               setEditedOpening(currentOpening);
               setEditing(false);
-              setReviewError("");
+              setReviewError(null);
               setEmptyOpening(false);
               editButton.current?.focus();
             }}
@@ -470,7 +477,7 @@ export function PreRead({
         <MessageBar intent="error" role="alert" className="review-error">
           <MessageBarBody>
             <MessageBarTitle>The review was not saved.</MessageBarTitle>
-            {reviewError} The brief stays open.
+            {reviewError.message} The brief stays open.
           </MessageBarBody>
           <MessageBarActions
             containerAction={
@@ -478,7 +485,15 @@ export function PreRead({
                 appearance="transparent"
                 icon={<DismissRegular />}
                 aria-label="Dismiss the review error"
-                onClick={() => setReviewError("")}
+                onClick={() => {
+                  const retryButton = {
+                    Approve: approveButton,
+                    Edit: editButton,
+                    Reject: rejectButton,
+                  }[reviewError.action];
+                  flushSync(() => setReviewError(null));
+                  retryButton.current?.focus();
+                }}
               />
             }
           />
@@ -503,6 +518,7 @@ export function PreRead({
         </div>
         <div className="review-actions">
           <Button
+            ref={rejectButton}
             disabledFocusable={editing || pending !== null}
             aria-describedby={editing ? "review-guidance" : undefined}
             icon={pending === "Reject" ? <Spinner size="tiny" /> : undefined}
@@ -519,6 +535,7 @@ export function PreRead({
             {editing ? "Save edit" : "Edit"}
           </Button>
           <Button
+            ref={approveButton}
             appearance="primary"
             className="approve-button"
             disabledFocusable={editing || pending !== null}

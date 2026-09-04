@@ -772,6 +772,9 @@ describe("Monday Brief", () => {
       screen.getByRole("button", { name: "Dismiss the review error" }),
     );
     expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Approve pre-read" }),
+    ).toHaveFocus();
   });
 });
 
