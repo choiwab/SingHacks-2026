@@ -1932,6 +1932,12 @@ for (const width of [1280, 390]) {
       "15",
       "5.5",
       "5.5%",
+      ".5%",
+      ".5 %",
+      "-.5%",
+      "−.5%",
+      "+.5%",
+      "0.5%",
       "5.5 %",
       "15%",
       "15 %",
@@ -1992,7 +1998,7 @@ for (const width of [1280, 390]) {
 
   test(`Memory preserves signed amounts at ${width}px`, async ({ page }) => {
     const wording =
-      "Recorded -5% performance, +3.4m inflows, and −12,500.50 in fees.";
+      "Recorded -5% performance, +3.4m inflows, and −12,500.50 in fees. A 0.5% fee, -.25% adjustment, and +.75m inflow.";
     await page.route("**/api/monday-brief", async (route) => {
       const response = await route.fetch();
       const projection = await response.json();
@@ -2024,6 +2030,12 @@ for (const width of [1280, 390]) {
       await expect(notes.locator("mark")).toHaveCount(0);
     }
     for (const [query, highlight] of [
+      [".5%", "0.5%"],
+      ["0.5 %", "0.5%"],
+      ["-.25%", "-.25%"],
+      ["−0.25 %", "-.25%"],
+      ["+.75m", "+.75m"],
+      ["+0.75M", "+.75m"],
       ["-5%", "-5%"],
       ["−5 %", "-5%"],
       ["+3.4M", "+3.4m"],

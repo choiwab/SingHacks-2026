@@ -1250,6 +1250,11 @@ function queryTerms(query: string): string[] {
           )
           // Accept spaces before percent signs without losing the unit.
           .replace(/(\p{N})\s+%/gu, "$1%")
+          // An omitted leading zero must not turn .5% into 5%.
+          .replace(
+            /(?<![\p{L}\p{N}.+−-])([+−-]?)\.(?=\p{N})/gu,
+            (_, sign: string) => `${sign}0.`,
+          )
           // Keep note references, ISO dates, and financial amounts intact.
           .match(
             /[Nn]-\d+|\d{4}-\d{2}-\d{2}|[+−-]?(?:\p{N}{1,3}(?:,\p{N}{3})+|\p{N}+)(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
@@ -1296,9 +1301,10 @@ function termPattern(term: string): string {
   if (/^(?:n-\d+|\d{4}-\d{2}-\d{2})$/.test(term))
     return `(?<![\\p{L}\\p{N}-])${literal}(?![\\p{L}\\p{N}-])`;
   if (/^[+-]?\p{N}/u.test(term)) {
-    const grouped = literal.replace(/\p{N}+/u, (integer) =>
-      integer.replace(/\B(?=(?:\p{N}{3})+$)/gu, ","),
-    );
+    const grouped = literal.replace(/\p{N}+/u, (integer) => {
+      if (integer === "0" && term.includes(".")) return "0?";
+      return integer.replace(/\B(?=(?:\p{N}{3})+$)/gu, ",");
+    });
     const amount = (
       grouped === literal ? literal : `(?:${literal}|${grouped})`
     ).replaceAll("-", "[-−]");
