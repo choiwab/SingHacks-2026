@@ -299,7 +299,7 @@ describe("Monday Brief", () => {
       screen.getByRole("region", { name: "RM notes" }),
     ).getByRole("button", { name: "Why?" });
     await user.click(noteSource);
-    const sourceTrail = screen.getByRole("dialog", { name: "Why?" });
+    const sourceTrail = await screen.findByRole("dialog", { name: "Why?" });
     expect(sourceTrail).toHaveTextContent("data/rm_notes.json · row note:1");
     expect(sourceTrail).toHaveTextContent("Keep it safe.");
     expect(sourceTrail).not.toHaveTextContent("Berlin apartment");

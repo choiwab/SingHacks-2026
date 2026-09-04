@@ -1,6 +1,67 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`client search tolerates name separators at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    const switcher = page.getByRole("navigation", { name: "Client switcher" });
+    const search = switcher.getByRole("searchbox", { name: "Search clients" });
+    for (const query of [
+      "Voss Brenner",
+      "  VOSS   BRENNER  ",
+      "Voss-Brenner",
+      "Voss\u2011Brenner",
+    ]) {
+      await search.fill(query);
+      await expect(switcher.getByRole("status")).toHaveText(
+        "1 of 20 clients shown",
+      );
+      await expect(switcher.getByRole("listitem")).toHaveCount(1);
+      await expect(
+        switcher.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+      ).toBeVisible();
+      await expect(search).toBeFocused();
+    }
+    await switcher
+      .getByRole("button", { name: /Margarethe Voss-Brenner/ })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Margarethe Voss-Brenner",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      switcher.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+    ).toHaveAttribute("aria-current", "true");
+    await search.fill("Al Mansoori");
+    await expect(switcher.getByRole("status")).toHaveText(
+      "1 of 20 clients shown",
+    );
+    await switcher
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Abdullah Al-Mansoori", exact: true }),
+    ).toBeVisible();
+    await search.focus();
+    await switcher.getByRole("button", { name: "clear", exact: true }).click();
+    await expect(switcher.getByRole("status")).toHaveText(
+      "20 clients, ranked by priority",
+    );
+    await expect(switcher.getByRole("listitem").first()).toContainText(
+      "Margarethe Voss-Brenner",
+    );
+    await expect(search).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`client profile sources are reachable from every tab at ${width}px`, async ({
     page,
   }) => {

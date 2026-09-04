@@ -202,10 +202,15 @@ function ClientSwitcher({
   const [query, setQuery] = useState("");
 
   const matches = useMemo(() => {
-    const needle = query.trim().toLowerCase();
+    const normalizeName = (name: string) =>
+      name
+        .toLowerCase()
+        .replace(/[\p{Pd}\s]+/gu, " ")
+        .trim();
+    const needle = normalizeName(query);
     if (!needle) return ranking;
     return ranking.filter((client) =>
-      client.name.toLowerCase().includes(needle),
+      normalizeName(client.name).includes(needle),
     );
   }, [ranking, query]);
 
