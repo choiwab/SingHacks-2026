@@ -1,5 +1,12 @@
 import {
+  Body1,
+  Caption1,
+  Card,
   Link,
+  mergeClasses,
+  Subtitle2,
+  Title2,
+  Title3,
   makeStyles,
   ToggleButton,
   tokens,
@@ -11,6 +18,44 @@ import type { MondayBriefProjection, ScenarioKey } from "./contracts";
 import { CitedList, WhyButton } from "./shared";
 
 const useStyles = makeStyles({
+  header: {
+    display: "grid",
+    gap: tokens.spacingVerticalL,
+    paddingTop: tokens.spacingVerticalXL,
+    paddingBottom: tokens.spacingVerticalXL,
+  },
+  copy: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: tokens.spacingVerticalS,
+    minWidth: 0,
+  },
+  title: { maxWidth: "none", letterSpacing: "normal" },
+  muted: { color: tokens.colorNeutralForeground3 },
+  result: {
+    display: "grid",
+    gap: tokens.spacingHorizontalXXL,
+    padding: tokens.spacingHorizontalXL,
+    "@container main (min-width: 48rem)": {
+      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+      alignItems: "center",
+    },
+  },
+  range: { margin: 0, fontVariantNumeric: "tabular-nums" },
+  amount: { whiteSpace: "nowrap" },
+  visual: { minWidth: 0, paddingBottom: tokens.spacingVerticalXS },
+  disclaimer: {
+    display: "block",
+    marginTop: "2.2rem",
+    color: tokens.colorNeutralForeground3,
+  },
+  detail: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalM,
+    paddingTop: tokens.spacingVerticalXXL,
+  },
   toggle: {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -86,10 +131,12 @@ export function Scenario({
         </p>
       </div>
 
-      <header className="scenario-heading">
-        <div>
-          <p className="eyebrow accent">{preRead.name}</p>
-          <h1 id="scenario-title">Rehearse the Strait conversation</h1>
+      <header className={styles.header}>
+        <div className={styles.copy}>
+          <Caption1 className={styles.muted}>{preRead.name}</Caption1>
+          <Title3 as="h1" id="scenario-title" className={styles.title}>
+            Rehearse the Strait conversation
+          </Title3>
         </div>
         <div className={styles.toggle} role="group" aria-label="Scenario">
           <ToggleButton
@@ -115,13 +162,27 @@ export function Scenario({
         {resultSummary}
       </p>
 
-      <section className="scenario-result" aria-labelledby="scenario-name">
-        <div className="range-copy">
-          <p className="scenario-label" id="scenario-name">
+      <Card
+        role="region"
+        className={styles.result}
+        aria-labelledby="scenario-name"
+      >
+        <div className={styles.copy}>
+          <Subtitle2 as="h2" className="scenario-label" id="scenario-name">
             {scenario.name}
-          </p>
-          <p className="range-value">{valueRange}</p>
-          <p className="range-percent">{percentRange}</p>
+          </Subtitle2>
+          <Title2 as="p" className={mergeClasses("range-value", styles.range)}>
+            <span className={styles.amount}>
+              {money(scenario.low_delta, scenario.currency)}
+            </span>{" "}
+            to{" "}
+            <span className={styles.amount}>
+              {money(scenario.high_delta, scenario.currency)}
+            </span>
+          </Title2>
+          <Body1 className={mergeClasses("range-percent", styles.muted)}>
+            {percentRange}
+          </Body1>
           <WhyButton
             citations={scenario.citations}
             clientId={clientId}
@@ -129,7 +190,7 @@ export function Scenario({
             children="Why this range?"
           />
         </div>
-        <div className="range-visual">
+        <div className={styles.visual}>
           <div
             className="range-axis"
             aria-label="Estimated portfolio change range from negative twenty to positive twenty percent"
@@ -146,16 +207,17 @@ export function Scenario({
               }}
             />
           </div>
-          <p>{disclaimer}</p>
+          <Caption1 className={styles.disclaimer}>{disclaimer}</Caption1>
         </div>
-      </section>
+      </Card>
 
       <section
-        className="scenario-detail"
+        className={styles.detail}
         aria-labelledby="scenario-detail-title"
       >
-        <p className="eyebrow">Talk through</p>
-        <h2 id="scenario-detail-title">What changes</h2>
+        <Subtitle2 as="h2" id="scenario-detail-title">
+          What changes
+        </Subtitle2>
         <CitedList
           items={scenario.bullets}
           clientId={clientId}

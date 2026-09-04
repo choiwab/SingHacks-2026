@@ -104,8 +104,7 @@ textarea:focus-visible {
   padding: 2.5rem 1rem 5rem;
 }
 
-.eyebrow,
-.scenario-label {
+.eyebrow {
   margin: 0 0 0.5rem;
   color: var(--muted);
   font-size: 0.72rem;
@@ -164,24 +163,18 @@ h2 {
   color: var(--ink);
 }
 
-.client-heading,
-.scenario-heading {
+.client-heading {
   display: grid;
   padding: 2rem 0;
   border-bottom: 2px solid var(--ink);
   gap: 1.5rem;
 }
 
-.client-heading h1,
-.scenario-heading h1 {
+.client-heading h1 {
   max-width: 22ch;
   margin: 0;
   font-size: clamp(2.1rem, 6cqw, 3.2rem);
   line-height: 1.05;
-}
-
-.scenario-heading h1 {
-  font-size: clamp(2.5rem, 9vw, 4.4rem);
 }
 
 /* The lower dashboard tabs sit directly under the client header (PRD 5.6). */
@@ -272,40 +265,17 @@ h2 {
   border: 0;
 }
 
-.scenario-result {
-  display: grid;
-  min-height: 24rem;
-  align-items: center;
-  padding: 3rem 0;
-  border-bottom: 2px solid var(--ink);
-  gap: 3rem;
-}
-
-.range-value {
-  max-width: 16ch;
-  margin: 0;
-  font-family: var(--serif);
-  font-size: clamp(2.75rem, 11vw, 5.2rem);
-  letter-spacing: -0.05em;
-  line-height: 0.95;
-}
-
-.range-percent {
-  margin: 1rem 0 0.25rem;
-  color: var(--muted);
-}
-
 .range-axis {
   position: relative;
   height: 7rem;
-  border-top: 1px solid var(--rule);
-  border-bottom: 1px solid var(--rule);
+  border-top: 1px solid var(--colorNeutralStroke2);
+  border-bottom: 1px solid var(--colorNeutralStroke2);
 }
 
 .range-axis > span {
   position: absolute;
   bottom: -1.8rem;
-  color: var(--muted);
+  color: var(--colorNeutralForeground3);
   font-size: 0.72rem;
 }
 
@@ -328,14 +298,14 @@ h2 {
   bottom: 0;
   left: 50%;
   width: 1px;
-  background: var(--ink);
+  background: var(--colorNeutralForeground3);
 }
 
 .range-line {
   position: absolute;
   top: 50%;
   height: 1rem;
-  background: var(--signal);
+  background: var(--colorBrandBackground);
   transform: translateY(-50%);
 }
 
@@ -345,9 +315,9 @@ h2 {
   top: 50%;
   width: 1.15rem;
   height: 1.15rem;
-  border: 0.2rem solid var(--canvas);
+  border: 0.2rem solid var(--colorNeutralBackground1);
   border-radius: 50%;
-  background: var(--signal);
+  background: var(--colorBrandBackground);
   content: "";
   transform: translateY(-50%);
 }
@@ -358,19 +328,6 @@ h2 {
 
 .range-line::after {
   right: -0.55rem;
-}
-
-.range-visual > p {
-  margin: 2.2rem 0 0;
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.scenario-detail {
-  padding: 2.5rem 0;
 }
 
 .toast {
@@ -408,14 +365,9 @@ h2 {
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
-  .client-heading,
-  .scenario-heading {
+  .client-heading {
     align-items: end;
     grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .scenario-result {
-    grid-template-columns: minmax(19rem, 0.85fr) minmax(0, 1.15fr);
   }
 }
 

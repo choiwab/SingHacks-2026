@@ -2164,9 +2164,9 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   ).toBeVisible();
 
   await page.goto("/clients/CL-0019/scenario");
-  await expect(page.locator("#main .scenario-heading .eyebrow")).toHaveText(
-    "Abdullah Al-Mansoori",
-  );
+  await expect(
+    page.getByRole("main").getByText("Abdullah Al-Mansoori", { exact: true }),
+  ).toHaveText("Abdullah Al-Mansoori");
   await page.getByRole("button", { name: "Strait escalates" }).click();
   await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
   await page.getByRole("button", { name: "Strait reopens" }).click();
