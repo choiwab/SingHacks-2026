@@ -44,13 +44,13 @@ digraph RMIntelligenceNodeFlow {
   ];
 
   intelligence [
-    label="2  Wealth Intelligence Agent — Member 3\nuse Member 2's deterministic calculators\nfind discrepancies • rank insights\noutput: FactBundle + EvidenceMap + RankedInsights",
+    label="2  Wealth Intelligence Agent — Member 3\nrun deterministic calculators\nfind discrepancies • rank insights\noutput: FactBundle + EvidenceMap + RankedInsights",
     fillcolor="#F3E8FF",
     color="#8764B8"
   ];
 
   briefing [
-    label="3  RM Briefing Agent — Member 3\nconnect facts to cited client memory\ncreate summary • talking points • questions\noutput: MeetingBrief",
+    label="3  RM Briefing Agent — Member 4\nconnect facts to cited client memory\ncreate summary • talking points • questions\noutput: MeetingBrief",
     fillcolor="#F3E8FF",
     color="#8764B8"
   ];
