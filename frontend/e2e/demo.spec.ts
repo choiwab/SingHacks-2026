@@ -1,6 +1,56 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory distinguishes missing beliefs from search misses at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.route("**/api/monday-brief", async (route) => {
+      const response = await route.fetch();
+      const projection = await response.json();
+      projection.pre_reads["CL-0003"].beliefs = [];
+      await route.fulfill({ response, json: projection });
+    });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const beliefs = page.getByRole("region", { name: "Extracted beliefs" });
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    await expect(beliefs).toContainText("No extracted beliefs available.");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await search.fill("unmatchedword");
+    await expect(beliefs).toContainText("No extracted beliefs available.");
+    await expect(notes).toContainText(
+      "No note mentions unmatchedword. Try another word.",
+    );
+    await expect(search).toBeFocused();
+    await searchRegion
+      .getByRole("button", { name: "clear", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Alistair Pemberton-Hale/ })
+      .click();
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    await expect(beliefs.getByRole("article")).toHaveCount(1);
+    await search.fill("unmatchedword");
+    await expect(beliefs).toContainText(
+      "No recorded belief mentions unmatchedword.",
+    );
+    await expect(beliefs).not.toContainText("No extracted beliefs available.");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`Memory search survives tab changes and stays client scoped at ${width}px`, async ({
     page,
   }) => {

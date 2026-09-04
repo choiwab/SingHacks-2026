@@ -1277,7 +1277,9 @@ export function MemoryPanel({
         <Subtitle2 as="h3">What the client told us</Subtitle2>
         {matchedBeliefs.length === 0 ? (
           <Body1 className={styles.empty}>
-            No recorded belief mentions {terms.join(" or ")}.
+            {preRead.beliefs.length === 0
+              ? "No extracted beliefs available."
+              : `No recorded belief mentions ${terms.join(" or ")}.`}
           </Body1>
         ) : (
           <div className={styles.cards}>
