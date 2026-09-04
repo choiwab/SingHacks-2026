@@ -21,3 +21,18 @@ def test_missing_fx_warns_and_discloses_unavailable_legacy_facts_without_blockin
     report = store.load_data_quality_report()
     assert not report.has_errors
     assert any(finding.code == "MISSING_FX_PATH" for finding in report.findings)
+
+
+def test_adapter_keeps_source_and_converted_currencies_distinct(tmp_path):
+    run_pipeline(curated_dir=tmp_path)
+    facts = {
+        fact.id.rsplit(":", 1)[-1]: fact
+        for fact in ArtifactStore(tmp_path).load_fact_bundle("CL-0006").facts
+        if ":deadline:" in fact.id
+    }
+    assert facts["amount"].currency == "USD"
+    assert facts["amount_in_portfolio_currency"].currency == "SGD"
+    assert facts["daily_liquid"].currency == "SGD"
+    assert facts["days"].currency is None
+    assert facts["coverage_pct"].currency is None
+    assert facts["amount"].unit == "currency"

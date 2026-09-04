@@ -20,7 +20,7 @@
         "instrument": "Global Luxury and Consumer Brands Fund"
       },
       "kind": "change-1.delta",
-      "unit": "number",
+      "unit": "currency",
       "value": -532400.0
     },
     {
@@ -41,7 +41,7 @@
         "instrument": "US Technology Leaders Fund"
       },
       "kind": "change-2.delta",
-      "unit": "number",
+      "unit": "currency",
       "value": 400588.61
     },
     {
@@ -62,14 +62,14 @@
         "instrument": "EUR Investment Grade Bond Fund"
       },
       "kind": "change-3.delta",
-      "unit": "number",
+      "unit": "currency",
       "value": -138000.0
     },
     {
       "as_of": "2026-08-26",
       "client_id": "CL-0003",
       "confidence": 1.0,
-      "currency": null,
+      "currency": "EUR",
       "evidence_ids": [
         "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
       ],
@@ -80,7 +80,7 @@
         "weight_pct": 26.1
       },
       "kind": "concentration.value",
-      "unit": "number",
+      "unit": "currency",
       "value": 5293200.0
     },
     {
@@ -122,7 +122,7 @@
         "portfolio_currency": "EUR"
       },
       "kind": "deadline.amount",
-      "unit": "number",
+      "unit": "currency",
       "value": 3400000.0
     },
     {
@@ -146,14 +146,14 @@
         "portfolio_currency": "EUR"
       },
       "kind": "deadline.amount_in_portfolio_currency",
-      "unit": "number",
+      "unit": "currency",
       "value": 3400000.0
     },
     {
       "as_of": "2026-08-26",
       "client_id": "CL-0003",
       "confidence": 1.0,
-      "currency": "EUR",
+      "currency": null,
       "evidence_ids": [
         "planned_cash_needs:CN-004"
       ],
@@ -194,14 +194,14 @@
         "portfolio_currency": "EUR"
       },
       "kind": "deadline.daily_liquid",
-      "unit": "number",
+      "unit": "currency",
       "value": 17934556.47
     },
     {
       "as_of": "2026-08-26",
       "client_id": "CL-0003",
       "confidence": 1.0,
-      "currency": "EUR",
+      "currency": null,
       "evidence_ids": [
         "planned_cash_needs:CN-004"
       ],
@@ -303,7 +303,7 @@
       "as_of": "2026-08-26",
       "client_id": "CL-0003",
       "confidence": 1.0,
-      "currency": "EUR",
+      "currency": null,
       "evidence_ids": [
         "clients:CL-0003"
       ],

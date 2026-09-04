@@ -57,6 +57,9 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
         computed.update(client_facts)
     bundles = {}
     for client_id, legacy_facts in computed.items():
+        holdings = sources.clients[client_id]["holdings"]
+        current = holdings[holdings["snapshot_date"] == sources.as_of.isoformat()]
+        portfolio_currency = str(current.iloc[0]["portfolio_ccy"]) if not current.empty else None
         facts = []
         for legacy in legacy_facts:
             kind = legacy["id"].rsplit(":", 1)[-1]
@@ -64,6 +67,20 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
             for field, value in numbers.items():
                 if isinstance(value, bool) or not isinstance(value, Real):
                     continue
+                monetary = field in {
+                    "amount",
+                    "amount_in_portfolio_currency",
+                    "daily_liquid",
+                    "delta",
+                    "value",
+                }
+                currency = None
+                if monetary:
+                    currency = (
+                        numbers.get("portfolio_currency") or portfolio_currency
+                        if field in {"amount_in_portfolio_currency", "daily_liquid", "value"}
+                        else numbers.get("currency")
+                    )
                 facts.append(
                     Fact(
                         id=f"{legacy['id']}:{field}",
@@ -74,8 +91,10 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
                         if field.endswith("_pct")
                         else "days"
                         if field == "days"
+                        else "currency"
+                        if monetary
                         else "number",
-                        currency=numbers.get("currency") or numbers.get("portfolio_currency"),
+                        currency=currency,
                         formula_id=f"legacy.{kind}.{field}",
                         inputs=numbers,
                         evidence_ids=sorted(set(legacy["source_rows"] + legacy["event_ids"])),
