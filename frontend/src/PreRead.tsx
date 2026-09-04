@@ -463,11 +463,16 @@ export function PreRead({
       >
         <div className="review-copy">
           <strong>RM checkpoint</strong>
-          <span>Only this decision is logged.</span>
+          <span id="review-guidance">
+            {editing
+              ? "Save or cancel your edit before approving or rejecting."
+              : "Only this decision is logged."}
+          </span>
         </div>
         <div className="review-actions">
           <Button
-            disabledFocusable={pending !== null}
+            disabledFocusable={editing || pending !== null}
+            aria-describedby={editing ? "review-guidance" : undefined}
             icon={pending === "Reject" ? <Spinner size="tiny" /> : undefined}
             onClick={() => void persistReview("Reject")}
           >
@@ -484,7 +489,8 @@ export function PreRead({
           <Button
             appearance="primary"
             className="approve-button"
-            disabledFocusable={pending !== null}
+            disabledFocusable={editing || pending !== null}
+            aria-describedby={editing ? "review-guidance" : undefined}
             icon={pending === "Approve" ? <Spinner size="tiny" /> : undefined}
             onClick={() => void persistReview("Approve")}
           >

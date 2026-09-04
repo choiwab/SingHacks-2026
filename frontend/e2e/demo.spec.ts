@@ -1,6 +1,91 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`review decisions require saving or cancelling the opening edit at ${width}px`, async ({
+    page,
+  }) => {
+    const submitted: { action: string; text: string }[] = [];
+    let failSave = true;
+    await page.route("**/api/reviews", async (route) => {
+      const request = route.request().postDataJSON();
+      submitted.push(request);
+      await route.fulfill({
+        status: request.action === "Edit" && failSave ? 503 : 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          request.action === "Edit" && failSave
+            ? { detail: "Ledger unavailable" }
+            : {
+                review: {
+                  ...request,
+                  review_id: "edit-before-review",
+                  rm: "Priscilla Ong",
+                  timestamp: "2026-09-05T09:00:00+00:00",
+                },
+              },
+        ),
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    const approve = page.getByRole("button", { name: "Approve pre-read" });
+    const reject = page.getByRole("button", { name: "Reject", exact: true });
+    const editor = page.getByLabel("Edit the opening line");
+    await edit.click();
+    const original = await editor.inputValue();
+    await editor.fill("Unsaved draft");
+    for (const button of [approve, reject]) {
+      await expect(button).toBeDisabled();
+      await expect(button).toHaveAccessibleDescription(
+        "Save or cancel your edit before approving or rejecting.",
+      );
+      await button.focus();
+      await button.press("Enter");
+      await button.press("Space");
+      await button.evaluate((element: HTMLButtonElement) => element.click());
+    }
+    await expect(editor).toHaveValue("Unsaved draft");
+    await expect(
+      page.getByText("Generated · awaiting RM review"),
+    ).toBeVisible();
+    expect(submitted).toHaveLength(0);
+    await page.getByRole("button", { name: "Cancel edit" }).click();
+    await expect(approve).toBeEnabled();
+    await expect(reject).toBeEnabled();
+    await reject.click();
+    await expect(page.getByText("Rejected by the RM")).toBeVisible();
+    expect(submitted.at(-1)).toMatchObject({
+      action: "Reject",
+      text: original,
+    });
+
+    await edit.click();
+    await editor.fill("Saved wording for approval");
+    await page.getByRole("button", { name: "Save edit" }).click();
+    await expect(page.getByRole("alert")).toContainText("Ledger unavailable");
+    await expect(approve).toBeDisabled();
+    await expect(reject).toBeDisabled();
+    await expect(editor).toHaveValue("Saved wording for approval");
+    failSave = false;
+    await page.getByRole("button", { name: "Save edit" }).click();
+    await expect(editor).toHaveCount(0);
+    await expect(approve).toBeEnabled();
+    await expect(reject).toBeEnabled();
+    await approve.click();
+    await expect(page.getByText("Approved by the RM")).toBeVisible();
+    expect(submitted.at(-1)).toMatchObject({
+      action: "Approve",
+      text: "Saved wording for approval",
+    });
+    expect(submitted.map((request) => request.action)).toEqual([
+      "Reject",
+      "Edit",
+      "Edit",
+      "Approve",
+    ]);
+  });
+
   test(`pending opening saves protect wording and recover at ${width}px`, async ({
     page,
   }) => {
