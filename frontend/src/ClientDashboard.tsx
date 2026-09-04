@@ -1314,8 +1314,11 @@ export function MemoryPanel({
           onChange={(_, data) => onQueryChange(data.value)}
         />
         <Caption1 role="status">
+          {terms.length === 0 &&
+            query.trim() &&
+            "Add a topic such as risk, tax, or cash to search. "}
           {terms.length === 0
-            ? `Searching ${plural(notes.length, "note")} and ${plural(preRead.beliefs.length, "extracted belief")} for this client.`
+            ? `${query.trim() ? "Showing all" : "Searching"} ${plural(notes.length, "note")} and ${plural(preRead.beliefs.length, "extracted belief")} for this client.`
             : `${matchedNotes.length} of ${plural(notes.length, "note")} and ${matchedBeliefs.length} of ${plural(preRead.beliefs.length, "belief")} mention ${terms.join(" or ")}.`}
         </Caption1>
       </section>

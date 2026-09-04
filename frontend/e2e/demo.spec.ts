@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory explains searches without topic words at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const status = searchRegion.getByRole("status");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    const guidance = "Add a topic such as risk, tax, or cash to search.";
+    for (const query of ["What did she say?", "?!", "a"]) {
+      await search.fill(query);
+      await expect(search).toBeFocused();
+      await expect(status).toContainText(guidance);
+      await expect(status).toContainText(
+        "Showing all 2 notes and 1 extracted belief",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+      await expect(notes.locator("mark")).toHaveCount(0);
+      expect(
+        await searchRegion.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+    }
+    await search.fill("What did she say about risk?");
+    await expect(status).not.toContainText(guidance);
+    await expect(status).toContainText("1 of 2 notes");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(1);
+    await expect(notes.locator("mark")).toHaveCount(2);
+    await search.fill("What did she say?");
+    await expect(status).toContainText(guidance);
+    await searchRegion
+      .getByRole("button", { name: "clear", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await expect(status).not.toContainText(guidance);
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await search.fill("   ");
+    await expect(status).not.toContainText(guidance);
+  });
+
   test(`Memory highlights matching note channels at ${width}px`, async ({
     page,
   }) => {
