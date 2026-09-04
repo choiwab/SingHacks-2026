@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`calendar reveals the selected meeting without moving page focus at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0019/pre-read");
+    const calendar = page.getByRole("navigation", {
+      name: "This week's meetings",
+    });
+    const selected = calendar.locator('button[aria-current="true"]');
+    const main = page.getByRole("main");
+    const assertMeetingVisible = async (name: string) => {
+      await expect(selected).toContainText(name);
+      await expect(selected).toBeInViewport({ ratio: 1 });
+      await expect
+        .poll(() => main.evaluate((element) => element.scrollTop))
+        .toBe(0);
+    };
+    await assertMeetingVisible("Abdullah Al-Mansoori");
+    await expect(page.locator("body")).toBeFocused();
+
+    for (const name of [
+      "Lau Chi Ming",
+      "Margarethe Voss-Brenner",
+      "Abdullah Al-Mansoori",
+    ]) {
+      await page
+        .getByRole("navigation", { name: "Client switcher" })
+        .getByRole("button", { name: new RegExp(name) })
+        .click();
+      await assertMeetingVisible(name);
+      await expect(main).toBeFocused();
+    }
+    await page.goBack();
+    await assertMeetingVisible("Margarethe Voss-Brenner");
+    await expect(main).toBeFocused();
+    await page.goForward();
+    await assertMeetingVisible("Abdullah Al-Mansoori");
+    await expect(main).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`source trail identifies its client without a generated claim at ${width}px`, async ({
     page,
   }) => {

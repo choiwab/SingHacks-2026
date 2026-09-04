@@ -19,6 +19,7 @@ import type {
   RankedClient,
 } from "./contracts";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useRef } from "react";
 
 import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
@@ -554,6 +555,23 @@ export function CompactCalendar({
 }) {
   const styles = useStyles();
   const navigate = useNavigate();
+  const selectedMeeting = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const button = selectedMeeting.current;
+    const strip = button?.closest("ul");
+    if (!button || !strip) return;
+    const meetingBounds = button.getBoundingClientRect();
+    const stripBounds = strip.getBoundingClientRect();
+    // Reveal the meeting horizontally without scrolling the dashboard or
+    // moving focus away from the navigation destination.
+    if (meetingBounds.left < stripBounds.left) {
+      strip.scrollLeft += meetingBounds.left - stripBounds.left;
+    } else if (meetingBounds.right > stripBounds.right) {
+      strip.scrollLeft += meetingBounds.right - stripBounds.right;
+    }
+  }, [selectedClient]);
+
   const meetings = projection.ranking
     .filter((client) => client.meeting)
     .sort((a, b) => {
@@ -585,6 +603,7 @@ export function CompactCalendar({
             <li key={client.client_id}>
               <button
                 type="button"
+                ref={selected ? selectedMeeting : undefined}
                 aria-current={selected ? "true" : undefined}
                 className={`${styles.meeting} ${selected ? styles.meetingSelected : ""}`}
                 onClick={() => {
