@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from app.client_flow.state import ClientFlowState
 from app.client_flow.tools.projection import build_client_artifacts
-from app.monday_brief import ProjectionBuildError
+from app.wealth_intelligence import ProjectionBuildError
 
 
 def wealth_intelligence_agent(state: ClientFlowState) -> dict[str, Any]:

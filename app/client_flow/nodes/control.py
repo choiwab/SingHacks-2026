@@ -8,7 +8,7 @@ from langgraph.types import Command, interrupt
 from pydantic import ValidationError
 
 from app.client_flow.state import ClientFlowState, FlowStatus
-from app.monday_brief.models import ReviewRequest
+from app.wealth_intelligence.models import ReviewRequest
 
 
 def human_review(

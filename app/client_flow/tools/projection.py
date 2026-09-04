@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 from app.client_flow.tools.evidence import collect_citations
-from app.monday_brief import build_monday_brief
+from app.wealth_intelligence import build_monday_brief
 
 
 class ClientArtifacts(TypedDict):
