@@ -1293,6 +1293,7 @@ export function MemoryPanel({
                   <WhyButton
                     citations={belief.citations}
                     clientId={preRead.client_id}
+                    claim={`${preRead.name} · Extracted belief: “${belief.text}”`}
                   />
                 </div>
               </article>
