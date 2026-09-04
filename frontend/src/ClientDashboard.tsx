@@ -1239,7 +1239,7 @@ function queryTerms(query: string): string[] {
           .replace(/(\p{N})\s+%/gu, "$1%")
           // Keep ISO dates and financial amounts intact.
           .match(
-            /\d{4}-\d{2}-\d{2}|\p{N}{1,3}(?:,\p{N}{3})+(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
+            /\d{4}-\d{2}-\d{2}|[+−-]?(?:\p{N}{1,3}(?:,\p{N}{3})+|\p{N}+)(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
           ) ?? []
       )
         .filter(
@@ -1248,7 +1248,9 @@ function queryTerms(query: string): string[] {
             // Preserve the region abbreviation, but still ignore conversational "us".
             (word === "US" || !STOPWORDS.has(word.toLowerCase())),
         )
-        .map((word) => word.toLowerCase().replaceAll(",", "")),
+        .map((word) =>
+          word.toLowerCase().replaceAll(",", "").replaceAll("−", "-"),
+        ),
     ),
   ];
 }
@@ -1261,15 +1263,17 @@ function matchScore(text: string, terms: string[]): number {
 
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
-  const literal = term.replaceAll(".", "\\.");
+  const literal = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (/^\d{4}-\d{2}-\d{2}$/.test(term))
     return `(?<![\\p{L}\\p{N}-])${literal}(?![\\p{L}\\p{N}-])`;
-  if (/^\p{N}/u.test(term)) {
-    const grouped = literal.replace(/^\p{N}+/u, (integer) =>
+  if (/^[+-]?\p{N}/u.test(term)) {
+    const grouped = literal.replace(/\p{N}+/u, (integer) =>
       integer.replace(/\B(?=(?:\p{N}{3})+$)/gu, ","),
     );
-    const amount = grouped === literal ? literal : `(?:${literal}|${grouped})`;
-    return `(?<![\\p{L}\\p{N}.]|\\p{N}[,-])${amount}(?![\\p{L}\\p{N}]|[.,-]\\p{N})`;
+    const amount = (
+      grouped === literal ? literal : `(?:${literal}|${grouped})`
+    ).replaceAll("-", "[-−]");
+    return `(?<![\\p{L}\\p{N}.+−-]|\\p{N},)${amount}(?![\\p{L}\\p{N}]|[.,-]\\p{N})`;
   }
   return term.length === 2
     ? `(?<![\\p{L}\\p{N}])${literal}(?![\\p{L}\\p{N}])`

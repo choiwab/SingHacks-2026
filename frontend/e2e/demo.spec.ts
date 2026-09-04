@@ -1711,6 +1711,9 @@ for (const width of [1280, 390]) {
     const notes = page.getByRole("region", { name: "RM notes", exact: true });
     for (const query of [
       "9%",
+      "-5%",
+      "−5%",
+      "+5%",
       "0",
       "15",
       "5.5",
@@ -1765,6 +1768,75 @@ for (const width of [1280, 390]) {
     await expect(searchRegion.getByRole("status")).toHaveText(
       "Searching 1 note and 1 extracted belief for this client.",
     );
+    await expect(notes.locator("mark")).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+  test(`Memory preserves signed amounts at ${width}px`, async ({ page }) => {
+    const wording =
+      "Recorded -5% performance, +3.4m inflows, and −12,500.50 in fees.";
+    await page.route("**/api/monday-brief", async (route) => {
+      const response = await route.fetch();
+      const projection = await response.json();
+      projection.evidence["rm_notes:N-024"].record.note = wording;
+      await route.fulfill({ response, json: projection });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0018/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of [
+      "5%",
+      "+5%",
+      "-3.4m",
+      "3.4m",
+      "12,500.50",
+      "+12,500.50",
+      "-500.50",
+    ]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "0 of 1 note and 0 of 1 belief mention",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+      await expect(notes.locator("mark")).toHaveCount(0);
+    }
+    for (const [query, highlight] of [
+      ["-5%", "-5%"],
+      ["−5 %", "-5%"],
+      ["+3.4M", "+3.4m"],
+      ["-12500.50", "−12,500.50"],
+      ["−12,500.50", "−12,500.50"],
+    ]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 1 note and 0 of 1 belief mention",
+      );
+      await expect(notes.locator("mark")).toHaveText(highlight);
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    const why = notes.getByRole("button", { name: "Why?" });
+    await why.click();
+    await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+      wording,
+    );
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    await search.focus();
+    await searchRegion
+      .getByRole("button", { name: "Clear note search" })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(notes).toContainText(wording);
     await expect(notes.locator("mark")).toHaveCount(0);
     expect(
       await page.evaluate(
