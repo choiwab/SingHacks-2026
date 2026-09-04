@@ -7,9 +7,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from app.monday_brief import MondayBriefProjection, ProjectionBuildError, build_monday_brief
-from app.monday_brief.models import ReviewRequest
-from app.monday_brief.reviews import ReviewLedger
+from app.wealth_intelligence import MondayBriefProjection, ProjectionBuildError, build_monday_brief
+from app.wealth_intelligence.models import ReviewRequest
+from app.wealth_intelligence.reviews import ReviewLedger
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 AS_OF = date(2026, 8, 26)
