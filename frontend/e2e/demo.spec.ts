@@ -763,6 +763,10 @@ for (const width of [1280, 390]) {
           .getByRole("navigation", { name: "Client switcher" })
           .getByRole("button", { name: new RegExp(client) })
           .click();
+        // The persistent rail can still target the previous client mid-navigation.
+        await expect(
+          page.getByRole("heading", { name: client, level: 1, exact: true }),
+        ).toBeVisible();
         await page.getByRole("tab", { name: "Scenario rehearsal" }).click();
       }
       for (const scenario of ["Strait reopens", "Strait escalates"]) {
@@ -1512,6 +1516,14 @@ for (const width of [1280, 390]) {
       .getByRole("navigation", { name: "Client switcher" })
       .getByRole("button", { name: /Alistair Pemberton-Hale/ })
       .click();
+    // Wait for the keyed dashboard to mount before selecting its Memory tab.
+    await expect(
+      page.getByRole("heading", {
+        name: "Alistair Pemberton-Hale",
+        level: 1,
+        exact: true,
+      }),
+    ).toBeVisible();
     await page.getByRole("tab", { name: "Memory", exact: true }).click();
     await expect(beliefs.getByRole("article")).toHaveCount(1);
     await search.fill("unmatchedword");
