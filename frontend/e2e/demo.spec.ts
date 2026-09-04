@@ -1656,6 +1656,7 @@ for (const width of [1280, 390]) {
       "5.5 %",
       "15%",
       "15 %",
+      "5,000",
     ]) {
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toContainText(
@@ -1707,6 +1708,74 @@ for (const width of [1280, 390]) {
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
+    ).toBe(true);
+  });
+
+  test(`Memory matches whole grouped amounts at ${width}px`, async ({
+    page,
+  }) => {
+    const wording =
+      "Requested EUR 5,000 for travel, 12500 for repairs, and 1,250,000.50 for a purchase.";
+    await page.route("**/api/monday-brief", async (route) => {
+      const response = await route.fetch();
+      const projection = await response.json();
+      projection.evidence["rm_notes:N-024"].record.note = wording;
+      await route.fulfill({ response, json: projection });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0018/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of [
+      "5",
+      "000",
+      "250",
+      "1,250",
+      "15,000",
+      "5,001",
+      "1,250,000",
+      "1,250,000.51",
+    ]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "0 of 1 note and 0 of 1 belief mention",
+      );
+      await expect(notes.locator("mark")).toHaveCount(0);
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+    }
+    for (const [query, highlight] of [
+      ["5,000", "5,000"],
+      ["5000", "5,000"],
+      ["12,500", "12500"],
+      ["12500", "12500"],
+      ["1,250,000.50", "1,250,000.50"],
+      ["1250000.50", "1,250,000.50"],
+    ]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 1 note and 0 of 1 belief mention",
+      );
+      await expect(notes.locator("mark")).toHaveText(highlight);
+      await expect(notes).toContainText(wording);
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    const why = notes.getByRole("button", { name: "Why?" });
+    await why.click();
+    await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+      wording,
+    );
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    await expect(notes.locator("mark")).toHaveText("1,250,000.50");
+    expect(
+      await page
+        .getByRole("main")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
     ).toBe(true);
   });
 

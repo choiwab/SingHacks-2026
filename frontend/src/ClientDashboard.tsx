@@ -1237,9 +1237,9 @@ function queryTerms(query: string): string[] {
           )
           // Accept spaces before percent signs without losing the unit.
           .replace(/(\p{N})\s+%/gu, "$1%")
-          // Keep percentages and decimal amounts intact, including their units.
+          // Keep grouped amounts, percentages, and decimals intact with their units.
           .match(
-            /\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
+            /\p{N}{1,3}(?:,\p{N}{3})+(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
           ) ?? []
       )
         .filter(
@@ -1248,7 +1248,7 @@ function queryTerms(query: string): string[] {
             // Preserve the region abbreviation, but still ignore conversational "us".
             (word === "US" || !STOPWORDS.has(word.toLowerCase())),
         )
-        .map((word) => word.toLowerCase()),
+        .map((word) => word.toLowerCase().replaceAll(",", "")),
     ),
   ];
 }
@@ -1263,7 +1263,11 @@ function matchScore(text: string, terms: string[]): number {
 function termPattern(term: string): string {
   const literal = term.replaceAll(".", "\\.");
   if (/^\p{N}/u.test(term)) {
-    return `(?<![\\p{L}\\p{N}.])${literal}(?![\\p{L}\\p{N}]|\\.\\p{N})`;
+    const grouped = literal.replace(/^\p{N}+/u, (integer) =>
+      integer.replace(/\B(?=(?:\p{N}{3})+$)/gu, ","),
+    );
+    const amount = grouped === literal ? literal : `(?:${literal}|${grouped})`;
+    return `(?<![\\p{L}\\p{N}.]|\\p{N},)${amount}(?![\\p{L}\\p{N}]|[.,]\\p{N})`;
   }
   return term.length === 2
     ? `(?<![\\p{L}\\p{N}])${literal}(?![\\p{L}\\p{N}])`
