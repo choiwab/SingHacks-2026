@@ -1,70 +1,34 @@
 """Offline fact-to-narrative pipeline for the Monday Brief demo."""
 
+# Pandas' overloads widen common DataFrame selections into scalar and ndarray unions.
+# pyright: reportAttributeAccessIssue=false, reportArgumentType=false, reportCallIssue=false
+
 from __future__ import annotations
 
 import json
 import re
 from datetime import date
-from pathlib import Path
+from hashlib import sha256
 from typing import Any
 
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
-GENERATED = DATA / "generated"
+from app.monday_brief.policy import POLICY
+
 AS_OF = date(2026, 8, 26)
 SNAPSHOT = "2026-08-26"
 BASELINE = "2025-12-31"
 
 TABLE_NAMES = (
     "clients",
-    "commitments",
     "credit_facilities",
     "event_log",
     "holdings",
-    "instruments",
     "mandates",
     "market_context",
     "planned_cash_needs",
     "portfolios",
 )
-
-MEETINGS = {
-    "CL-0003": "Mon 10:30",
-    "CL-0014": "Tue 14:00",
-    "CL-0019": "Thu 09:00",
-}
-
-KNOWN_BELIEFS = {
-    "CL-0003": {
-        "text": "I have never taken a risk with money.",
-        "note_id": "N-005",
-    },
-    "CL-0014": {
-        "text": "The Hong Kong property market turns this year.",
-        "note_id": "N-018",
-    },
-    "CL-0019": {
-        "text": "The Asia portfolio should be uncorrelated with the Gulf business.",
-        "note_id": "N-025",
-    },
-}
-
-OPENINGS = {
-    "CL-0003": (
-        "Sie wünschen ein sicheres, ruhiges Portfolio. "
-        "Heute sind jedoch 71,5 % in Aktien investiert. Darf ich Ihnen die Lücke zeigen?"
-    ),
-    "CL-0014": (
-        "劉先生，您希望保留物業復甦的上升空間，也要確保重建資金。"
-        "我們可以先看看信貸額度在不同情境下還有多少緩衝嗎？"
-    ),
-    "CL-0019": (
-        "You asked for the Asia portfolio to diversify the Gulf business. "
-        "May I show where shipping conditions now drive both?"
-    ),
-}
 
 STOP_WORDS = {
     "and",
@@ -77,12 +41,6 @@ STOP_WORDS = {
     "the",
     "with",
 }
-
-
-def load_sources() -> tuple[dict[str, pd.DataFrame], list[dict[str, Any]]]:
-    tables = {name: pd.read_csv(DATA / f"{name}.csv") for name in TABLE_NAMES}
-    notes = json.loads((DATA / "rm_notes.json").read_text(encoding="utf-8"))
-    return tables, notes
 
 
 def _native(value: Any) -> Any:
@@ -105,12 +63,30 @@ def _evidence_id(table: str, row: pd.Series) -> str:
     if table == "holdings":
         key = f"{row['snapshot_date']}:{row['portfolio_id']}:{row['instrument_id']}"
     elif table == "event_log":
-        key = f"{row['event_date']}:{row.name}"
+        canonical = json.dumps(
+            _record(
+                row,
+                (
+                    "event_date",
+                    "event_type",
+                    "region",
+                    "description",
+                    "primary_transmission",
+                    "severity",
+                ),
+            ),
+            sort_keys=True,
+            default=str,
+        )
+        key = f"{row['event_date']}:{sha256(canonical.encode()).hexdigest()[:16]}"
     elif table == "market_context":
-        key = f"{row['snapshot_date']}:{row['series_code']}"
+        key = f"{row['snapshot_date']}:{row['series_id']}"
+    elif table == "mandates":
+        key = f"{row['mandate_code']}:{_slug(str(row['asset_class']))}"
     else:
         id_field = next((field for field in row.index if field.endswith("_id")), None)
-        key = str(row[id_field]) if id_field else str(row.name)
+        canonical = json.dumps(_record(row, tuple(sorted(row.index))), sort_keys=True, default=str)
+        key = str(row[id_field]) if id_field else sha256(canonical.encode()).hexdigest()[:16]
     return f"{table}:{key}"
 
 
@@ -260,10 +236,11 @@ def _change_facts(
     holdings: pd.DataFrame,
     events: pd.DataFrame,
     evidence: dict[str, dict[str, Any]],
+    as_of: date = AS_OF,
 ) -> list[dict[str, Any]]:
     client_id = str(client["client_id"])
     baseline = holdings[holdings["snapshot_date"] == BASELINE]
-    current = holdings[holdings["snapshot_date"] == SNAPSHOT]
+    current = holdings[holdings["snapshot_date"] == as_of.isoformat()]
     base_values = baseline.groupby("instrument_id")["market_value_base"].sum()
     current_values = current.groupby("instrument_id")["market_value_base"].sum()
     deltas = current_values.sub(base_values, fill_value=0).sort_values(key=abs, ascending=False)
@@ -313,6 +290,7 @@ def _deadline_fact(
     current: pd.DataFrame,
     tables: dict[str, pd.DataFrame],
     evidence: dict[str, dict[str, Any]],
+    as_of: date = AS_OF,
 ) -> dict[str, Any]:
     client_id = str(client["client_id"])
     needs = tables["planned_cash_needs"].query("client_id == @client_id")
@@ -322,13 +300,22 @@ def _deadline_fact(
             client_id,
             "deadline",
             f"KYC review is due {due.strftime('%d %b %Y')}.",
-            {"days": max((due - AS_OF).days, 0), "amount": 0, "currency": None},
+            {"days": max((due - as_of).days, 0), "amount": 0, "currency": None},
             [],
         )
     need = needs.sort_values("due_from").iloc[0]
     due = date.fromisoformat(str(need["due_from"]))
     daily = current[current["liquidity_tier"] == "Daily"]["market_value_base"].sum()
     amount = float(need["amount"])
+    portfolio_currency = str(current["portfolio_ccy"].iloc[0])
+    amount_in_portfolio_currency, fx_evidence = _convert_currency(
+        amount,
+        str(need["currency"]),
+        portfolio_currency,
+        tables["market_context"],
+        as_of,
+        evidence,
+    )
     evidence_id = _add_evidence(
         evidence,
         "planned_cash_needs",
@@ -339,17 +326,76 @@ def _deadline_fact(
     return _fact(
         client_id,
         "deadline",
-        f"{need['description']} starts in {max((due - AS_OF).days, 0)} days.",
+        f"{need['description']} starts in {max((due - as_of).days, 0)} days.",
         {
-            "days": max((due - AS_OF).days, 0),
+            "days": max((due - as_of).days, 0),
             "amount": amount,
             "currency": need["currency"],
             "daily_liquid": round(float(daily), 2),
-            "coverage_pct": round(min(daily / amount * 100, 999), 1) if amount else 999,
+            "amount_in_portfolio_currency": round(amount_in_portfolio_currency, 2),
+            "portfolio_currency": portfolio_currency,
+            "coverage_pct": (
+                round(min(daily / amount_in_portfolio_currency * 100, 999), 1)
+                if amount_in_portfolio_currency
+                else 999
+            ),
             "description": need["description"],
         },
-        [evidence_id],
+        [evidence_id, *fx_evidence],
     )
+
+
+def _convert_currency(
+    amount: float,
+    source_currency: str,
+    target_currency: str,
+    market_context: pd.DataFrame,
+    as_of: date,
+    evidence: dict[str, dict[str, Any]],
+) -> tuple[float, list[str]]:
+    """Convert through USD using validated as-of quotes."""
+    if source_currency == target_currency:
+        return amount, []
+    quote_rows = market_context[
+        (market_context["snapshot_date"] == as_of.isoformat())
+        & (market_context["category"] == "FX")
+    ]
+    quotes = quote_rows.set_index("series_id")["value"]
+    citations: list[str] = []
+
+    def quote(code: str) -> float:
+        row = quote_rows[quote_rows["series_id"] == code].iloc[0]
+        citations.append(
+            _add_evidence(
+                evidence,
+                "market_context",
+                row,
+                f"{code} exchange rate at {as_of.isoformat()}",
+                ("snapshot_date", "series_id", "series_name", "unit", "value"),
+            )
+        )
+        return float(quotes[code])
+
+    def to_usd(value: float, currency: str) -> float:
+        if currency == "USD":
+            return value
+        direct = f"{currency}USD"
+        inverse = f"USD{currency}"
+        if direct in quotes:
+            return value * quote(direct)
+        return value / quote(inverse)
+
+    def from_usd(value: float, currency: str) -> float:
+        if currency == "USD":
+            return value
+        direct = f"USD{currency}"
+        inverse = f"{currency}USD"
+        if direct in quotes:
+            return value * quote(direct)
+        return value / quote(inverse)
+
+    converted = from_usd(to_usd(amount, source_currency), target_currency)
+    return converted, list(dict.fromkeys(citations))
 
 
 def _facility_fact(
@@ -436,8 +482,9 @@ def _theme_fact(
     )
 
 
-def fact_engine(
+def _fact_engine(
     tables: dict[str, pd.DataFrame],
+    as_of: date = AS_OF,
 ) -> tuple[dict[str, list[dict[str, Any]]], dict[str, dict[str, Any]]]:
     evidence: dict[str, dict[str, Any]] = {}
     all_facts: dict[str, list[dict[str, Any]]] = {}
@@ -445,7 +492,7 @@ def fact_engine(
     for _, client in tables["clients"].iterrows():
         client_id = str(client["client_id"])
         client_holdings = holdings[holdings["client_id"] == client_id]
-        current = client_holdings[client_holdings["snapshot_date"] == SNAPSHOT]
+        current = client_holdings[client_holdings["snapshot_date"] == as_of.isoformat()]
         profile_id = _add_evidence(
             evidence,
             "clients",
@@ -480,9 +527,9 @@ def fact_engine(
             [profile_id],
         )
         facts = [profile]
-        facts.extend(_change_facts(client, client_holdings, tables["event_log"], evidence))
+        facts.extend(_change_facts(client, client_holdings, tables["event_log"], evidence, as_of))
         facts.append(_mandate_fact(client, current, tables, evidence))
-        facts.append(_deadline_fact(client, current, tables, evidence))
+        facts.append(_deadline_fact(client, current, tables, evidence, as_of))
         facility = _facility_fact(client_id, tables, evidence)
         if facility:
             facts.append(facility)
@@ -491,7 +538,7 @@ def fact_engine(
     return all_facts, evidence
 
 
-def belief_extractor(
+def _belief_extractor(
     notes: list[dict[str, Any]],
     evidence: dict[str, dict[str, Any]],
 ) -> dict[str, list[dict[str, Any]]]:
@@ -508,14 +555,14 @@ def belief_extractor(
         by_client.setdefault(note["client_id"], []).append(note)
     beliefs: dict[str, list[dict[str, Any]]] = {}
     for client_id, client_notes in by_client.items():
-        known = KNOWN_BELIEFS.get(client_id)
+        known = POLICY.known_beliefs.get(client_id)
         if known:
             beliefs[client_id] = [
                 {
                     "id": f"{client_id}:belief:1",
-                    "text": known["text"],
-                    "note_id": known["note_id"],
-                    "citations": [f"rm_notes:{known['note_id']}"],
+                    "text": known.text,
+                    "note_id": known.note_id,
+                    "citations": [f"rm_notes:{known.note_id}"],
                 }
             ]
             continue
@@ -540,7 +587,7 @@ def belief_extractor(
     return beliefs
 
 
-def gap_matcher(
+def _gap_matcher(
     facts: dict[str, list[dict[str, Any]]],
     beliefs: dict[str, list[dict[str, Any]]],
 ) -> tuple[dict[str, list[dict[str, Any]]], list[dict[str, Any]]]:
@@ -605,7 +652,13 @@ def gap_matcher(
             + concentration["numbers"]["weight_pct"] / 4
             + vulnerability,
         )
-        score = round((gap_size * closeness * consequence) ** (1 / 3))
+        weighted_score = (
+            gap_size**POLICY.scoring.gap
+            * closeness**POLICY.scoring.deadline
+            * consequence**POLICY.scoring.consequence
+        )
+        total_weight = POLICY.scoring.gap + POLICY.scoring.deadline + POLICY.scoring.consequence
+        score = round(weighted_score ** (1 / total_weight))
         ranking.append(
             {
                 "client_id": client_id,
@@ -616,8 +669,8 @@ def gap_matcher(
                     "deadline": round(closeness),
                     "consequence": round(consequence),
                 },
-                "meeting": MEETINGS.get(client_id),
-                "meeting_source": "Calendar preview" if client_id in MEETINGS else None,
+                "meeting": POLICY.meetings.get(client_id),
+                "meeting_source": "Calendar preview" if client_id in POLICY.meetings else None,
                 "reason": data_text,
                 "urgency": "now" if score >= 65 else "soon" if score >= 45 else "watch",
                 "citations": citations,
@@ -632,7 +685,7 @@ def _money(value: float, currency: str) -> str:
     return f"{sign}{currency} {abs(value) / 1_000_000:.1f}m"
 
 
-def narrator(
+def _narrator(
     facts: dict[str, list[dict[str, Any]]],
     beliefs: dict[str, list[dict[str, Any]]],
     gaps: dict[str, list[dict[str, Any]]],
@@ -666,7 +719,7 @@ def narrator(
             "You set the limits on this portfolio. Today it sits outside them. "
             "May I show you where?"
         )
-        opening = OPENINGS.get(client_id, default_opening)
+        opening = POLICY.openings.get(client_id, default_opening)
         pre_reads[client_id] = {
             "client_id": client_id,
             "name": profile["numbers"]["name"],
@@ -705,31 +758,10 @@ def _theme(row: pd.Series) -> str:
     return "Other assets"
 
 
-SHOCKS = {
-    "reopens": {
-        "Shipping": (-0.18, -0.08),
-        "Energy": (-0.12, -0.05),
-        "Gold": (-0.06, -0.02),
-        "Bonds": (0.01, 0.04),
-        "Structured products": (-0.10, -0.03),
-        "Other assets": (-0.01, 0.03),
-        "Cash": (0.0, 0.0),
-    },
-    "escalates": {
-        "Shipping": (0.06, 0.18),
-        "Energy": (0.06, 0.15),
-        "Gold": (0.04, 0.10),
-        "Bonds": (-0.05, -0.01),
-        "Structured products": (-0.08, 0.05),
-        "Other assets": (-0.08, -0.02),
-        "Cash": (0.0, 0.0),
-    },
-}
-
-
-def scenario_engine(
+def _scenario_engine(
     tables: dict[str, pd.DataFrame],
     evidence: dict[str, dict[str, Any]],
+    as_of: date = AS_OF,
 ) -> dict[str, dict[str, Any]]:
     events = tables["event_log"]
     transmission = events["primary_transmission"]
@@ -745,12 +777,12 @@ def scenario_engine(
         for _, row in related_events.iterrows()
     ]
     scenarios: dict[str, dict[str, Any]] = {}
-    current = tables["holdings"].query("snapshot_date == @SNAPSHOT")
+    current = tables["holdings"][tables["holdings"]["snapshot_date"] == as_of.isoformat()]
     for client_id, rows in current.groupby("client_id"):
         currency = str(rows["portfolio_ccy"].iloc[0])
         total = float(rows["market_value_base"].sum())
         client_scenarios = {}
-        for scenario_name, shocks in SHOCKS.items():
+        for scenario_name, shocks in POLICY.shocks.items():
             grouped: dict[str, dict[str, Any]] = {}
             low_total = high_total = 0.0
             for _, row in rows.iterrows():
@@ -808,7 +840,7 @@ def scenario_engine(
                 "high_pct": round(max(low_total, high_total) / total * 100, 1),
                 "bullets": bullets,
                 "citations": event_ids,
-                "disclaimer": "Precomputed range, not a forecast.",
+                "disclaimer": POLICY.scenario_disclaimer,
             }
         scenarios[str(client_id)] = client_scenarios
     return scenarios
@@ -871,18 +903,22 @@ def _workflow(
     return result
 
 
-def build_app_data() -> dict[str, Any]:
-    tables, notes = load_sources()
-    facts, evidence = fact_engine(tables)
-    beliefs = belief_extractor(notes, evidence)
-    gaps, ranking = gap_matcher(facts, beliefs)
-    pre_reads = narrator(facts, beliefs, gaps)
-    scenarios = scenario_engine(tables, evidence)
+def _build_projection(
+    tables: dict[str, pd.DataFrame],
+    notes: list[dict[str, Any]],
+    as_of: date = AS_OF,
+) -> dict[str, Any]:
+    facts, evidence = _fact_engine(tables, as_of)
+    beliefs = _belief_extractor(notes, evidence)
+    gaps, ranking = _gap_matcher(facts, beliefs)
+    pre_reads = _narrator(facts, beliefs, gaps)
+    scenarios = _scenario_engine(tables, evidence, as_of)
     workflows = _workflow(tables["clients"], notes)
     for client_id, pre_read in pre_reads.items():
         pre_read["workflow"] = workflows[client_id]
     return {
-        "as_of": AS_OF.isoformat(),
+        "schema_version": 1,
+        "as_of": as_of.isoformat(),
         "pipeline": ["Fact engine", "Belief extractor", "Gap matcher", "Narrator", "Review log"],
         "ranking_formula": "gap size × deadline closeness × consequence",
         "ranking": ranking,
@@ -891,18 +927,3 @@ def build_app_data() -> dict[str, Any]:
         "scenarios": scenarios,
         "evidence": evidence,
     }
-
-
-def build_and_save() -> dict[str, Any]:
-    data = build_app_data()
-    GENERATED.mkdir(exist_ok=True)
-    (GENERATED / "app_data.json").write_text(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    return data
-
-
-if __name__ == "__main__":
-    result = build_and_save()
-    print(f"Prepared {len(result['ranking'])} clients in {len(result['pipeline'])} stations.")
