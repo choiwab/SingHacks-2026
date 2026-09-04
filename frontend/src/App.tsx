@@ -37,6 +37,9 @@ function useRoute(projection: MondayBriefProjection) {
   const clientId = pathname.match(/^\/clients\/([^/]+)\//)?.[1];
   const selectedClient =
     clientId && projection.pre_reads[clientId] ? clientId : null;
+  const clientName = selectedClient
+    ? projection.pre_reads[selectedClient].name
+    : null;
 
   useEffect(() => {
     const titles = {
@@ -44,13 +47,18 @@ function useRoute(projection: MondayBriefProjection) {
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
     };
-    document.title = `${titles[route]} | Wealth Intelligence`;
+    document.title = [clientName, titles[route], "Wealth Intelligence"]
+      .filter(Boolean)
+      .join(" | ");
+  }, [clientName, route]);
+
+  useEffect(() => {
     const main = document.getElementById("main");
     main?.scrollTo({ top: 0, behavior: "auto" });
     // Enter the new screen after navigation without stealing focus on load.
     if (previousPath.current !== pathname) main?.focus({ preventScroll: true });
     previousPath.current = pathname;
-  }, [pathname, route]);
+  }, [pathname]);
 
   return { route, selectedClient } as const;
 }

@@ -598,7 +598,7 @@ for (const width of [1280, 390]) {
     }
   });
 
-  test(`client navigation moves keyboard focus into the new screen at ${width}px`, async ({
+  test(`client navigation updates the title and moves keyboard focus at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -606,10 +606,14 @@ for (const width of [1280, 390]) {
     const main = page.getByRole("main");
     await expect(main).toBeVisible();
     await expect(main).not.toBeFocused();
+    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
     const switcher = page.getByRole("navigation", { name: "Client switcher" });
     await switcher.getByRole("button", { name: /Margarethe/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0003\/pre-read$/);
+    await expect(page).toHaveTitle(
+      "Margarethe Voss-Brenner | Pre-read | Wealth Intelligence",
+    );
     await expect(main).toBeFocused();
     await expect(main).toHaveCSS("outline-style", "solid");
     await page.keyboard.press("Tab");
@@ -624,19 +628,43 @@ for (const width of [1280, 390]) {
     await meetings.getByRole("button", { name: /Abdullah/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
+    await expect(page).toHaveTitle(
+      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
+    );
     await expect(main).toBeFocused();
     await expect(main).toHaveJSProperty("scrollTop", 0);
 
     await page.getByRole("tab", { name: "Scenario rehearsal" }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/scenario$/);
+    await expect(page).toHaveTitle(
+      "Abdullah Al-Mansoori | Scenario rehearsal | Wealth Intelligence",
+    );
     await expect(main).toBeFocused();
     await page.goBack();
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
+    await expect(page).toHaveTitle(
+      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
+    );
     await expect(main).toBeFocused();
     await main.getByRole("button", { name: /RM dashboard/ }).press("Enter");
     await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
     await expect(main).toBeFocused();
+    await page.goto("/clients/CL-0003/scenario");
+    await expect(page).toHaveTitle(
+      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+    );
+    await page.reload();
+    await expect(page).toHaveTitle(
+      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+    );
+    await page.goto("/clients/CL-9999/pre-read");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(main.getByRole("status")).toContainText(
+      "CL-9999 was not found",
+    );
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth > innerWidth,
