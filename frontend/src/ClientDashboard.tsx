@@ -1237,9 +1237,9 @@ function queryTerms(query: string): string[] {
           )
           // Accept spaces before percent signs without losing the unit.
           .replace(/(\p{N})\s+%/gu, "$1%")
-          // Keep grouped amounts, percentages, and decimals intact with their units.
+          // Keep ISO dates and financial amounts intact.
           .match(
-            /\p{N}{1,3}(?:,\p{N}{3})+(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
+            /\d{4}-\d{2}-\d{2}|\p{N}{1,3}(?:,\p{N}{3})+(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
           ) ?? []
       )
         .filter(
@@ -1262,12 +1262,14 @@ function matchScore(text: string, terms: string[]): number {
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
   const literal = term.replaceAll(".", "\\.");
+  if (/^\d{4}-\d{2}-\d{2}$/.test(term))
+    return `(?<![\\p{L}\\p{N}-])${literal}(?![\\p{L}\\p{N}-])`;
   if (/^\p{N}/u.test(term)) {
     const grouped = literal.replace(/^\p{N}+/u, (integer) =>
       integer.replace(/\B(?=(?:\p{N}{3})+$)/gu, ","),
     );
     const amount = grouped === literal ? literal : `(?:${literal}|${grouped})`;
-    return `(?<![\\p{L}\\p{N}.]|\\p{N},)${amount}(?![\\p{L}\\p{N}]|[.,]\\p{N})`;
+    return `(?<![\\p{L}\\p{N}.]|\\p{N}[,-])${amount}(?![\\p{L}\\p{N}]|[.,-]\\p{N})`;
   }
   return term.length === 2
     ? `(?<![\\p{L}\\p{N}])${literal}(?![\\p{L}\\p{N}])`
@@ -1334,7 +1336,7 @@ export function MemoryPanel({
       String(a.record.note_date).localeCompare(String(b.record.note_date)),
     );
   const noteText = (note: (typeof notes)[number]) =>
-    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")}`;
+    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")}`;
 
   const matchedNotes = retrieve(notes, terms, noteText);
   const matchedBeliefs = retrieve(
@@ -1406,7 +1408,8 @@ export function MemoryPanel({
           matchedNotes.map((note) => (
             <div className={styles.note} key={note.id}>
               <Caption1>
-                {String(note.record.note_date)} ·{" "}
+                <Highlight text={String(note.record.note_date)} terms={terms} />{" "}
+                ·{" "}
                 <Highlight
                   text={String(note.record.channel ?? "Note")}
                   terms={terms}

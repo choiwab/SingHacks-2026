@@ -1559,6 +1559,68 @@ for (const width of [1280, 390]) {
     ).toBe(false);
   });
 
+  test(`Memory retrieves notes by their complete date at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of [
+      "2026-05-28",
+      "2025-05-29",
+      "2026-02-29",
+      "2026",
+      "29",
+    ]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        `0 of 2 notes and 0 of 1 belief mention ${query}.`,
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+      await expect(notes.locator("mark")).toHaveCount(0);
+    }
+    for (const [date, excerpt, noteId] of [
+      ["2026-02-16", "Risk profiling completed as Conservative.", "N-005"],
+      ["2026-05-29", "EUR 3.4m falls due before year end.", "N-006"],
+    ]) {
+      const query = `What did she say on ${date}?`;
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        `1 of 2 notes and 0 of 1 belief mention ${date}.`,
+      );
+      await expect(notes.locator("mark")).toHaveText(date);
+      await expect(notes).toContainText(excerpt);
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+      const why = notes.getByRole("button", { name: "Why?" });
+      await why.click();
+      const drawer = page.getByRole("dialog", { name: "Why?" });
+      await expect(drawer).toContainText(noteId);
+      await expect(drawer).toContainText(date);
+      await expect(drawer).toContainText(excerpt);
+      await page.keyboard.press("Escape");
+      await expect(why).toBeFocused();
+      await expect(notes.locator("mark")).toHaveText(date);
+    }
+    await search.focus();
+    await searchRegion
+      .getByRole("button", { name: "Clear note search" })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await expect(notes.locator("mark")).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`Memory amount searches preserve decimals at ${width}px`, async ({
     page,
   }) => {
