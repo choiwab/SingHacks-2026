@@ -1,6 +1,63 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`discrepancy evidence retains both sides of the comparison at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    for (const client of [
+      {
+        name: "Margarethe Voss-Brenner",
+        belief: "I have never taken a risk with money.",
+        data: "Equity is 71.5% against a 30% limit.",
+        note: "rm_notes:N-005",
+        fact: "CL-0003:fact:mandate-gap",
+      },
+      {
+        name: "Abdullah Al-Mansoori",
+        belief:
+          "The Asia portfolio should be uncorrelated with the Gulf business.",
+        data: "Shipping and energy-linked positions are 42.1% of the portfolio.",
+        note: "rm_notes:N-025",
+        fact: "CL-0019:fact:concentration",
+      },
+    ]) {
+      await page
+        .getByRole("navigation", { name: "Client switcher" })
+        .getByRole("button", { name: new RegExp(client.name) })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: client.name, exact: true }),
+      ).toBeVisible();
+      const comparison = page.getByRole("region", {
+        name: "You said / Data says",
+      });
+      const why = comparison.getByRole("button", { name: "Why?", exact: true });
+      await why.focus();
+      await why.press("Enter");
+      const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+      const claim = drawer.getByRole("region", { name: "Generated claim" });
+      await expect(claim).toContainText(
+        `${client.name} · You said: “${client.belief}” Data says: ${client.data}`,
+      );
+      await expect(claim).toContainText("Generated · awaiting RM review");
+      await expect(drawer).toContainText(
+        `data/rm_notes.json · row ${client.note}`,
+      );
+      await expect(drawer).toContainText(client.fact);
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+      await expect(why).toBeFocused();
+      await expect(comparison).toContainText(client.belief);
+    }
+  });
+
   test(`Memory evidence retains the extracted belief and client at ${width}px`, async ({
     page,
   }) => {

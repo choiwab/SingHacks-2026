@@ -376,7 +376,7 @@ export function PreRead({
                     <WhyButton
                       citations={preRead.gap.citations}
                       clientId={clientId}
-                      claim={preRead.gap.data}
+                      claim={`${preRead.name} · You said: “${preRead.gap.belief}” Data says: ${preRead.gap.data}`}
                       authorship={reviewState}
                     />
                   </div>
