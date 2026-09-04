@@ -4,12 +4,14 @@ import {
   Button,
   Body1Strong,
   Caption1,
+  SearchBox,
   Subtitle2,
   makeStyles,
   mergeClasses,
   shorthands,
   tokens,
 } from "@fluentui/react-components";
+import { useState } from "react";
 
 import type {
   ClientPreRead,
@@ -169,6 +171,17 @@ const useStyles = makeStyles({
   },
   empty: {
     color: tokens.colorNeutralForeground3,
+  },
+  search: {
+    maxWidth: "26rem",
+    width: "100%",
+  },
+  mark: {
+    backgroundColor: tokens.colorBrandBackground2,
+    color: tokens.colorBrandForeground2,
+    ...shorthands.borderRadius(tokens.borderRadiusSmall),
+    ...shorthands.padding(0, "0.1em"),
+    fontWeight: tokens.fontWeightSemibold,
   },
   calendar: {
     display: "flex",
@@ -970,6 +983,77 @@ export function DataPanel({
   );
 }
 
+/**
+ * Question words and glue the RM will type but that carry no signal, so
+ * "What did she say about risk?" retrieves on "risk" alone.
+ */
+const STOPWORDS = new Set(
+  `a about all an and any are as ask at be been but by can did do does for from
+   get had has have her him his how i if in into is it its me my not of on or
+   our say said she that the their them then there these they this to told
+   under up us was we were what when where which who whom why will with would
+   you your`.split(/\s+/),
+);
+
+/**
+ * PRD 4 nice-to-have: retrieval over the selected client's RM notes. Distinct
+ * term overlap against one client's note set, which is tens of short records.
+ * ponytail: keyword scoring, swap for a pipeline retriever if one ever lands.
+ */
+function queryTerms(query: string): string[] {
+  return [
+    ...new Set(
+      query
+        .toLowerCase()
+        .split(/[^\p{L}\p{N}]+/u)
+        .filter((word) => word.length > 2 && !STOPWORDS.has(word)),
+    ),
+  ];
+}
+
+/** How many distinct query terms the text contains. */
+function matchScore(text: string, terms: string[]): number {
+  const haystack = text.toLowerCase();
+  return terms.filter((term) => haystack.includes(term)).length;
+}
+
+/**
+ * Keeps the retrieved records readable by marking the words that matched.
+ * Terms are letters and digits only by construction, so they need no escaping
+ * before going into the split pattern.
+ */
+function Highlight({ text, terms }: { text: string; terms: string[] }) {
+  const styles = useStyles();
+  if (terms.length === 0) return <>{text}</>;
+  const parts = text.split(new RegExp(`(${terms.join("|")})`, "giu"));
+  return (
+    <>
+      {parts.map((part, index) =>
+        index % 2 === 1 ? (
+          <mark className={styles.mark} key={index}>
+            {part}
+          </mark>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+const plural = (count: number, word: string) =>
+  `${count} ${word}${count === 1 ? "" : "s"}`;
+
+/** Best match first; equal scores keep the order they were given in. */
+function retrieve<T>(items: T[], terms: string[], text: (item: T) => string) {
+  if (terms.length === 0) return items;
+  return items
+    .map((item) => ({ item, score: matchScore(text(item), terms) }))
+    .filter((hit) => hit.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .map((hit) => hit.item);
+}
+
 export function MemoryPanel({
   preRead,
   evidence,
@@ -978,6 +1062,8 @@ export function MemoryPanel({
   evidence: MondayBriefProjection["evidence"];
 }) {
   const styles = useStyles();
+  const [query, setQuery] = useState("");
+  const terms = queryTerms(query);
   const notes = Object.values(evidence)
     .filter(
       (item) =>
@@ -986,39 +1072,82 @@ export function MemoryPanel({
     .sort((a, b) =>
       String(a.record.note_date).localeCompare(String(b.record.note_date)),
     );
+  const noteText = (note: (typeof notes)[number]) =>
+    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")}`;
+
+  const matchedNotes = retrieve(notes, terms, noteText);
+  const matchedBeliefs = retrieve(
+    preRead.beliefs,
+    terms,
+    (belief) => belief.text,
+  );
 
   return (
     <div className={styles.panel}>
+      <section className={styles.group} aria-label="Search the client memory">
+        <Subtitle2 as="h3">Ask the notes</Subtitle2>
+        <SearchBox
+          className={styles.search}
+          placeholder="What did she say about risk?"
+          aria-label="Search this client's RM notes"
+          value={query}
+          onChange={(_, data) => setQuery(data.value)}
+        />
+        <Caption1 role="status">
+          {terms.length === 0
+            ? `Searching ${plural(notes.length, "note")} and ${plural(preRead.beliefs.length, "extracted belief")} for this client.`
+            : `${matchedNotes.length} of ${plural(notes.length, "note")} and ${matchedBeliefs.length} of ${plural(preRead.beliefs.length, "belief")} mention ${terms.join(" or ")}.`}
+        </Caption1>
+      </section>
       <section className={styles.group} aria-label="Extracted beliefs">
         <Subtitle2 as="h3">What the client told us</Subtitle2>
-        <div className={styles.cards}>
-          {preRead.beliefs.map((belief) => (
-            <article className={styles.card} key={belief.id}>
-              <Body1>“{belief.text}”</Body1>
-              <Caption1>Note {belief.note_id}</Caption1>
-              <div className={styles.action}>
-                <WhyButton
-                  citations={belief.citations}
-                  clientId={preRead.client_id}
-                />
-              </div>
-            </article>
-          ))}
-        </div>
+        {matchedBeliefs.length === 0 ? (
+          <Body1 className={styles.empty}>
+            No recorded belief mentions {terms.join(" or ")}.
+          </Body1>
+        ) : (
+          <div className={styles.cards}>
+            {matchedBeliefs.map((belief) => (
+              <article className={styles.card} key={belief.id}>
+                <Body1>
+                  “<Highlight text={belief.text} terms={terms} />”
+                </Body1>
+                <Caption1>Note {belief.note_id}</Caption1>
+                <div className={styles.action}>
+                  <WhyButton
+                    citations={belief.citations}
+                    clientId={preRead.client_id}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
       <section className={styles.group} aria-label="RM notes">
-        <Subtitle2 as="h3">RM notes</Subtitle2>
-        {notes.length === 0 ? (
-          <Body1 className={styles.empty}>No RM notes recorded.</Body1>
+        <Subtitle2 as="h3">
+          {terms.length === 0 ? "RM notes" : "Matching RM notes"}
+        </Subtitle2>
+        {matchedNotes.length === 0 ? (
+          <Body1 className={styles.empty}>
+            {notes.length === 0
+              ? "No RM notes recorded."
+              : `No note mentions ${terms.join(" or ")}. Try another word.`}
+          </Body1>
         ) : (
-          notes.map((note) => (
+          matchedNotes.map((note) => (
             <div className={styles.note} key={note.id}>
               <Caption1>
                 {String(note.record.note_date)} ·{" "}
                 {String(note.record.channel ?? "Note")} ·{" "}
                 {String(note.record.rm_name ?? "RM")}
               </Caption1>
-              <Body1>{String(note.record.note ?? note.title)}</Body1>
+              <Body1>
+                <Highlight
+                  text={String(note.record.note ?? note.title)}
+                  terms={terms}
+                />
+              </Body1>
             </div>
           ))
         )}

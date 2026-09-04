@@ -167,6 +167,52 @@ describe("Monday Brief", () => {
     expect(screen.getByText("\u201cKeep it safe.\u201d")).toBeVisible();
   });
 
+  it("retrieves the RM notes that answer a question typed into Memory", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(projectionResponse())),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await user.click(await screen.findByRole("tab", { name: "Memory" }));
+    const search = screen.getByRole("searchbox", {
+      name: "Search this client's RM notes",
+    });
+    expect(
+      screen.getByText(
+        "Searching 2 notes and 1 extracted belief for this client.",
+      ),
+    ).toBeVisible();
+
+    // Question words are dropped, so the query retrieves on "safe" alone.
+    await user.type(search, "What did she say about safe?");
+    expect(
+      screen.getByText("1 of 2 notes and 1 of 1 belief mention safe."),
+    ).toBeVisible();
+    expect(
+      screen.getByText("2026-02-16 \u00b7 Meeting \u00b7 Priscilla Ong"),
+    ).toBeVisible();
+    expect(
+      screen.queryByText("2026-03-02 \u00b7 Call \u00b7 Priscilla Ong"),
+    ).not.toBeInTheDocument();
+    // The matching word is marked in both the note and the extracted belief.
+    expect(screen.getAllByText("safe", { selector: "mark" })).toHaveLength(2);
+
+    await user.clear(search);
+    await user.type(search, "custody");
+    expect(
+      screen.getByText("No note mentions custody. Try another word."),
+    ).toBeVisible();
+    expect(
+      screen.getByText("No recorded belief mentions custody."),
+    ).toBeVisible();
+  });
+
   it("opens the meeting brief with the PRD 5.5 summary, agenda and commitments", async () => {
     vi.stubGlobal(
       "fetch",

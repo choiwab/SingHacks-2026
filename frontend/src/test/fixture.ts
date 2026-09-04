@@ -243,5 +243,18 @@ export const projectionFixture: MondayBriefProjection = {
         note: "Keep it safe.",
       },
     },
+    "note:2": {
+      id: "note:2",
+      kind: "RM note",
+      title: "Call on 2026-03-02",
+      source: "data/rm_notes.json",
+      record: {
+        client_id: "CL-0003",
+        note_date: "2026-03-02",
+        channel: "Call",
+        rm_name: "Priscilla Ong",
+        note: "Asked about the Berlin apartment lease.",
+      },
+    },
   },
 };

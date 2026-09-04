@@ -108,6 +108,23 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     .getByRole("button", { name: "Close source trail" })
     .click();
 
+  // The Memory tab answers a plain question over this client's notes (PRD 4).
+  await page.getByRole("tab", { name: "Memory" }).click();
+  const notes = page.getByRole("region", { name: "RM notes" });
+  await expect(notes).toContainText("never taken a risk with money");
+  await expect(notes).toContainText("safe and boring");
+  await page
+    .getByRole("searchbox", { name: "Search this client's RM notes" })
+    .fill("What did she say about risk?");
+  await expect(
+    page.getByRole("region", { name: "Search the client memory" }),
+  ).toContainText("1 of 2 notes");
+  await expect(notes).toContainText("never taken a risk with money");
+  await expect(notes).not.toContainText("safe and boring");
+  // Both occurrences of the retrieved word are marked in the surviving note.
+  await expect(notes.locator("mark")).toHaveCount(2);
+  await page.getByRole("tab", { name: "Overview" }).click();
+
   // Selecting a meeting switches the whole dashboard to that client (PRD 5.3).
   await calendar.getByRole("button", { name: /Abdullah Al-Mansoori/ }).click();
   await expect(
