@@ -14,7 +14,7 @@ import type { CitedText, CitationId, WorkflowContext } from "./contracts";
 const useStyles = makeStyles({
   list: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(16rem, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(16rem, 100%), 1fr))",
     alignItems: "start",
     columnGap: tokens.spacingHorizontalM,
     rowGap: tokens.spacingVerticalM,

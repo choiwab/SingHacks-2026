@@ -180,7 +180,9 @@ h2 {
 }
 
 /* The lower dashboard tabs sit directly under the client header (PRD 5.6). */
-.dashboard-tabs {
+.dashboard-tabs.fui-TabList {
+  /* System-font widths vary by platform; keep every tab inside the pane. */
+  flex-wrap: wrap;
   position: sticky;
   top: 0;
   z-index: 2;

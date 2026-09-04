@@ -104,7 +104,7 @@ const useStyles = makeStyles({
   },
   cards: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(17rem, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(17rem, 100%), 1fr))",
     gap: tokens.spacingHorizontalM,
   },
   card: {

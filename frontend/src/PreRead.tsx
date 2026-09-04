@@ -77,7 +77,7 @@ const useStyles = makeStyles({
   /** "You said" beside "Data says" once there is room for two columns. */
   gapPair: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(18rem, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(18rem, 100%), 1fr))",
     gap: tokens.spacingHorizontalM,
   },
   dataSays: {
