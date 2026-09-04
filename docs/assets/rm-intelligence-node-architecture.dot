@@ -1,0 +1,99 @@
+digraph RMIntelligenceNodeFlow {
+  graph [
+    rankdir=TB,
+    bgcolor="white",
+    pad="0.3",
+    nodesep="0.35",
+    ranksep="0.55",
+    splines=polyline,
+    fontname="Arial",
+    fontsize=20,
+    label="Client Future Room — planned node flow",
+    labelloc=t,
+    labeljust=l
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Arial",
+    fontsize=11,
+    fontcolor="#242424",
+    color="#605E5C",
+    fillcolor="#FFFFFF",
+    margin="0.16,0.11"
+  ];
+
+  edge [
+    color="#605E5C",
+    fontcolor="#424242",
+    fontname="Arial",
+    fontsize=9,
+    arrowsize=0.72
+  ];
+
+  trigger [
+    label="Client selected or data updated\nread-only files • RM notes • event log",
+    fillcolor="#F3F2F1"
+  ];
+
+  context [
+    label="1  Context Agent — Member 2\nload • validate • compare with prior snapshot\noutput: ClientContext + processing mode",
+    fillcolor="#E7F4E4",
+    color="#107C10"
+  ];
+
+  intelligence [
+    label="2  Wealth Intelligence Agent — Member 3\nuse Member 2's deterministic calculators\nfind discrepancies • rank insights\noutput: FactBundle + EvidenceMap + RankedInsights",
+    fillcolor="#F3E8FF",
+    color="#8764B8"
+  ];
+
+  briefing [
+    label="3  RM Briefing Agent — Member 3\nconnect facts to cited client memory\ncreate summary • talking points • questions\noutput: MeetingBrief",
+    fillcolor="#F3E8FF",
+    color="#8764B8"
+  ];
+
+  gate [
+    label="Evidence Gate — Member 4\ncitations • math • as-of dates • confidence\noutput: VerificationReport",
+    fillcolor="#FFF4CE",
+    color="#986F0B"
+  ];
+
+  review [
+    label="Human review interrupt\nRM approves • edits • rejects\nMember 4 workflow • output: ReviewRecord",
+    fillcolor="#FDE7E9",
+    color="#C50F1F"
+  ];
+
+  dashboard [
+    label="React + Fluent UI dashboard — Member 1\nmeeting brief • insights • data • memory\nevidence drawer • client switcher • compact calendar",
+    fillcolor="#E8F3FF",
+    color="#0F6CBD"
+  ];
+
+  reuse [
+    label="No material change\nreuse the last verified brief",
+    fillcolor="#F3F2F1"
+  ];
+
+  confirm [
+    label="Needs confirmation\nshow missing, conflicting, or unsupported evidence",
+    fillcolor="#FDE7E9",
+    color="#C50F1F"
+  ];
+
+  trigger -> context;
+  context -> intelligence [label="first seen / changed"];
+  intelligence -> briefing;
+  briefing -> gate;
+  gate -> review [label="pass"];
+  review -> dashboard [label="approved view model"];
+
+  context -> reuse [label="unchanged"];
+  reuse -> dashboard;
+  context -> confirm [label="missing / conflicting"];
+  gate -> confirm [label="fail"];
+  review -> gate [label="edit + recheck", style=dashed, constraint=false];
+}
