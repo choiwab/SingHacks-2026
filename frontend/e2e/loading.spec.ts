@@ -5,6 +5,7 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
+    const errorDetail = `Temporary outage: ${"UpstreamUnavailable_".repeat(18)}`;
     let fail = true;
     let responseGate = Promise.resolve();
     await page.route("**/api/monday-brief", async (route) => {
@@ -13,7 +14,7 @@ for (const width of [1280, 390]) {
         await route.fulfill({
           status: 503,
           contentType: "application/json",
-          body: JSON.stringify({ detail: "Temporary outage" }),
+          body: JSON.stringify({ detail: errorDetail }),
         });
       } else {
         await route.continue();
@@ -24,7 +25,20 @@ for (const width of [1280, 390]) {
       fail = true;
       await page.goto(path);
       const retry = page.getByRole("button", { name: "Try again" });
-      await expect(page.getByRole("alert")).toContainText("Temporary outage");
+      const alert = page.getByRole("alert");
+      const expectContainedError = async () => {
+        await expect(alert).toContainText(errorDetail);
+        await expect
+          .poll(() =>
+            alert.evaluate((element) => ({
+              fits: element.scrollWidth <= element.clientWidth,
+              pageFits: document.documentElement.scrollWidth <= innerWidth,
+            })),
+          )
+          .toEqual({ fits: true, pageFits: true });
+        await expect(retry).toBeInViewport();
+      };
+      await expectContainedError();
       // Initial loading still respects the browser's default focus.
       await expect(page.locator("body")).toBeFocused();
       await page.keyboard.press("Tab");
@@ -44,9 +58,7 @@ for (const width of [1280, 390]) {
         releaseResponse();
 
         if (fail) {
-          await expect(page.getByRole("alert")).toContainText(
-            "Temporary outage",
-          );
+          await expectContainedError();
           await expect(retry).toBeFocused();
           await expect(retry).toBeInViewport();
         } else {

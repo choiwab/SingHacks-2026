@@ -54,6 +54,7 @@ body {
 .app-status-message {
   max-width: min(42rem, 100%);
   text-align: start;
+  overflow-wrap: anywhere;
 }
 
 .route-notice {
