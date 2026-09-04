@@ -241,6 +241,7 @@ export function PreRead({
       void persistReview("Edit");
       return;
     }
+    setEditedOpening(currentOpening);
     setEditing(true);
     window.setTimeout(() => editField.current?.focus(), 0);
   };

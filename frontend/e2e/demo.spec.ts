@@ -1,6 +1,71 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`reopening the editor uses a save completed after navigation at ${width}px`, async ({
+    page,
+  }) => {
+    const submitted: { action: string; text: string }[] = [];
+    let finishSave = () => {};
+    const saveGate = new Promise<void>((resolve) => {
+      finishSave = resolve;
+    });
+    await page.route("**/api/reviews", async (route) => {
+      const request = route.request().postDataJSON();
+      submitted.push(request);
+      await saveGate;
+      await route.fulfill({
+        json: {
+          review: {
+            ...request,
+            timestamp: "2026-09-05T10:00:00Z",
+            rm: "Priscilla Ong",
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    const editor = page.getByLabel("Edit the opening line");
+    const saved = "Let us discuss your cash needs before the next meeting.";
+    await edit.click();
+    await editor.fill(saved);
+    await page.getByRole("button", { name: "Save edit" }).click();
+    await expect.poll(() => submitted.length).toBe(1);
+
+    const clients = page.getByRole("navigation", { name: "Client switcher" });
+    await clients.getByRole("button", { name: /Abdullah Al-Mansoori/ }).click();
+    await clients
+      .getByRole("button", { name: /Margarethe Voss-Brenner/ })
+      .click();
+    await expect(edit).toBeVisible();
+    finishSave();
+    const opening = page.getByRole("region", { name: "Suggested opening" });
+    await expect(opening).toContainText(saved);
+    await edit.click();
+    await expect(editor).toBeFocused();
+    await expect(editor).toHaveValue(saved);
+
+    await editor.fill(`${saved} Then confirm the timing.`);
+    await page.getByRole("tab", { name: "Data", exact: true }).click();
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
+    await expect(editor).toHaveValue(`${saved} Then confirm the timing.`);
+    await page.getByRole("button", { name: "Cancel edit" }).click();
+    await expect(edit).toBeFocused();
+    await edit.click();
+    await expect(editor).toHaveValue(saved);
+    await page.getByRole("button", { name: "Save edit" }).click();
+    await expect(edit).toBeFocused();
+    expect(submitted).toHaveLength(2);
+    expect(submitted[1].text).toBe(saved);
+    await expect(opening).toContainText(saved);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`Memory distinguishes missing beliefs from search misses at ${width}px`, async ({
     page,
   }) => {
