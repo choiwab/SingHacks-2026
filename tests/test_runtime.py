@@ -191,3 +191,41 @@ def test_reset_prepares_seed_missing_from_ledger_before_activating_it(tmp_path):
     assert service.reset().run_id == seed.run_id
     assert len(service.ledger.list_briefs(seed.run_id)) == 20
     assert len(calls) == 40
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {},
+        {"passed": "false"},
+        {"passed": 1},
+        {"passed": True, "errors": ["Failed"]},
+        {"passed": True, "checks": [False]},
+        {"passed": True, "checks": [{"passed": False}]},
+        {"passed": True, "checks": {"numeric": {"passed": "true"}}},
+    ],
+)
+def test_approval_rejects_missing_malformed_or_contradictory_verification(tmp_path, report):
+    from test_loaders import CLIENT, SEED, publish_fixture
+
+    store = ArtifactStore(tmp_path / "curated")
+    publish_fixture(store.root)
+    ledger = ReviewLedger(tmp_path / "ledger.sqlite")
+    ledger.add_run(run_id=SEED, pipeline_version="1", as_of="2026-08-26", source_hashes={})
+    ledger.store_brief(
+        client_id=CLIENT,
+        run_id=SEED,
+        body={"meeting_brief": {"sections": {"summary": {"text": "Draft"}}}},
+        verification_report=report,
+    )
+    service = PipelineRuntime(store, ledger)
+    with pytest.raises(ValueError, match="verification"):
+        service.review(
+            ReviewRequest(
+                client_id=CLIENT,
+                run_id=SEED,
+                brief_version=1,
+                action="Approve",
+            )
+        )
+    assert ledger.list(SEED) == []

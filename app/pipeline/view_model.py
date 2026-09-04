@@ -14,19 +14,8 @@ from typing import Any
 from app.pipeline.api_schemas import ClientHeader, ClientView, DataTab, DemoViewModel
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.schemas import ChangeReport, Fact
+from app.pipeline.verification_state import verification_passed
 from app.store import ReviewLedger
-
-
-def _failed(report: dict[str, Any]) -> bool:
-    if report.get("passed") is False or report.get("errors"):
-        return True
-    checks = report.get("checks", [])
-    if isinstance(checks, dict):
-        checks = list(checks.values())
-    return any(
-        check is False or (isinstance(check, dict) and check.get("passed") is False)
-        for check in checks
-    )
 
 
 def _has_text(value: Any) -> bool:
@@ -182,18 +171,15 @@ def build_view_model(
         body = persisted.body if persisted else {}
         verification = persisted.verification_report if persisted else {}
         context_issues = list(manifest.context_issues) + body.get("context_issues", [])
-        failed = _failed(verification)
+        verified = verification_passed(verification)
+        failed = persisted is not None and not verified
         client_unconfirmed = failed or quality.has_errors or bool(context_issues)
         needs_confirmation = needs_confirmation or client_unconfirmed
         brief = body.get("meeting_brief")
         status = (
             "Not prepared"
             if not _prepared(brief)
-            else (
-                "Needs review"
-                if client_unconfirmed or verification.get("passed") is not True
-                else "Ready"
-            )
+            else ("Needs review" if client_unconfirmed or not verified else "Ready")
         )
         connected = body.get("connected_context", [])
         for item in connected:
@@ -213,10 +199,10 @@ def build_view_model(
                     if key in ClientHeader.model_fields
                 }
             ),
-            insights=[] if failed else _insights(body.get("insights", []), changes),
-            meeting_brief=None if failed else brief,
+            insights=_insights(body.get("insights", []), changes) if verified else [],
+            meeting_brief=brief if verified else None,
             brief_version=persisted.brief_version if persisted else None,
-            memory_card=None if failed else body.get("memory_card"),
+            memory_card=body.get("memory_card") if verified else None,
             data_tab=_data_tab(facts.facts),
             memory_tab=[*connected, *(note.model_dump(mode="json") for note in bundle.rm_notes)],
             change_report=changes,

@@ -294,3 +294,47 @@ def test_header_only_exposes_qualitative_profile_fields(tmp_path):
         header
     )
     assert all(isinstance(value, str) for value in header.values())
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {},
+        {"passed": "false"},
+        {"passed": 1},
+        {"passed": True, "errors": ["Failed"]},
+        {"passed": True, "checks": [False]},
+        {"passed": True, "checks": [{"passed": False}]},
+        {"passed": True, "checks": [{"passed": "true"}]},
+        {"passed": True, "checks": [{"passed": True, "errors": ["Failed"]}]},
+        {"passed": True, "checks": {"numeric": {"passed": False}}},
+        {"passed": True, "checks": [None]},
+        {"passed": True, "checks": None},
+    ],
+)
+def test_missing_malformed_or_contradictory_verification_never_exposes_claims(tmp_path, report):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    store_brief(
+        ledger,
+        body={
+            "meeting_brief": {"sections": {"opening": {"text": "UNVERIFIED_CLAIM"}}},
+            "insights": [{"text": "UNVERIFIED_CLAIM"}],
+            "memory_card": {"summary": "UNVERIFIED_CLAIM"},
+        },
+        verification=report,
+    )
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.data_health == "Needs confirmation"
+    assert model.clients[CLIENT].brief_status == "Needs review"
+    assert "UNVERIFIED_CLAIM" not in model.model_dump_json()
+
+
+@pytest.mark.parametrize(
+    "checks", [[], [True], [{"passed": True}], {"numeric": True, "evidence": {"passed": True}}]
+)
+def test_explicit_passing_checks_allow_verified_content(tmp_path, checks):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    store_brief(ledger, verification={"passed": True, "checks": checks})
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.clients[CLIENT].brief_status == "Ready"
+    assert model.clients[CLIENT].meeting_brief is not None
