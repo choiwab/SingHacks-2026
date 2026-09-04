@@ -102,12 +102,13 @@ export function Scenario({
 
   const scenario = pair[scenarioKey];
   const valueRange = `${money(scenario.low_delta, scenario.currency)} to ${money(scenario.high_delta, scenario.currency)}`;
-  const percentRange = `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of today's portfolio`;
+  const percentRange = `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of the snapshot portfolio`;
+  const baseline = `Portfolio baseline: ${scenario.currency} ${scenario.portfolio_value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · as of ${projection.as_of}.`;
   const disclaimer = scenario.disclaimer.replace(
     "Precomputed range, ",
     "Estimated range · ",
   );
-  const resultSummary = `${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${disclaimer}`;
+  const resultSummary = `${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${baseline} ${disclaimer}`;
   const scale = (value: number) =>
     Math.max(0, Math.min(100, ((value + 20) / 40) * 100));
   const left = scale(scenario.low_pct);
@@ -183,6 +184,9 @@ export function Scenario({
           <Body1 className={mergeClasses("range-percent", styles.muted)}>
             {percentRange}
           </Body1>
+          <Caption1 className={mergeClasses("scenario-baseline", styles.muted)}>
+            {baseline}
+          </Caption1>
           <WhyButton
             citations={scenario.citations}
             clientId={clientId}
@@ -194,7 +198,7 @@ export function Scenario({
           <div
             className="range-axis"
             role="img"
-            aria-label={`${scenario.name}: ${percentRange}. ${disclaimer} Scale: −20% to +20%.`}
+            aria-label={`${scenario.name}: ${percentRange}. ${baseline} ${disclaimer} Scale: −20% to +20%.`}
           >
             <span className="axis-start">−20%</span>
             <span className="axis-zero">0</span>
@@ -222,7 +226,7 @@ export function Scenario({
         <CitedList
           items={scenario.bullets}
           clientId={clientId}
-          evidenceContext={`${preRead.name} · ${scenario.name}. ${disclaimer}`}
+          evidenceContext={`${preRead.name} · ${scenario.name}. ${baseline} ${disclaimer}`}
         />
       </section>
     </section>

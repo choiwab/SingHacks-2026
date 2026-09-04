@@ -311,7 +311,8 @@ for (const width of [1280, 390]) {
       ).toHaveCount(1);
       const valueRange = await page.locator(".range-value").innerText();
       const percentRange = await page.locator(".range-percent").innerText();
-      const chartDescription = `${scenario}: ${percentRange}. Estimated range · not a forecast. Scale: −20% to +20%.`;
+      const baseline = await page.locator(".scenario-baseline").innerText();
+      const chartDescription = `${scenario}: ${percentRange}. ${baseline} Estimated range · not a forecast. Scale: −20% to +20%.`;
       const chart = page.getByRole("img", {
         name: chartDescription,
         exact: true,
@@ -321,7 +322,7 @@ for (const width of [1280, 390]) {
         `- ${JSON.stringify(`img "${chartDescription}"`)}`,
       );
       await expect(announcement).toHaveText(
-        `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). Estimated range · not a forecast.`,
+        `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). ${baseline} Estimated range · not a forecast.`,
       );
       expect(
         await announcement.evaluate(
@@ -355,6 +356,7 @@ for (const width of [1280, 390]) {
       }
       for (const scenario of ["Strait reopens", "Strait escalates"]) {
         await page.getByRole("button", { name: scenario, exact: true }).click();
+        const baseline = await page.locator(".scenario-baseline").innerText();
         const cards = page
           .getByRole("region", { name: "What changes", exact: true })
           .getByRole("listitem");
@@ -371,7 +373,7 @@ for (const width of [1280, 390]) {
           await expect(
             drawer.getByRole("region", { name: "Generated claim" }),
           ).toHaveText(
-            `Claim on the dashboard${client} · ${scenario}. Estimated range · not a forecast. ${sector}`,
+            `Claim on the dashboard${client} · ${scenario}. ${baseline} Estimated range · not a forecast. ${sector}`,
           );
           await expect(drawer).toContainText("data/holdings.csv");
           await expect(drawer).toContainText("data/event_log.csv");
@@ -879,7 +881,11 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
+    const projection = await page.request
+      .get("/api/monday-brief")
+      .then((response) => response.json());
     for (const client of [
+      { id: "CL-0003", name: "Margarethe Voss-Brenner", currency: "EUR" },
       { id: "CL-0014", name: "Lau Chi Ming", currency: "HKD" },
       { id: "CL-0019", name: "Abdullah Al-Mansoori", currency: "USD" },
     ]) {
@@ -892,6 +898,13 @@ for (const width of [1280, 390]) {
         });
         const range = await result.locator(".range-value").innerText();
         const percentage = await result.locator(".range-percent").innerText();
+        const baseline = result.locator(".scenario-baseline");
+        const portfolioValue =
+          projection.scenarios[client.id].reopens.portfolio_value;
+        const baselineText = `Portfolio baseline: ${client.currency} ${portfolioValue.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · as of ${projection.as_of}.`;
+        await expect(baseline).toHaveText(baselineText);
+        await expect(baseline).toBeVisible();
+        await expect(result).not.toContainText("today's portfolio");
         const why = result.getByRole("button", { name: "Why this range?" });
         await why.focus();
         await why.press("Enter");
@@ -902,6 +915,7 @@ for (const width of [1280, 390]) {
         await expect(claim).toContainText(range);
         await expect(claim).toContainText(client.currency);
         await expect(claim).toContainText(percentage);
+        await expect(claim).toContainText(baselineText);
         await expect(claim).toContainText("Estimated range · not a forecast.");
         await expect(
           drawer.getByText(/data\/event_log\.csv · row /).first(),
