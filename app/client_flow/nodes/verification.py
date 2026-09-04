@@ -1,0 +1,62 @@
+"""Evidence validation between generated content and human review."""
+
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from app.client_flow.state import ClientFlowState
+from app.client_flow.tools.evidence import collect_citations
+
+
+def evidence_gate(state: ClientFlowState) -> dict[str, Any]:
+    """Member 4: block briefs with uncited claims or unresolved evidence."""
+    brief = state.get("meeting_brief", {})
+    facts = {fact["id"]: fact for fact in state.get("fact_bundle", [])}
+    evidence = state.get("evidence_map", {})
+    cited_items = [
+        *brief.get("what_changed", []),
+        *brief.get("rules_money", []),
+        brief.get("gap", {}),
+        brief.get("opening", {}),
+        brief.get("uncertainty", {}),
+        *brief.get("beliefs", []),
+        *brief.get("workflow", []),
+    ]
+    missing_citations = [
+        index for index, item in enumerate(cited_items) if not item.get("citations")
+    ]
+    unresolved = sorted(
+        citation
+        for citation in collect_citations(cited_items)
+        if citation not in facts and citation not in evidence
+    )
+    ungrounded_facts = sorted(
+        fact["id"]
+        for fact in facts.values()
+        if any(
+            citation not in evidence
+            for citation in [*fact.get("source_rows", []), *fact.get("event_ids", [])]
+        )
+    )
+    errors = [
+        *(f"brief item {index} has no citation" for index in missing_citations),
+        *(f"unresolved citation: {citation}" for citation in unresolved),
+        *(f"ungrounded fact: {fact_id}" for fact_id in ungrounded_facts),
+    ]
+    passed = not errors
+    return {
+        "verification_report": {
+            "passed": passed,
+            "errors": errors,
+            "as_of": state["as_of"],
+        },
+        "status": "verified" if passed else "needs_confirmation",
+        "trace": [f"evidence_gate:{'pass' if passed else 'fail'}"],
+    }
+
+
+def route_verification(
+    state: ClientFlowState,
+) -> Literal["human_review", "needs_confirmation"]:
+    report = state.get("verification_report", {})
+    return "human_review" if report.get("passed") else "needs_confirmation"

@@ -1,15 +1,14 @@
-digraph RMIntelligenceArchitecture {
+digraph RMIntelligenceNodeFlow {
   graph [
     rankdir=TB,
-    newrank=true,
     bgcolor="white",
-    pad="0.35",
+    pad="0.3",
     nodesep="0.35",
-    ranksep="0.46",
+    ranksep="0.55",
     splines=polyline,
     fontname="Arial",
     fontsize=20,
-    label="Client Future Room — planned agent and node architecture",
+    label="Client Future Room — planned node flow",
     labelloc=t,
     labeljust=l
   ];
@@ -19,10 +18,10 @@ digraph RMIntelligenceArchitecture {
     style="rounded,filled",
     fontname="Arial",
     fontsize=11,
+    fontcolor="#242424",
     color="#605E5C",
     fillcolor="#FFFFFF",
-    fontcolor="#242424",
-    margin="0.17,0.11"
+    margin="0.16,0.11"
   ];
 
   edge [
@@ -33,171 +32,68 @@ digraph RMIntelligenceArchitecture {
     arrowsize=0.72
   ];
 
-  subgraph cluster_inputs {
-    label="Inputs";
-    color="#D2D0CE";
-    fillcolor="#FAF9F8";
-    style="rounded,filled";
-    fontcolor="#424242";
-
-    profiles [label="Client + portfolio CSVs"];
-    activity [label="Holdings + transactions"];
-    obligations [label="Mandates + cash needs\n+ credit facilities"];
-    notes [label="RM notes + authoritative\nevent log"];
-    dashboard_action [
-      label="RM dashboard action\nselect client or simulate update\nMember 1",
-      fillcolor="#E8F3FF",
-      color="#0F6CBD"
-    ];
-
-    { rank=same; profiles; activity; obligations; notes; dashboard_action; }
-  }
-
-  router [
-    label="Trigger Router — Member 4\nresolve client + prior run\nchoose trigger scope",
-    fillcolor="#FFF4CE",
-    color="#986F0B"
+  trigger [
+    label="Client selected or data updated\nread-only files • RM notes • event log",
+    fillcolor="#F3F2F1"
   ];
 
   context [
-    label="Context Agent — Member 2\nload current client state\nfind new, changed, stale, or conflicting records\noutput: ClientContext + processing mode",
+    label="1  Context Agent — Member 2\nload • validate • compare with prior snapshot\noutput: ClientContext + processing mode",
     fillcolor="#E7F4E4",
     color="#107C10"
   ];
 
-  context_tools [
-    label="Context tools — Member 2\njoin + as-of scoping\nsource diff + data-quality checks",
-    fillcolor="#F1FAEE",
-    color="#107C10"
-  ];
-
-  valid [
-    label="Context valid?",
-    shape=diamond,
-    style="filled",
-    fillcolor="#FFF4CE",
-    color="#986F0B",
-    width=1.2,
-    height=0.72
-  ];
-
-  mode [
-    label="Processing mode?",
-    shape=diamond,
-    style="filled",
-    fillcolor="#FFF4CE",
-    color="#986F0B",
-    width=1.35,
-    height=0.8
-  ];
-
-  confirmation [
-    label="Needs confirmation\nshow missing or conflicting evidence\nstop unverified output",
-    fillcolor="#FDE7E9",
-    color="#C50F1F"
-  ];
-
-  reuse [
-    label="Reuse verified insight\nrefresh freshness only",
-    fillcolor="#F3F2F1",
-    color="#605E5C"
-  ];
-
   intelligence [
-    label="Wealth Intelligence Agent — Member 3\ncompute facts + discrepancies\nrank insight candidates\noutput: FactBundle + EvidenceMap + RankedInsights",
+    label="2  Wealth Intelligence Agent — Member 3\nuse Member 2's deterministic calculators\nfind discrepancies • rank insights\noutput: FactBundle + EvidenceMap + RankedInsights",
     fillcolor="#F3E8FF",
     color="#8764B8"
   ];
 
-  calculation_tools [
-    label="Deterministic tools — Member 2\nperformance • mandate • concentration\nliquidity • collateral • scenario checks",
-    fillcolor="#F1FAEE",
-    color="#107C10"
-  ];
-
   briefing [
-    label="RM Briefing Agent — Member 3\nconnect facts to cited client memory\ncompose meeting topics + questions\noutput: MeetingBrief",
+    label="3  RM Briefing Agent — Member 3\nconnect facts to cited client memory\ncreate summary • talking points • questions\noutput: MeetingBrief",
     fillcolor="#F3E8FF",
     color="#8764B8"
   ];
 
   gate [
-    label="Evidence Gate — Member 4\ncheck citations, math, as-of dates, confidence\nand block unsupported claims\noutput: VerificationReport",
+    label="Evidence Gate — Member 4\ncitations • math • as-of dates • confidence\noutput: VerificationReport",
     fillcolor="#FFF4CE",
     color="#986F0B"
   ];
 
   review [
-    label="Human review interrupt — Member 4\nRM approves, edits, or rejects\noutput: ReviewRecord",
+    label="Human review interrupt\nRM approves • edits • rejects\nMember 4 workflow • output: ReviewRecord",
     fillcolor="#FDE7E9",
     color="#C50F1F"
   ];
 
-  finalize [
-    label="Finalize / supersede / stop — Member 4\nversion the reviewed result\noutput: verified DemoViewModel",
-    fillcolor="#FFF4CE",
-    color="#986F0B"
-  ];
-
-  api [
-    label="Minimal FastAPI boundary — Member 4\nGET /api/app • POST /api/demo/update • POST /api/reviews",
-    fillcolor="#FFF4CE",
-    color="#986F0B"
-  ];
-
-  ui [
-    label="React + Fluent UI RM dashboard — Member 1\nclient switcher • compact calendar • meeting summary\ninsights • source data • memory • evidence drawer",
+  dashboard [
+    label="React + Fluent UI dashboard — Member 1\nmeeting brief • insights • data • memory\nevidence drawer • client switcher • compact calendar",
     fillcolor="#E8F3FF",
     color="#0F6CBD"
   ];
 
-  legend [
-    label="Ownership colors\nBlue: Member 1 — UI\nGreen: Member 2 — data + tools\nPurple: Member 3 — intelligence + briefing\nGold: Member 4 — graph + gate + API\nRed: human review / confirmation",
-    shape=note,
-    style="filled",
-    fillcolor="#FAF9F8",
-    color="#8A8886",
-    fontsize=9
+  reuse [
+    label="No material change\nreuse the last verified brief",
+    fillcolor="#F3F2F1"
   ];
 
-  profiles -> context;
-  activity -> context;
-  obligations -> context;
-  notes -> context;
-  dashboard_action -> router [label="POST demo update"];
-  router -> context [label="selected client + trigger"];
-
-  context -> context_tools [
-    style=dashed,
-    color="#107C10",
-    label="constrained calls"
+  confirm [
+    label="Needs confirmation\nshow missing, conflicting, or unsupported evidence",
+    fillcolor="#FDE7E9",
+    color="#C50F1F"
   ];
-  context -> valid [label="ClientContext"];
-  valid -> confirmation [label="no"];
-  valid -> mode [label="yes"];
-  mode -> reuse [label="no material change"];
-  mode -> intelligence [label="first seen / changed"];
 
-  intelligence -> calculation_tools [
-    style=dashed,
-    color="#107C10",
-    label="constrained calls"
-  ];
-  intelligence -> briefing [label="ranked, cited insights"];
-  briefing -> gate [label="MeetingBrief"];
-  gate -> confirmation [label="fail"];
-  gate -> review [label="verified"];
-  review -> gate [label="RM edit → recheck", constraint=false];
-  review -> finalize [label="approve / reject"];
+  trigger -> context;
+  context -> intelligence [label="first seen / changed"];
+  intelligence -> briefing;
+  briefing -> gate;
+  gate -> review [label="pass"];
+  review -> dashboard [label="approved view model"];
 
-  reuse -> api;
-  finalize -> api [label="verified state"];
-  api -> ui [label="GET dashboard view model"];
-
-  legend -> ui [style=invis];
-  { rank=same; context; context_tools; }
-  { rank=same; valid; confirmation; }
-  { rank=same; mode; reuse; }
-  { rank=same; intelligence; calculation_tools; }
-  { rank=same; ui; legend; }
+  context -> reuse [label="unchanged"];
+  reuse -> dashboard;
+  context -> confirm [label="missing / conflicting"];
+  gate -> confirm [label="fail"];
+  review -> gate [label="edit + recheck", style=dashed, constraint=false];
 }
