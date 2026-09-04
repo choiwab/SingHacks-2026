@@ -195,9 +195,12 @@ folder and run the two commands above.
 and one worked client. It deliberately computes nothing clever — it exists so you can see the shape
 of the data in 30 seconds.
 
-### Run the Client Future Room demo
+### Run the Monday Brief demo
 
-The repository includes a complete Lau Chi Ming case-study application built with FastAPI and a dependency-locked `uv` environment.
+The demo is a three-screen Monday workflow for Priscilla Ong.
+It ranks all 20 clients, opens a cited pre-read, and re-shocks the selected portfolio under two precomputed Strait scenarios.
+The fact pipeline runs once at startup and saves its output to `data/generated/app_data.json`.
+Approve, Edit, or Reject is the only live write and is stored in `data/generated/review_log.json`.
 No API key or external service is required.
 
 ```bash
@@ -205,7 +208,8 @@ uv sync
 uv run uvicorn app.main:app --reload
 ```
 
-Open `http://127.0.0.1:8000` and press **Prepare Lau's meeting**.
+Open `http://127.0.0.1:8000`.
+For the shortest demo, open Margarethe Voss-Brenner, inspect a **Why?** source trail, edit the German opening, approve it, then open Abdullah Al-Mansoori and toggle the Strait scenario.
 
 Run the automated checks with:
 

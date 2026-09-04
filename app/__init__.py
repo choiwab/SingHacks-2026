@@ -1,1 +1,1 @@
-"""Client Future Room application package."""
+"""Monday Brief application package."""

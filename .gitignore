@@ -5,3 +5,5 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+data/generated/review_log.json
+data/generated/app_data.json

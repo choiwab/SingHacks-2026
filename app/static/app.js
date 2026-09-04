@@ -1,16 +1,13 @@
-const state = {
-  case: null,
-  evidence: {},
-  prepared: null,
-  opening: null,
-  followUp: null,
-  rehearsalComplete: false,
-  tasks: [],
-};
+const $ = (selector, scope = document) => scope.querySelector(selector);
+const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 
-const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const svgNamespace = "http://www.w3.org/2000/svg";
+const state = {
+  data: null,
+  clientId: null,
+  scenario: "reopens",
+  editing: false,
+  lastFocus: null,
+};
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -18,525 +15,316 @@ async function request(path, options = {}) {
     ...options,
   });
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: "The service did not respond." }));
-    throw new Error(error.detail || "The service did not respond.");
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail || "The server did not answer.");
   }
   return response.json();
 }
 
-function formatNumber(value, digits = 2) {
-  return new Intl.NumberFormat("en-SG", {
-    minimumFractionDigits: digits,
-    maximumFractionDigits: digits,
-  }).format(value);
+function element(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
 }
 
-function formatDate(value) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(Date.UTC(year, month - 1, day)));
-}
-
-function makeElement(tag, className, text) {
-  const element = document.createElement(tag);
-  if (className) element.className = className;
-  if (text !== undefined) element.textContent = text;
-  return element;
+function setCitations(node, citations) {
+  node.dataset.citations = JSON.stringify(citations || []);
 }
 
 function showToast(message) {
   const toast = $("#toast");
   toast.textContent = message;
   toast.hidden = false;
-  window.clearTimeout(showToast.timeout);
-  showToast.timeout = window.setTimeout(() => {
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => {
     toast.hidden = true;
-  }, 4200);
+  }, 3200);
 }
 
-function setProgress(current) {
-  const order = ["attention", "stress", "council", "rehearse", "act", "outcome"];
-  const currentIndex = order.indexOf(current);
-  $$('[data-progress]').forEach((item) => {
-    const index = order.indexOf(item.dataset.progress);
-    item.classList.toggle("is-complete", index < currentIndex);
-    item.classList.toggle("is-current", index === currentIndex);
-  });
-}
-
-function renderCase(caseData) {
-  state.case = caseData;
-  const client = caseData.client;
-  $("#client-name").textContent = client.name;
-  $("#client-id").textContent = client.id;
-  $("#client-meta").textContent = `${client.booking_centre} · ${client.risk_profile} · ${client.liquidity_need} liquidity need`;
-  $("#attention-copy").textContent = caseData.attention;
-  $("#rm-name").textContent = client.rm_name;
-  $("#kyc-due").textContent = formatDate(client.kyc_due);
-  $("#property-weight").textContent = `${formatNumber(caseData.portfolio.property_weight_pct, 1)}%`;
-  $("#current-ltv").textContent = `${formatNumber(caseData.facility.ltv_pct)}%`;
-  $("#cash-need").textContent = formatNumber(caseData.cash_need.amount_m, 1);
-}
-
-function svgElement(tag, attributes = {}, text = null) {
-  const node = document.createElementNS(svgNamespace, tag);
-  Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, value));
-  if (text !== null) node.textContent = text;
-  return node;
-}
-
-function renderLtvChart(history, stressedLtv, trigger) {
-  const svg = $("#ltv-chart");
-  const title = $("#ltv-chart-title");
-  const description = $("#ltv-chart-desc");
-  svg.replaceChildren(title, description);
-
-  const left = 54;
-  const right = 680;
-  const top = 24;
-  const bottom = 218;
-  const min = 50;
-  const max = 78;
-  const observedRight = 530;
-  const scenarioX = 656;
-  const y = (value) => bottom - ((value - min) / (max - min)) * (bottom - top);
-  const observedX = history.map((_, index) => left + (index * (observedRight - left)) / (history.length - 1));
-  const triggerY = y(trigger);
-
-  svg.append(svgElement("rect", {
-    x: left,
-    y: top,
-    width: right - left,
-    height: triggerY - top,
-    class: "chart-breach-zone",
-  }));
-
-  [50, 60, 70].forEach((value) => {
-    const gridY = y(value);
-    svg.append(svgElement("line", { x1: left, y1: gridY, x2: right, y2: gridY, class: "chart-grid" }));
-    svg.append(svgElement("text", { x: 8, y: gridY + 4, class: "chart-axis-label" }, `${value}%`));
-  });
-
-  svg.append(svgElement("line", {
-    x1: left,
-    y1: triggerY,
-    x2: right,
-    y2: triggerY,
-    class: "chart-trigger-line",
-  }));
-  svg.append(svgElement("text", {
-    x: right,
-    y: triggerY - 8,
-    "text-anchor": "end",
-    class: "chart-value-label",
-  }, `${formatNumber(trigger)}% trigger`));
-
-  const observedPoints = history.map((point, index) => `${observedX[index]},${y(point.ltv)}`).join(" ");
-  svg.append(svgElement("polyline", { points: observedPoints, class: "chart-history" }));
-  const last = history.at(-1);
-  svg.append(svgElement("line", {
-    x1: observedRight,
-    y1: y(last.ltv),
-    x2: scenarioX,
-    y2: y(stressedLtv),
-    class: "chart-scenario",
-  }));
-
-  history.forEach((point, index) => {
-    const pointClass = index === history.length - 1 ? "chart-point-current" : "chart-point";
-    svg.append(svgElement("circle", { cx: observedX[index], cy: y(point.ltv), r: 5, class: pointClass }));
-    svg.append(svgElement("text", {
-      x: observedX[index],
-      y: bottom + 28,
-      "text-anchor": "middle",
-      class: "chart-date-label",
-    }, point.label));
-    if (index === 0 || index === history.length - 1) {
-      svg.append(svgElement("text", {
-        x: observedX[index],
-        y: y(point.ltv) - 12,
-        "text-anchor": "middle",
-        class: "chart-value-label",
-      }, `${formatNumber(point.ltv)}%`));
-    }
-  });
-
-  svg.append(svgElement("circle", { cx: scenarioX, cy: y(stressedLtv), r: 7, class: "chart-point-stress" }));
-  svg.append(svgElement("text", {
-    x: scenarioX,
-    y: bottom + 28,
-    "text-anchor": "middle",
-    class: "chart-date-label",
-  }, "Stress"));
-  svg.append(svgElement("text", {
-    x: scenarioX,
-    y: y(stressedLtv) - 16,
-    "text-anchor": "middle",
-    class: "chart-note",
-  }, `${formatNumber(stressedLtv)}% · breached`));
-}
-
-function renderNetwork(scenario) {
-  const container = $("#network-nodes");
-  container.replaceChildren();
-  const propertyHoldings = scenario.holdings.filter((holding) => holding.property_linked);
-  const nodes = [
-    ...propertyHoldings.map((holding) => ({
-      title: holding.name,
-      meta: `${holding.liquidity} · ${formatNumber(holding.portfolio_weight_pct, 1)}% weight`,
-      value: `HKD ${formatNumber(holding.current_value_m, 1)}m`,
-      evidence: holding.evidence_id,
-    })),
-    {
-      title: "Lombard facility",
-      meta: "Secured borrowing · 69.41% LTV",
-      value: "HKD 58.0m",
-      evidence: "facility:CF-0002",
-    },
-    {
-      title: "Redevelopment contribution",
-      meta: "Confirmed · due Jun 2027",
-      value: "HKD 60.0m",
-      evidence: "cash-need:CN-013",
-    },
-  ];
-  nodes.forEach((item) => {
-    const button = makeElement("button", "network-node");
-    button.type = "button";
-    button.dataset.evidence = item.evidence;
-    const copy = makeElement("span");
-    copy.append(makeElement("strong", null, item.title), makeElement("small", null, item.meta));
-    button.append(copy, makeElement("span", null, item.value));
-    container.append(button);
-  });
-}
-
-function renderHoldings(holdings) {
-  const body = $("#holdings-body");
-  body.replaceChildren();
-  holdings.forEach((holding) => {
-    const row = document.createElement("tr");
-    const positionCell = document.createElement("td");
-    const position = makeElement("div", "position-name");
-    if (holding.property_linked) position.append(makeElement("i", "property-dot"));
-    const evidenceButton = makeElement("button", "table-evidence", holding.name);
-    evidenceButton.type = "button";
-    evidenceButton.dataset.evidence = holding.evidence_id;
-    position.append(evidenceButton);
-    positionCell.append(position);
-    row.append(positionCell);
-
-    const values = [
-      [holding.theme, ""],
-      [`HKD ${formatNumber(holding.current_value_m)}m`, "numeric"],
-      [`${formatNumber(holding.portfolio_weight_pct, 1)}%`, "numeric"],
-      [holding.liquidity, ""],
-      [`${formatNumber(holding.advance_rate_pct, 0)}%`, "numeric"],
-      [`HKD ${formatNumber(holding.stressed_value_m)}m`, "numeric"],
-    ];
-    values.forEach(([value, className]) => row.append(makeElement("td", className, value)));
-    body.append(row);
-  });
-}
-
-function renderCouncil(council) {
-  const body = $("#council-body");
-  body.replaceChildren();
-  council.forEach((specialist) => {
-    const row = document.createElement("tr");
-    const role = document.createElement("td");
-    role.append(makeElement("strong", null, specialist.role));
-    role.append(makeElement("span", "stance", specialist.stance));
-    row.append(role);
-    row.append(makeElement("td", null, specialist.position));
-    row.append(makeElement("td", null, specialist.concern));
-    row.append(makeElement("td", null, specialist.action));
-    const evidenceCell = document.createElement("td");
-    const evidenceButton = makeElement("button", "evidence-count", String(specialist.evidence_ids.length));
-    evidenceButton.type = "button";
-    evidenceButton.dataset.evidence = specialist.evidence_ids[0];
-    evidenceButton.setAttribute("aria-label", `View evidence for ${specialist.role}`);
-    evidenceCell.append(evidenceButton);
-    row.append(evidenceCell);
-    body.append(row);
-  });
-}
-
-function renderActionPlan(plan) {
-  $("#brief-summary").textContent = plan.summary;
-  const questions = $("#open-questions");
-  questions.replaceChildren(...plan.open_questions.map((question) => makeElement("li", null, question)));
-  state.tasks = plan.tasks.map((task) => ({ ...task }));
-  const taskList = $("#task-list");
-  taskList.replaceChildren();
-
-  state.tasks.forEach((task, index) => {
-    const row = makeElement("div", "task-row");
-    row.append(makeElement("span", "task-number", String(index + 1).padStart(2, "0")));
-
-    const titleLabel = makeElement("label", "task-title");
-    titleLabel.append(makeElement("span", null, "Action"));
-    const titleInput = document.createElement("input");
-    titleInput.value = task.title;
-    titleInput.id = `task-${index}-title`;
-    titleInput.name = `task-${index}-title`;
-    titleInput.setAttribute("aria-label", `Action ${index + 1}`);
-    titleInput.addEventListener("input", () => {
-      task.title = titleInput.value;
-    });
-    titleLabel.append(titleInput);
-
-    const ownerLabel = makeElement("label", "task-owner");
-    ownerLabel.append(makeElement("span", null, "Owner"));
-    const ownerInput = document.createElement("input");
-    ownerInput.value = task.owner;
-    ownerInput.id = `task-${index}-owner`;
-    ownerInput.name = `task-${index}-owner`;
-    ownerInput.setAttribute("aria-label", `Owner for action ${index + 1}`);
-    ownerInput.addEventListener("input", () => {
-      task.owner = ownerInput.value;
-    });
-    ownerLabel.append(ownerInput);
-
-    const dueLabel = makeElement("label", "task-due");
-    dueLabel.append(makeElement("span", null, "Due"));
-    const dueInput = document.createElement("input");
-    dueInput.type = "date";
-    dueInput.value = task.due;
-    dueInput.id = `task-${index}-due-date`;
-    dueInput.name = `task-${index}-due-date`;
-    dueInput.setAttribute("aria-label", `Due date for action ${index + 1}`);
-    dueInput.addEventListener("input", () => {
-      task.due = dueInput.value;
-    });
-    dueLabel.append(dueInput);
-
-    row.append(titleLabel, ownerLabel, dueLabel);
-    taskList.append(row);
-  });
-}
-
-function renderPrepared(payload) {
-  state.prepared = payload;
-  document.body.classList.add("is-prepared");
-  state.evidence = { ...state.evidence, ...payload.evidence };
-  const { scenario } = payload;
-  const summary = state.case;
-
-  $("#governance-notice").textContent = summary.governance_notice;
-  $("#ltv-current-large").textContent = `${formatNumber(scenario.current.ltv_pct)}%`;
-  $("#ltv-stressed-large").textContent = `${formatNumber(scenario.stressed.ltv_pct)}%`;
-  $("#stressed-portfolio").textContent = `HKD ${formatNumber(scenario.stressed.portfolio_value_m)}m`;
-  $("#portfolio-change").textContent = `-HKD ${formatNumber(Math.abs(scenario.stressed.portfolio_change_m))}m`;
-  $("#stressed-lending").textContent = `HKD ${formatNumber(scenario.stressed.lending_value_m)}m`;
-  $("#lending-change").textContent = `-HKD ${formatNumber(Math.abs(scenario.stressed.lending_change_m))}m`;
-  $("#estimated-cure").textContent = `HKD ${formatNumber(scenario.stressed.cure_m)}m`;
-  $("#known-cash").textContent = `HKD ${formatNumber(summary.portfolio.known_cash_m)}m`;
-  $("#cash-coverage").textContent = `${formatNumber(summary.portfolio.cash_coverage_pct, 0)}% of project need`;
-  renderLtvChart(summary.facility.history, scenario.stressed.ltv_pct, summary.facility.trigger_pct);
-  renderNetwork(scenario);
-  renderHoldings(scenario.holdings);
-  renderCouncil(payload.council);
-  renderActionPlan(payload.action_plan);
-  $("#prepared-content").hidden = false;
-  setProgress("stress");
-}
-
-async function prepareMeeting() {
-  const button = $("#prepare-button");
-  const note = $("#trigger-note");
-  button.disabled = true;
-  const buttonText = $("span", button);
-  buttonText.textContent = "Building the evidence packet…";
-  note.textContent = "Calculating first. Specialist perspectives follow from the same immutable evidence.";
-  try {
-    const payload = await request("/api/prepare", { method: "POST" });
-    renderPrepared(payload);
-    buttonText.textContent = "Meeting prepared";
-    note.textContent = "8 holdings reconciled · 5 specialist views · every material claim linked";
-    window.setTimeout(() => $("#stress-section").scrollIntoView({ behavior: "smooth", block: "start" }), 180);
-  } catch (error) {
-    button.disabled = false;
-    buttonText.textContent = "Prepare Lau's meeting";
-    note.textContent = "Preparation did not complete. Your client data was not changed.";
-    showToast(`${error.message} Try preparing the meeting again.`);
-  }
-}
-
-async function chooseOpening(event) {
-  const button = event.target.closest("[data-opening]");
-  if (!button) return;
-  state.opening = button.dataset.opening;
-  $$('[data-opening]').forEach((choice) => {
-    choice.classList.toggle("is-selected", choice === button);
-    choice.disabled = true;
-  });
-  try {
-    const result = await request("/api/rehearse", {
-      method: "POST",
-      body: JSON.stringify({ opening: state.opening }),
-    });
-    $("#client-position").textContent = `“${result.client_position}”`;
-    $("#opening-feedback").textContent = result.opening_feedback;
-    $("#client-response").hidden = false;
-    setProgress("rehearse");
-    window.setTimeout(() => $("#client-response").scrollIntoView({ behavior: "smooth", block: "center" }), 120);
-  } catch (error) {
-    $$('[data-opening]').forEach((choice) => {
-      choice.disabled = false;
-      choice.classList.remove("is-selected");
-    });
-    showToast(`${error.message} Choose the opening again.`);
-  }
-}
-
-async function chooseFollowUp(event) {
-  const button = event.target.closest("[data-follow-up]");
-  if (!button || !state.opening) return;
-  state.followUp = button.dataset.followUp;
-  $$('[data-follow-up]').forEach((choice) => {
-    choice.classList.toggle("is-selected", choice === button);
-    choice.disabled = true;
-  });
-  try {
-    const result = await request("/api/rehearse", {
-      method: "POST",
-      body: JSON.stringify({ opening: state.opening, follow_up: state.followUp }),
-    });
-    $("#outcome-status").textContent = result.status;
-    $("#outcome-headline").textContent = result.headline;
-    $("#coaching-copy").textContent = result.coaching;
-    $("#next-question").textContent = result.next_question;
-    $("#coaching-panel").hidden = false;
-    state.rehearsalComplete = true;
-    updateApprovalButton();
-    setProgress("act");
-    window.setTimeout(() => $("#coaching-panel").scrollIntoView({ behavior: "smooth", block: "center" }), 120);
-  } catch (error) {
-    $$('[data-follow-up]').forEach((choice) => {
-      choice.disabled = false;
-      choice.classList.remove("is-selected");
-    });
-    showToast(`${error.message} Choose the follow-up again.`);
-  }
-}
-
-function updateApprovalButton() {
-  const acknowledged = $("#approval-checkbox").checked;
-  $("#approve-button").disabled = !(acknowledged && state.rehearsalComplete);
-}
-
-function readablePayload(payload) {
-  return Object.entries(payload)
-    .map(([key, value]) => {
-      const label = key.replaceAll("_", " ");
-      const rendered = Array.isArray(value) ? value.join(" · ") : value;
-      return `${label}: ${rendered}`;
-    })
-    .join(" | ");
-}
-
-function renderOutcome(payload) {
-  const outcome = payload.outcome;
-  const values = [
-    ["Client goal", outcome.client_goal],
-    ["Risk obligation", outcome.risk_obligation],
-    ["Relationship stage", outcome.relationship_stage],
-    ["Records prepared", outcome.records],
-  ];
-  const strip = $("#outcome-strip");
-  strip.replaceChildren();
-  values.forEach(([label, value]) => {
-    const item = makeElement("div", "outcome-item");
-    item.append(makeElement("span", null, label), makeElement("strong", null, value));
-    strip.append(item);
-  });
-
-  const list = $("#connector-list");
+function renderList() {
+  const list = $("#client-list");
   list.replaceChildren();
-  payload.connectors.forEach((connector) => {
-    const row = makeElement("article", "connector-row");
-    row.append(makeElement("div", "connector-name", connector.name));
-    const destination = makeElement("div", "connector-destination");
-    destination.append(makeElement("span", null, "Destination"), makeElement("p", null, connector.destination));
-    const connectorPayload = makeElement("div", "connector-payload");
-    connectorPayload.append(makeElement("span", null, "Prepared payload"), makeElement("p", null, readablePayload(connector.payload)));
-    row.append(destination, connectorPayload, makeElement("span", "connector-mode", connector.mode));
+  state.data.ranking.forEach((client, index) => {
+    const row = element("button", `client-row urgency-${client.urgency}`);
+    row.type = "button";
+    row.dataset.client = client.client_id;
+
+    const rank = element("span", "rank");
+    rank.append(element("span", "urgency-dot"), document.createTextNode(String(index + 1).padStart(2, "0")));
+
+    const summary = element("span");
+    summary.append(element("span", "client-name", client.name));
+    summary.append(element("span", "client-reason", client.reason));
+
+    const meeting = element("span", "meeting");
+    if (client.meeting) {
+      meeting.append(element("strong", null, client.meeting));
+      meeting.append(document.createTextNode(client.meeting_source));
+    } else {
+      meeting.textContent = "No meeting";
+    }
+
+    row.append(rank, summary, meeting, element("span", "priority-score", client.score));
     list.append(row);
   });
-  $("#outcome-section").hidden = false;
-  setProgress("outcome");
-  window.setTimeout(() => $("#outcome-section").scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+  const first = state.data.ranking[0];
+  const parts = first.components;
+  $("#formula-example").textContent =
+    `${first.name}: ${parts.gap} × ${parts.deadline} × ${parts.consequence} → ${first.score}`;
 }
 
-async function approvePlan() {
-  const button = $("#approve-button");
-  button.disabled = true;
-  button.textContent = "Preparing action previews…";
+function renderCitedList(items, target) {
+  const list = $(target);
+  list.replaceChildren();
+  items.forEach((item) => {
+    const row = element("li");
+    row.append(element("p", null, item.text));
+    const why = element("button", "why-link", "Why?");
+    why.type = "button";
+    setCitations(why, item.citations);
+    row.append(why);
+    list.append(row);
+  });
+}
+
+function renderWorkflow(items) {
+  const container = $("#workflow-items");
+  container.replaceChildren();
+  items.forEach((item) => {
+    const block = element("div", "workflow-item");
+    block.append(element("strong", null, item.system), element("span", null, item.status));
+    container.append(block);
+  });
+}
+
+function selectClient(clientId) {
+  state.clientId = clientId;
+  state.editing = false;
+  $$('[data-screen="pre-read"], [data-screen="scenario"]').forEach((button) => {
+    button.disabled = false;
+  });
+  renderPreRead();
+  showScreen("pre-read");
+}
+
+function renderPreRead() {
+  const preRead = state.data.pre_reads[state.clientId];
+  $("#client-id").textContent = preRead.client_id;
+  $("#client-name").textContent = preRead.name;
+  $("#review-state").textContent = "Unreviewed";
+  $("#review-state").className = "review-state";
+  renderCitedList(preRead.what_changed, "#changed-list");
+  $("#belief-text").textContent = `“${preRead.gap.belief}”`;
+  $("#data-text").textContent = preRead.gap.data;
+  setCitations($("#gap-why"), preRead.gap.citations);
+  renderCitedList(preRead.rules_money, "#rules-list");
+  $("#opening-language").textContent = preRead.language;
+  $("#opening-text").textContent = preRead.opening.text;
+  $("#edited-opening").value = preRead.opening.text;
+  setCitations($("#opening-why"), preRead.opening.citations);
+  $("#uncertainty-text").textContent = preRead.uncertainty.text;
+  setCitations($("#uncertainty-why"), preRead.uncertainty.citations);
+  renderWorkflow(preRead.workflow);
+  $("#edit-panel").hidden = true;
+  $("#review-receipt").hidden = true;
+  $('[data-review="Edit"]').textContent = "Edit";
+}
+
+function showScreen(name) {
+  if (name !== "list" && !state.clientId) return;
+  $$(".screen").forEach((screen) => {
+    screen.hidden = screen.id !== `${name}-screen`;
+  });
+  $$(".flow-nav button").forEach((button) => {
+    const active = button.dataset.screen === name;
+    if (active) button.setAttribute("aria-current", "step");
+    else button.removeAttribute("aria-current");
+  });
+  if (name === "scenario") renderScenario();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function money(value, currency) {
+  const sign = value >= 0 ? "+" : "−";
+  return `${sign}${currency} ${Math.abs(value / 1_000_000).toFixed(1)}m`;
+}
+
+function renderScenario() {
+  const scenario = state.data.scenarios[state.clientId][state.scenario];
+  const preRead = state.data.pre_reads[state.clientId];
+  $("#scenario-client").textContent = preRead.name;
+  $("#scenario-name").textContent = scenario.name;
+  $("#scenario-range").textContent = `${money(scenario.low_delta, scenario.currency)} to ${money(
+    scenario.high_delta,
+    scenario.currency,
+  )}`;
+  $("#scenario-percent").textContent = `${scenario.low_pct.toFixed(1)}% to ${scenario.high_pct.toFixed(
+    1,
+  )}% of today's portfolio`;
+  renderCitedList(scenario.bullets, "#scenario-bullets");
+  setCitations($("#scenario-why"), scenario.citations);
+
+  const scale = (value) => Math.max(0, Math.min(100, ((value + 20) / 40) * 100));
+  const left = scale(scenario.low_pct);
+  const right = scale(scenario.high_pct);
+  const line = $("#range-line");
+  line.style.left = `${left}%`;
+  line.style.width = `${Math.max(right - left, 1.5)}%`;
+}
+
+function setScenario(name) {
+  state.scenario = name;
+  $$("[data-scenario]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.scenario === name));
+  });
+  renderScenario();
+}
+
+function expandCitations(citations) {
+  const facts = state.data.facts[state.clientId] || [];
+  const factMap = Object.fromEntries(facts.map((fact) => [fact.id, fact]));
+  const records = [];
+  const queue = [...citations];
+  const seen = new Set();
+  while (queue.length) {
+    const citation = queue.shift();
+    if (!citation || seen.has(citation)) continue;
+    seen.add(citation);
+    const fact = factMap[citation];
+    if (fact) {
+      records.push({ type: "fact", value: fact });
+      queue.push(...fact.source_rows, ...fact.event_ids);
+      continue;
+    }
+    const evidence = state.data.evidence[citation];
+    if (evidence) records.push({ type: "evidence", value: evidence });
+  }
+  return records;
+}
+
+function renderEvidenceRecord(item) {
+  if (item.type === "fact") {
+    const block = element("article", "evidence-record fact-record");
+    block.append(element("h3", null, "Computed fact"));
+    block.append(element("p", null, item.value.what));
+    block.append(element("p", "evidence-source", `Confidence: ${item.value.confidence}`));
+    return block;
+  }
+  const record = item.value;
+  const block = element("article", "evidence-record");
+  block.append(element("h3", null, record.title));
+  block.append(element("p", "evidence-source", record.source));
+  const details = element("dl");
+  Object.entries(record.record).forEach(([key, value]) => {
+    details.append(element("dt", null, key.replaceAll("_", " ")));
+    details.append(element("dd", null, value === null ? "Not recorded" : String(value)));
+  });
+  block.append(details);
+  return block;
+}
+
+function openEvidence(citations, trigger) {
+  state.lastFocus = trigger;
+  const content = $("#evidence-content");
+  const records = expandCitations(citations);
+  content.replaceChildren(
+    ...(records.length
+      ? records.map(renderEvidenceRecord)
+      : [element("p", null, "Nothing in the source tables backs this one.")]),
+  );
+  $("#drawer-scrim").hidden = false;
+  const drawer = $("#evidence-drawer");
+  drawer.removeAttribute("inert");
+  drawer.classList.add("is-open");
+  drawer.setAttribute("aria-hidden", "false");
+  $("#close-drawer").focus();
+}
+
+function closeEvidence() {
+  $("#drawer-scrim").hidden = true;
+  const drawer = $("#evidence-drawer");
+  drawer.classList.remove("is-open");
+  drawer.setAttribute("aria-hidden", "true");
+  drawer.setAttribute("inert", "");
+  state.lastFocus?.focus();
+}
+
+async function saveReview(action) {
+  const edited = $("#edited-opening").value.trim();
   try {
-    const payload = await request("/api/action-plan/approve", {
+    const payload = await request("/api/reviews", {
       method: "POST",
       body: JSON.stringify({
-        acknowledged: $("#approval-checkbox").checked,
-        tasks: state.tasks.map(({ id, title, owner, due, system }) => ({ id, title, owner, due, system })),
+        client_id: state.clientId,
+        action,
+        text: action === "Edit" ? edited : $("#opening-text").textContent,
       }),
     });
-    renderOutcome(payload);
-    button.textContent = "Plan approved for preview";
-    showToast("Action previews are ready. Nothing was sent or written externally.");
+    if (action === "Edit") {
+      $("#opening-text").textContent = edited;
+      $("#edit-panel").hidden = true;
+      $('[data-review="Edit"]').textContent = "Edit";
+      state.editing = false;
+    }
+    const reviewState = $("#review-state");
+    const labels = { Approve: "Approved", Edit: "Edited", Reject: "Rejected" };
+    reviewState.textContent = labels[action];
+    reviewState.className = `review-state is-${labels[action].toLowerCase()}`;
+    const receipt = $("#review-receipt");
+    const time = new Date(payload.review.timestamp).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    receipt.textContent = `Review log · ${labels[action]} · ${time} · ${payload.review.rm}`;
+    receipt.hidden = false;
+    showToast(`${payload.review.action} recorded for ${state.data.pre_reads[state.clientId].name}.`);
   } catch (error) {
-    button.textContent = "Approve plan and preview actions";
-    updateApprovalButton();
-    showToast(`${error.message} Review the plan and try again.`);
+    showToast(error.message);
   }
 }
 
-function openEvidence(evidenceId) {
-  const evidence = state.evidence[evidenceId];
-  if (!evidence) {
-    showToast("This evidence record is not available in the current packet.");
+function handleReview(action) {
+  if (action !== "Edit") {
+    saveReview(action);
     return;
   }
-  $("#evidence-type").textContent = evidence.type;
-  $("#evidence-title").textContent = evidence.title;
-  $("#evidence-detail").textContent = evidence.detail;
-  $("#evidence-source").textContent = evidence.source;
-  $("#evidence-record").textContent = evidence.record;
-  $("#evidence-date").textContent = formatDate(evidence.as_of);
-  const formulaRow = $("#evidence-formula-row");
-  formulaRow.hidden = !evidence.formula;
-  $("#evidence-formula").textContent = evidence.formula || "";
-  $("#evidence-dialog").showModal();
-}
-
-function bindEvents() {
-  $("#prepare-button").addEventListener("click", prepareMeeting);
-  $("#opening-choices").addEventListener("click", chooseOpening);
-  $("#follow-up-choices").addEventListener("click", chooseFollowUp);
-  $("#approval-checkbox").addEventListener("change", updateApprovalButton);
-  $("#approve-button").addEventListener("click", approvePlan);
-  $("#close-evidence").addEventListener("click", () => $("#evidence-dialog").close());
-  $("#evidence-dialog").addEventListener("click", (event) => {
-    if (event.target === $("#evidence-dialog")) $("#evidence-dialog").close();
-  });
-  document.addEventListener("click", (event) => {
-    const trigger = event.target.closest("[data-evidence]");
-    if (trigger) openEvidence(trigger.dataset.evidence);
-  });
-}
-
-async function initialize() {
-  bindEvents();
-  try {
-    const payload = await request("/api/case");
-    state.evidence = payload.evidence;
-    renderCase(payload.case);
-  } catch (error) {
-    showToast(`${error.message} Static case details remain available.`);
+  if (!state.editing) {
+    state.editing = true;
+    $("#edit-panel").hidden = false;
+    $('[data-review="Edit"]').textContent = "Save edit";
+    $("#edited-opening").focus();
+    return;
   }
+  saveReview("Edit");
 }
 
-initialize();
+document.addEventListener("click", (event) => {
+  const client = event.target.closest("[data-client]");
+  if (client) return selectClient(client.dataset.client);
+
+  const navigation = event.target.closest("[data-screen]");
+  if (navigation && !navigation.disabled) return showScreen(navigation.dataset.screen);
+
+  const scenario = event.target.closest("[data-scenario]");
+  if (scenario) return setScenario(scenario.dataset.scenario);
+
+  const review = event.target.closest("[data-review]");
+  if (review) return handleReview(review.dataset.review);
+
+  const why = event.target.closest("[data-citations]");
+  if (why) return openEvidence(JSON.parse(why.dataset.citations), why);
+});
+
+$("#close-drawer").addEventListener("click", closeEvidence);
+$("#drawer-scrim").addEventListener("click", closeEvidence);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && $("#evidence-drawer").classList.contains("is-open")) closeEvidence();
+});
+
+request("/api/app")
+  .then((data) => {
+    state.data = data;
+    renderList();
+  })
+  .catch((error) => showToast(error.message));
