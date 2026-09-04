@@ -184,12 +184,13 @@ required.
 unzip singhacks-jb-wealth-intelligence.zip
 cd singhacks-jb-wealth-intelligence
 
-pip install -r requirements.txt
-python starter/quickstart.py
+uv python install 3.13
+uv sync --locked
+uv run python starter/quickstart.py
 ```
 
 On Windows, right-click the zip and choose *Extract All*, then open a terminal in the extracted
-folder and run the two commands above.
+folder and run the commands above.
 
 `starter/quickstart.py` loads every file and prints the book, the event timeline, the market table
 and one worked client. It deliberately computes nothing clever — it exists so you can see the shape
@@ -201,25 +202,44 @@ The demo is a three-screen Monday workflow for Priscilla Ong.
 Its two highlighted features are an Explainable Priority Calendar and an Evidence-backed Scenario Rehearsal.
 The pre-read is the approval checkpoint between them.
 The calendar ranks all 20 clients across calls and booked meetings, while the rehearsal re-shocks the selected portfolio under two precomputed Strait scenarios.
-The fact pipeline runs once at startup and saves its output to `data/generated/app_data.json`.
-Approve, Edit, or Reject is the only live write and is stored in `data/generated/review_log.json`.
+The Python projection module runs once during application startup and saves a diagnostic snapshot to `data/generated/app_data.json`.
+The React interface loads that versioned projection through one `GET /api/monday-brief` request.
+Approve, Edit, or Reject is the only live write and is stored in the local SQLite review ledger.
 No API key or external service is required.
 
 ```bash
-uv sync
-uv run uvicorn app.main:app --reload
+uv python install 3.13
+uv sync --locked --all-groups
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-Open `http://127.0.0.1:8000`.
+Open `http://127.0.0.1:5173`.
 For the shortest demo, open Margarethe Voss-Brenner, inspect a **Why?** source trail, edit the German opening, approve it, then open Abdullah Al-Mansoori and toggle the Strait scenario.
 
 Run the automated checks with:
 
 ```bash
-uv run pytest
+uv run ruff format --check .
 uv run ruff check .
-node --check app/static/app.js
+uv run pytest
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm check:contract
+pnpm build
+pnpm exec playwright install chromium
+pnpm test:e2e
 ```
+
+### Demo architecture
+
+The Python projection module owns source loading, validation, ranking, narration, scenarios, and evidence assembly behind one interface. FastAPI builds the projection during its application lifespan and exposes it through `GET /api/monday-brief`. Pydantic models define the response, and committed TypeScript types are generated from the OpenAPI document.
+
+React 19, TypeScript, Vite, and React Router render the Monday list, client pre-read, and scenario rehearsal. The root route loads the complete projection once and shares it with client routes, so scenario toggles do not require another request. Review decisions use `POST /api/reviews` and a local SQLite ledger; the generated JSON projection is diagnostic output only.
+
+Create an optimized frontend build with `pnpm build`. Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
 
 ### Where to start
 

@@ -166,69 +166,60 @@ The drawer shows the computed fact, confidence, exact source file, exact source 
 Evidence records are read-only.
 Closing the drawer returns focus to the triggering control.
 
-## Offline pipeline
+## Monday Brief projection
 
 ~~~text
 CSVs and notes
     |
     v
-1. Fact engine
+Monday Brief projection module
+    |-- facts and beliefs
+    |-- gaps and priorities
+    |-- constrained narration
+    |-- scenario ranges
+    `-- evidence
     |
     v
-2. Belief extractor
+GET /api/monday-brief
     |
     v
-3. Gap matcher and ranker
-    |
-    v
-4. Constrained narrator
-    |
-    v
-5. Review log
+React routes
 ~~~
 
-### Station 1: Fact engine
+The module loads, validates, and relates the consumed CSV sources and RM notes behind one interface.
+Its internal stages calculate facts, extract beliefs, match gaps, rank clients, create constrained narration, and assemble scenario ranges.
+The application builds one versioned projection for the explicit as-of date during FastAPI lifespan startup and saves a JSON copy for diagnostics.
 
-The fact engine uses pandas and deterministic Python.
-It calculates holding changes, event matches, mandate gaps, facility proximity, liquidity coverage, and scenario ranges.
+### Facts and beliefs
 
-Each fact contains a stable ID, text, numbers, source row IDs, event IDs, and confidence.
+Deterministic Python and pandas calculate holding changes, event matches, mandate gaps, facility proximity, currency-adjusted liquidity coverage, and scenario ranges.
+Each fact has a stable identity, an explicit kind, text, numbers, source record identities, event identities, and confidence.
+Beliefs are extracted only from RM notes and retain their note identity.
 
-### Station 2: Belief extractor
-
-The extractor reads only RM notes.
-Every belief retains its note_id.
-The demo uses deterministic extraction for stage reliability.
-The station is an explicit boundary where an offline model can later replace the deterministic extractor.
-
-### Station 3: Gap matcher and ranker
+### Ranking and narration
 
 Python pairs beliefs with structured facts and produces the ranking.
 No language model performs arithmetic or scoring.
+The constrained narrator receives only facts, beliefs, and gaps, not raw CSV rows.
+Every output line carries Evidence, and all narration is produced before the interface is served.
 
-### Station 4: Constrained narrator
+### Review ledger
 
-The narrator receives only facts, beliefs, and gaps.
-It does not receive raw CSV rows.
-Every output line carries a fact ID or note citation.
-The demo narrator is deterministic and runs before the app starts.
-
-### Station 5: Review log
-
-The web app appends reviewed decisions to data/generated/review_log.json.
+The web app writes Review Decisions to a local SQLite ledger.
+The legacy JSON review log is imported once when present and remains untouched.
 No CRM, Gmail, calendar, or meeting platform is written during the demo.
 
 ## Technical design
 
-- Python 3.11 or later.
-- pandas for deterministic data transformation.
-- FastAPI for static assets, application JSON, and review writes.
-- Vanilla JavaScript for the three screens.
-- JSON files for generated application data and review records.
-- uv for dependency locking and execution.
+- Python 3.13 and pandas 3 for deterministic data transformation.
+- Pydantic models define the versioned Monday Brief projection, and FastAPI exposes the projection and review interfaces.
+- React 19, TypeScript, Vite, and React Router implement the three routed screens.
+- TypeScript projection types are generated from FastAPI's OpenAPI document and committed.
+- SQLite is authoritative for Review Decisions.
+- `uv` and `pnpm` provide locked dependency installation and execution.
 
-The startup pipeline saves data/generated/app_data.json.
-The interface reads the in-memory copy through GET /api/app.
+The startup projection writes `data/generated/app_data.json` as a diagnostic snapshot.
+The React root route reads the in-memory projection once through `GET /api/monday-brief` and shares it with the pre-read and scenario routes.
 Review decisions use POST /api/reviews.
 
 ## Acceptance criteria
@@ -243,6 +234,9 @@ Review decisions use POST /api/reviews.
 - Every narrated change, rule, opening, uncertainty, and workflow status has at least one citation.
 - Evidence links resolve to source records.
 - Review actions persist with an RM identity and timestamp.
+- The browser obtains the complete projection with one request to `GET /api/monday-brief`.
+- Direct pre-read and scenario URLs load the selected Client, while invalid Client URLs return to the Monday list with an accessible notice.
+- The committed TypeScript contract matches the generated FastAPI OpenAPI contract.
 - No chat interface appears anywhere.
 - No API credential is required.
 - Desktop and mobile flows have no page-level horizontal overflow.
