@@ -397,6 +397,7 @@ export function PreRead({
                 facts={facts}
                 evidence={projection.evidence}
                 clientId={clientId}
+                clientName={preRead.name}
               />
             </BriefSection>
 

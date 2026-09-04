@@ -1,6 +1,58 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`commitment evidence retains the client and cash-need terms at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const commitments = page.getByRole("region", { name: "Open commitments" });
+    const description = "German inheritance tax instalment";
+    const timing = "Due 2026-10-01 to 2026-12-31 · Confirmed";
+    await expect(commitments).toContainText(description);
+    await expect(commitments).toContainText("€3,400,000");
+    await expect(commitments).toContainText(timing);
+    const why = commitments.getByRole("button", { name: "Why?", exact: true });
+    await why.focus();
+    await why.press("Enter");
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    await expect(
+      drawer.getByRole("region", { name: "Generated claim" }),
+    ).toHaveText(
+      `Claim on the dashboardMargarethe Voss-Brenner · ${description} · €3,400,000 · ${timing}`,
+    );
+    await expect(drawer).toContainText(
+      "data/planned_cash_needs.csv · row planned_cash_needs:CN-004",
+    );
+    expect(
+      await drawer.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
+    await expect(why).toBeFocused();
+    await expect(commitments).toContainText(timing);
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    await expect(commitments).toContainText(
+      "Seed capital for Singapore family office entity",
+    );
+    await why.click();
+    await expect(
+      drawer.getByRole("region", { name: "Generated claim" }),
+    ).toHaveText(
+      "Claim on the dashboardAbdullah Al-Mansoori · Seed capital for Singapore family office entity · $5,000,000 · Due 2027-01-01 to 2027-12-31 · Likely",
+    );
+    await expect(drawer).toContainText("planned_cash_needs:CN-017");
+    await expect(drawer).not.toContainText("Margarethe");
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
+    await expect(why).toBeFocused();
+  });
+
   test(`workflow evidence retains the client, status, and review at ${width}px`, async ({
     page,
   }) => {

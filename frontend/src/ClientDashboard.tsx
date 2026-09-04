@@ -1046,10 +1046,12 @@ export function OpenCommitments({
   facts,
   evidence,
   clientId,
+  clientName,
 }: {
   facts: ProjectionFact[];
   evidence: MondayBriefProjection["evidence"];
   clientId: string;
+  clientName: string;
 }) {
   const styles = useStyles();
   const commitments = [...new Set(facts.flatMap((fact) => fact.source_rows))]
@@ -1073,18 +1075,19 @@ export function OpenCommitments({
           typeof record.amount === "number"
             ? formatMoney(record.amount, String(record.currency ?? ""))
             : "Amount not recorded";
+        const description = String(record.description ?? commitment.title);
+        const timing = `Due ${String(record.due_from)} to ${String(record.due_to)} · ${String(record.certainty ?? "Certainty not recorded")}`;
         return (
           <article className={styles.card} key={commitment.id}>
-            <Body1Strong>
-              {String(record.description ?? commitment.title)}
-            </Body1Strong>
+            <Body1Strong>{description}</Body1Strong>
             <Subtitle2 as="p">{amount}</Subtitle2>
-            <Caption1>
-              Due {String(record.due_from)} to {String(record.due_to)} ·{" "}
-              {String(record.certainty ?? "Certainty not recorded")}
-            </Caption1>
+            <Caption1>{timing}</Caption1>
             <div className={styles.action}>
-              <WhyButton citations={[commitment.id]} clientId={clientId} />
+              <WhyButton
+                citations={[commitment.id]}
+                clientId={clientId}
+                claim={`${clientName} · ${description} · ${amount} · ${timing}`}
+              />
             </div>
           </article>
         );
