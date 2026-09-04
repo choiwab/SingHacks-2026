@@ -1,0 +1,2 @@
+need_id,client_id,description,currency,amount,due_from,due_to,recurrence,certainty
+CN-004,CL-0003,German inheritance tax instalment,EUR,3400000,2026-09-01,2026-12-31,One-off,Confirmed

@@ -283,6 +283,59 @@ class IngestedSources:
     diagnostics: list[SourceDiagnostic] = field(default_factory=list)
 
 
+def coerce_source_table(
+    table: str, source: pd.DataFrame
+) -> tuple[pd.DataFrame, list[SourceDiagnostic]]:
+    """Type and validate source or overlay cells with the same structural contract."""
+    frame = source.copy(deep=True)
+    filename = f"{table}.csv"
+    columns = COLUMNS[table]
+    diagnostics: list[SourceDiagnostic] = []
+    for column in columns:
+        if column not in frame:
+            diagnostics.append(
+                SourceDiagnostic(
+                    filename, "missing_column", "required column is missing", field=column
+                )
+            )
+            continue
+        if column in NUMERIC_FIELDS or column.startswith(NUMERIC_PREFIXES):
+            parsed = cast(
+                pd.Series, pd.to_numeric(frame[column].replace("", None), errors="coerce")
+            )
+            for index, value in cast(Any, frame[column]).items():
+                if (value != "" or column not in OPTIONAL_FIELDS) and (
+                    bool(pd.isna(cast(Any, parsed[index])))
+                    or not float("-inf") < float(cast(Any, parsed[index])) < float("inf")
+                ):
+                    diagnostics.append(
+                        SourceDiagnostic(
+                            filename,
+                            "invalid_number",
+                            f"expected finite number, got {value!r}",
+                            row=int(str(index)) + 2,
+                            field=column,
+                        )
+                    )
+            frame[column] = parsed.astype("Float64")
+        elif column in DATE_FIELDS:
+            for index, value in cast(Any, frame[column]).items():
+                try:
+                    if date.fromisoformat(value).isoformat() != value:
+                        raise ValueError(value)
+                except (ValueError, TypeError):
+                    diagnostics.append(
+                        SourceDiagnostic(
+                            filename,
+                            "invalid_date",
+                            f"expected YYYY-MM-DD, got {value!r}",
+                            row=int(str(index)) + 2,
+                            field=column,
+                        )
+                    )
+    return frame, diagnostics
+
+
 def ingest_sources(source_dir: Path, *, as_of: date) -> IngestedSources:
     """Preserve all rows and original indices; validation is a separate stage.
 
@@ -290,7 +343,7 @@ def ingest_sources(source_dir: Path, *, as_of: date) -> IngestedSources:
     All numeric columns use nullable floats. Malformed cells are recorded before coercion.
     """
     result = IngestedSources({}, [], as_of)
-    for table, columns in COLUMNS.items():
+    for table in COLUMNS:
         filename = f"{table}.csv"
         try:
             frame = pd.read_csv(Path(source_dir) / filename, dtype=str, keep_default_na=False)
@@ -304,48 +357,9 @@ def ingest_sources(source_dir: Path, *, as_of: date) -> IngestedSources:
             )
             continue
         result.tables[table] = frame
-        for column in columns:
-            if column not in frame:
-                result.diagnostics.append(
-                    SourceDiagnostic(
-                        filename, "missing_column", "required column is missing", field=column
-                    )
-                )
-                continue
-            if column in NUMERIC_FIELDS or column.startswith(NUMERIC_PREFIXES):
-                parsed = cast(
-                    pd.Series, pd.to_numeric(frame[column].replace("", None), errors="coerce")
-                )
-                for index, value in cast(Any, frame[column]).items():
-                    if (value != "" or column not in OPTIONAL_FIELDS) and (
-                        bool(pd.isna(cast(Any, parsed[index])))
-                        or not float("-inf") < float(cast(Any, parsed[index])) < float("inf")
-                    ):
-                        result.diagnostics.append(
-                            SourceDiagnostic(
-                                filename,
-                                "invalid_number",
-                                f"expected finite number, got {value!r}",
-                                row=int(str(index)) + 2,
-                                field=column,
-                            )
-                        )
-                frame[column] = parsed.astype("Float64")
-            elif column in DATE_FIELDS:
-                for index, value in cast(Any, frame[column]).items():
-                    try:
-                        if date.fromisoformat(value).isoformat() != value:
-                            raise ValueError(value)
-                    except (ValueError, TypeError):
-                        result.diagnostics.append(
-                            SourceDiagnostic(
-                                filename,
-                                "invalid_date",
-                                f"expected YYYY-MM-DD, got {value!r}",
-                                row=int(str(index)) + 2,
-                                field=column,
-                            )
-                        )
+        frame, diagnostics = coerce_source_table(table, frame)
+        result.tables[table] = frame
+        result.diagnostics.extend(diagnostics)
     try:
         notes = json.loads((Path(source_dir) / "rm_notes.json").read_text())
         if not isinstance(notes, list) or not all(isinstance(note, dict) for note in notes):
