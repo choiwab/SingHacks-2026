@@ -21,6 +21,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -226,6 +227,7 @@ export function EvidenceProvider({
 }) {
   const styles = useStyles();
   const { pathname } = useLocation();
+  const clientContextId = useId();
   const [request, setRequest] = useState<
     (EvidenceRequest & { pathname: string }) | null
   >(null);
@@ -252,12 +254,14 @@ export function EvidenceProvider({
     ? expandCitations(projection, request.clientId, request.citations)
     : { records: [], missing: [] };
   const authorship = request?.authorship && AUTHORSHIP[request.authorship];
+  const clientName = request && projection.pre_reads[request.clientId]?.name;
 
   return (
     <EvidenceContext.Provider value={controls}>
       {children}
       <OverlayDrawer
         aria-label="Why?"
+        aria-describedby={request ? clientContextId : undefined}
         position="end"
         size="medium"
         open={Boolean(request)}
@@ -278,6 +282,13 @@ export function EvidenceProvider({
           >
             Why?
           </DrawerHeaderTitle>
+          {request && (
+            <Body1Strong id={clientContextId}>
+              {clientName
+                ? `${clientName} · ${request.clientId}`
+                : request.clientId}
+            </Body1Strong>
+          )}
           <Caption1>
             The cited facts, holdings, events, market inputs and note rows.
           </Caption1>

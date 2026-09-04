@@ -1,6 +1,52 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`source trail identifies its client without a generated claim at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    for (const client of [
+      { name: "Margarethe Voss-Brenner", id: "CL-0003", query: "boring" },
+      { name: "Abdullah Al-Mansoori", id: "CL-0019", query: "Gulf" },
+    ]) {
+      await page
+        .getByRole("navigation", { name: "Client switcher" })
+        .getByRole("button", { name: new RegExp(client.name) })
+        .click();
+      await page.getByRole("tab", { name: "Memory", exact: true }).click();
+      const search = page.getByRole("searchbox", {
+        name: "Search this client's RM notes",
+      });
+      await search.fill(client.query);
+      const why = page
+        .getByRole("region", { name: "RM notes", exact: true })
+        .getByRole("button", { name: "Why?", exact: true })
+        .first();
+      await why.focus();
+      await why.press("Enter");
+      const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+      const identity = `${client.name} · ${client.id}`;
+      await expect(drawer).toHaveAccessibleDescription(identity);
+      await expect(
+        drawer.getByText(identity, { exact: true }),
+      ).toBeInViewport();
+      await expect(drawer).toContainText("data/rm_notes.json");
+      await expect(
+        drawer.getByRole("region", { name: "Generated claim" }),
+      ).toHaveCount(0);
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).toHaveCount(0);
+      await expect(why).toBeFocused();
+      await expect(search).toHaveValue(client.query);
+    }
+  });
+
   test(`Memory explains searches without topic words at ${width}px`, async ({
     page,
   }) => {
