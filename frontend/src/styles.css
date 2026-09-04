@@ -38,6 +38,26 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+#root {
+  min-height: 100vh;
+}
+
+.app-status {
+  display: grid;
+  min-height: 70vh;
+  place-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.route-notice {
+  margin: 0 0 1.5rem;
+  padding: 0.8rem 1rem;
+  border-left: 0.3rem solid var(--signal);
+  background: var(--signal-soft);
+  font-weight: 650;
+}
+
 button,
 textarea {
   font: inherit;
@@ -284,7 +304,9 @@ h2 {
   background: var(--surface);
   cursor: pointer;
   text-align: left;
-  transition: background-color 140ms var(--ease-out), transform 140ms var(--ease-out);
+  transition:
+    background-color 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
   gap: 0.75rem;
   grid-template-columns: 3.5rem minmax(0, 1fr) auto;
 }
@@ -395,7 +417,9 @@ h2 {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background-color 140ms var(--ease-out), transform 140ms var(--ease-out);
+  transition:
+    background-color 140ms var(--ease-out),
+    transform 140ms var(--ease-out);
 }
 
 .meeting-card.urgency-now {

@@ -5,5 +5,10 @@ __pycache__/
 .venv/
 .pytest_cache/
 .ruff_cache/
+node_modules/
+frontend/dist/
+playwright-report/
+test-results/
+*.tsbuildinfo
 data/generated/review_log.json
 data/generated/app_data.json
