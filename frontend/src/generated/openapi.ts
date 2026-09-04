@@ -21,6 +21,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/app": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** App Data */
+        get: operations["app_data_api_app_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/demo/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Demo Update */
+        post: operations["demo_update_api_demo_update_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reviews": {
         parameters: {
             query?: never;
@@ -42,10 +76,284 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ChangeReport */
+        ChangeReport: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /**
+             * Run Id
+             * @default
+             */
+            run_id: string;
+            /** Client Id */
+            client_id: string;
+            /** Prior Run Id */
+            prior_run_id?: string | null;
+            /**
+             * Processing Mode
+             * @enum {string}
+             */
+            processing_mode: "first_seen" | "incremental_update" | "no_material_change";
+            /** Fact Changes */
+            fact_changes?: components["schemas"]["FactChange"][];
+            /** Signal Changes */
+            signal_changes?: components["schemas"]["SignalChange"][];
+            /** Changed Fact Ids */
+            changed_fact_ids?: string[];
+            /** Affected Signal Ids */
+            affected_signal_ids?: string[];
+            /** Changed Source Files */
+            changed_source_files?: string[];
+        };
+        /**
+         * ClientHeader
+         * @description Qualitative profile fields; financial numbers are presented as Facts.
+         */
+        ClientHeader: {
+            /** Client Id */
+            client_id: string;
+            /** Client Name */
+            client_name: string;
+            /** Rm Id */
+            rm_id: string;
+            /** Rm Name */
+            rm_name: string;
+            /** Rm Desk */
+            rm_desk: string;
+            /** Base Currency */
+            base_currency: string;
+            /** Risk Profile */
+            risk_profile: string;
+            /** Life Stage */
+            life_stage: string;
+            /** Reporting Language */
+            reporting_language: string;
+            /** Booking Centre */
+            booking_centre: string;
+        };
+        /** ClientView */
+        ClientView: {
+            header: components["schemas"]["ClientHeader"];
+            /** Insights */
+            insights?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            }[];
+            /** Meeting Brief */
+            meeting_brief?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            } | null;
+            /** Brief Version */
+            brief_version?: number | null;
+            /** Memory Card */
+            memory_card?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            } | null;
+            data_tab: components["schemas"]["DataTab"];
+            /** Memory Tab */
+            memory_tab?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            }[];
+            change_report: components["schemas"]["ChangeReport"];
+            /** Quality Findings */
+            quality_findings?: components["schemas"]["DataQualityFinding"][];
+            /**
+             * Brief Status
+             * @enum {string}
+             */
+            brief_status: "Ready" | "Needs review" | "Not prepared";
+            /** Verification */
+            verification?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Context Issues */
+            context_issues?: string[];
+        };
+        /** DataQualityFinding */
+        DataQualityFinding: {
+            /** Code */
+            code: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning";
+            /** Client Id */
+            client_id?: string | null;
+            /** Portfolio Id */
+            portfolio_id?: string | null;
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /** Message */
+            message: string;
+        };
+        /** DataTab */
+        DataTab: {
+            /** Allocation */
+            allocation?: components["schemas"]["Fact"][];
+            /** Snapshot Changes */
+            snapshot_changes?: components["schemas"]["Fact"][];
+            /** Mandate */
+            mandate?: components["schemas"]["Fact"][];
+            /** Liquidity */
+            liquidity?: components["schemas"]["Fact"][];
+            /** Cash Need */
+            cash_need?: components["schemas"]["Fact"][];
+            /** Collateral */
+            collateral?: components["schemas"]["Fact"][];
+        };
+        /** DemoUpdateRequest */
+        DemoUpdateRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "apply" | "reset";
+        };
+        /** DemoViewModel */
+        DemoViewModel: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Run Id */
+            run_id: string;
+            /**
+             * Refreshed At
+             * Format: date-time
+             */
+            refreshed_at: string;
+            /**
+             * Data Health
+             * @enum {string}
+             */
+            data_health: "Current" | "Stale" | "Updating" | "Needs confirmation";
+            /** Clients */
+            clients: {
+                [key: string]: components["schemas"]["ClientView"];
+            };
+            /** Calendar */
+            calendar?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            }[];
+            /** Evidence */
+            evidence?: {
+                [key: string]: components["schemas"]["Evidence"];
+            };
+            /** Reviews */
+            reviews?: components["schemas"]["ReviewRecord"][];
+        };
+        /** Evidence */
+        Evidence: {
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Title */
+            title: string;
+            /** Source */
+            source: string;
+            /** Record */
+            record: {
+                [key: string]: unknown;
+            };
+            /**
+             * Source File
+             * @default
+             */
+            source_file: string;
+            /** Row Index */
+            row_index?: number | null;
+            /** Fields */
+            fields?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+        };
+        /** Fact */
+        Fact: {
+            /** Id */
+            id: string;
+            /** Client Id */
+            client_id: string;
+            /** Kind */
+            kind: string;
+            /** Value */
+            value: number;
+            /** Unit */
+            unit: string;
+            /** Currency */
+            currency?: string | null;
+            /** Formula Id */
+            formula_id: string;
+            /** Inputs */
+            inputs?: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Evidence Ids */
+            evidence_ids?: string[];
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Confidence */
+            confidence: number;
+        };
+        /** FactChange */
+        FactChange: {
+            /** Fact Id */
+            fact_id: string;
+            /**
+             * Change
+             * @enum {string}
+             */
+            change: "added" | "removed" | "changed";
+            /** Before */
+            before?: number | null;
+            /** After */
+            after?: number | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        JsonValue: unknown;
+        /** ReviewActionRequest */
+        ReviewActionRequest: {
+            /** Client Id */
+            client_id: string;
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "Approve" | "Edit" | "Reject";
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Section */
+            section?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Run Id */
+            run_id: string;
+            /** Brief Version */
+            brief_version: number;
+        };
+        /** ReviewActionResponse */
+        ReviewActionResponse: {
+            review: components["schemas"]["ReviewRecord"];
+            /** Brief Version */
+            brief_version: number;
+            /** Verification Report */
+            verification_report: {
+                [key: string]: unknown;
+            };
         };
         /** ReviewRecord */
         ReviewRecord: {
@@ -56,11 +364,21 @@ export interface components {
              * @enum {string}
              */
             action: "Approve" | "Edit" | "Reject";
+            /** Run Id */
+            run_id?: string | null;
+            /** Brief Version */
+            brief_version?: number | null;
+            /** Section */
+            section?: string | null;
+            /** Reason */
+            reason?: string | null;
             /**
              * Text
              * @default
              */
             text: string;
+            /** Verification Report Id */
+            verification_report_id?: string | null;
             /** Review Id */
             review_id: string;
             /** Rm */
@@ -71,24 +389,19 @@ export interface components {
              */
             timestamp: string;
         };
-        /** ReviewRequest */
-        ReviewRequest: {
-            /** Client Id */
-            client_id: string;
+        /** SignalChange */
+        SignalChange: {
+            /** Signal Id */
+            signal_id: string;
             /**
-             * Action
+             * Change
              * @enum {string}
              */
-            action: "Approve" | "Edit" | "Reject";
-            /**
-             * Text
-             * @default
-             */
-            text: string;
-        };
-        /** ReviewResponse */
-        ReviewResponse: {
-            review: components["schemas"]["ReviewRecord"];
+            change: "added" | "removed" | "changed";
+            /** Before */
+            before?: string | null;
+            /** After */
+            after?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -134,7 +447,27 @@ export interface operations {
             };
         };
     };
-    review_api_reviews_post: {
+    app_data_api_app_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemoViewModel"];
+                };
+            };
+        };
+    };
+    demo_update_api_demo_update_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -143,7 +476,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ReviewRequest"];
+                "application/json": components["schemas"]["DemoUpdateRequest"];
             };
         };
         responses: {
@@ -153,7 +486,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReviewResponse"];
+                    "application/json": components["schemas"]["DemoViewModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    review_api_reviews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewActionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviewActionResponse"];
                 };
             };
             /** @description Validation Error */

@@ -4,10 +4,15 @@ from typing import Annotated, Any, Literal
 
 from pydantic import Field, model_validator
 
-from app.pipeline.schemas import ContractModel, ReviewRecord, ReviewRequest
+from app.pipeline.schemas import ContractModel, ReviewRecord
 
 
-class ReviewActionRequest(ReviewRequest):
+class ReviewActionRequest(ContractModel):
+    client_id: Annotated[str, Field(pattern=r"^CL-\d{4}$")]
+    action: Literal["Approve", "Edit", "Reject"]
+    text: Annotated[str, Field(max_length=1200)] = ""
+    section: str | None = None
+    reason: str | None = None
     run_id: Annotated[str, Field(pattern=r"^[a-f0-9]{12}$")] = Field(...)
     brief_version: Annotated[int, Field(ge=1)] = Field(...)
 

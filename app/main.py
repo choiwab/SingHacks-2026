@@ -17,6 +17,7 @@ from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.publish import read_latest
 from app.pipeline.runtime import PipelineRuntime
+from app.pipeline.schemas import ReviewRequest
 from app.pipeline.view_model import build_view_model
 from app.store import ReviewLedger
 
@@ -94,7 +95,9 @@ def create_app(
     def review(payload: ReviewActionRequest, request: Request) -> ReviewActionResponse:
         runtime: PipelineRuntime = request.app.state.pipeline_runtime
         try:
-            return ReviewActionResponse.model_validate(runtime.review(payload))
+            return ReviewActionResponse.model_validate(
+                runtime.review(ReviewRequest.model_validate(payload.model_dump()))
+            )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         except ValueError as exc:

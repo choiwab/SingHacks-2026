@@ -17,6 +17,16 @@ def test_margarethe_artifact_goldens(tmp_path, request):
         "change_report": store.load_change_report("CL-0003"),
         "data_quality_report": store.load_data_quality_report(client_id="CL-0003"),
     }
+    evidence = store.load_evidence_map()
+    referenced = {
+        key for fact in store.load_fact_bundle("CL-0003").facts for key in fact.evidence_ids
+    }
+    entries = {
+        key: value
+        for key, value in evidence.entries.items()
+        if value.fields.get("client_id") == "CL-0003" or key in referenced
+    }
+    artifacts["evidence_map"] = evidence.model_copy(update={"entries": entries})
     for name, artifact in artifacts.items():
         expected = GOLDEN / f"{name}.json"
         actual = canonical_json(artifact)
