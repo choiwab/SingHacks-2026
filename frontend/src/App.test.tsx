@@ -477,7 +477,17 @@ describe("Monday Brief", () => {
     const saved = "May we discuss your cash needs first?";
     await user.click(await screen.findByRole("button", { name: "Edit" }));
     await user.clear(screen.getByLabelText("Edit the opening line"));
+    await user.click(screen.getByRole("button", { name: "Save edit" }));
+    expect(requests).toHaveLength(0);
+    expect(screen.getByLabelText("Edit the opening line")).toHaveFocus();
+    expect(screen.getByLabelText("Edit the opening line")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
     await user.type(screen.getByLabelText("Edit the opening line"), saved);
+    expect(
+      screen.queryByText("Enter an opening line before saving."),
+    ).toBeNull();
     expect(opening()).not.toHaveTextContent(saved);
     await user.click(screen.getByRole("button", { name: "Save edit" }));
     await waitFor(() => expect(opening()).toHaveTextContent(saved));
@@ -490,6 +500,12 @@ describe("Monday Brief", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByLabelText("Edit the opening line")).toHaveValue(saved);
+    await user.clear(screen.getByLabelText("Edit the opening line"));
+    await user.type(screen.getByLabelText("Edit the opening line"), "   ");
+    await user.click(screen.getByRole("button", { name: "Save edit" }));
+    expect(requests).toHaveLength(1);
+    expect(opening()).toHaveTextContent(saved);
+    expect(screen.getByText("Edited by the RM")).toBeVisible();
     await user.clear(screen.getByLabelText("Edit the opening line"));
     await user.type(
       screen.getByLabelText("Edit the opening line"),

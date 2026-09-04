@@ -144,6 +144,7 @@ export function PreRead({
   // A failed review is kept until the RM dismisses it; only the confirmation
   // is allowed to disappear on its own.
   const [reviewError, setReviewError] = useState("");
+  const [emptyOpening, setEmptyOpening] = useState(false);
   const [pending, setPending] = useState<ReviewAction | null>(null);
   const [tab, setTab] = useState<TabValue>("overview");
   const reviewState = reviews[clientId] ?? "Unreviewed";
@@ -177,6 +178,11 @@ export function PreRead({
   const currentOpening = savedOpenings[clientId] ?? preRead.opening.text;
 
   const persistReview = async (action: ReviewAction) => {
+    if (action === "Edit" && !editedOpening.trim()) {
+      setEmptyOpening(true);
+      editField.current?.focus();
+      return;
+    }
     setPending(action);
     setReviewError("");
     try {
@@ -388,6 +394,10 @@ export function PreRead({
           <Field
             label="Edit the opening line"
             hint="Saved to the review log as your wording."
+            validationMessage={
+              emptyOpening ? "Enter an opening line before saving." : undefined
+            }
+            validationState={emptyOpening ? "error" : "none"}
           >
             <Textarea
               ref={editField}
@@ -395,7 +405,10 @@ export function PreRead({
               resize="vertical"
               rows={4}
               value={editedOpening}
-              onChange={(_event, data) => setEditedOpening(data.value)}
+              onChange={(_event, data) => {
+                setEditedOpening(data.value);
+                if (data.value.trim()) setEmptyOpening(false);
+              }}
             />
           </Field>
           <Button
@@ -404,6 +417,7 @@ export function PreRead({
               setEditedOpening(currentOpening);
               setEditing(false);
               setReviewError("");
+              setEmptyOpening(false);
               editButton.current?.focus();
             }}
           >

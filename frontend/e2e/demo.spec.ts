@@ -1,6 +1,56 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`blank opening edits preserve the brief at ${width}px`, async ({
+    page,
+  }) => {
+    let reviewRequests = 0;
+    page.on("request", (request) => {
+      if (request.url().endsWith("/api/reviews")) reviewRequests += 1;
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const edit = page.getByRole("button", { name: "Edit", exact: true });
+    await edit.click();
+    const editor = page.getByLabel("Edit the opening line");
+    const original = await editor.inputValue();
+    for (const blank of ["", "   \n  "]) {
+      await editor.fill(blank);
+      const save = page.getByRole("button", { name: "Save edit" });
+      await save.focus();
+      await save.press("Enter");
+      await expect(editor).toBeFocused();
+      await expect(editor).toHaveAttribute("aria-invalid", "true");
+      await expect(editor).toHaveAccessibleDescription(
+        /Enter an opening line before saving/,
+      );
+      await expect(
+        page.getByText("Enter an opening line before saving."),
+      ).toBeInViewport();
+      await expect(
+        page.getByRole("region", { name: "Suggested opening" }),
+      ).toContainText(original);
+      await expect(
+        page.getByText("Generated · awaiting RM review"),
+      ).toBeVisible();
+    }
+    expect(reviewRequests).toBe(0);
+    await editor.fill("A valid opening");
+    await expect(editor).not.toHaveAttribute("aria-invalid", "true");
+    await editor.fill("");
+    await page.getByRole("button", { name: "Save edit" }).click();
+    await page.getByRole("button", { name: "Cancel edit" }).click();
+    await edit.click();
+    await expect(editor).toHaveValue(original);
+    await expect(editor).not.toHaveAttribute("aria-invalid", "true");
+    expect(reviewRequests).toBe(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`cancel opening edit restores wording and focus at ${width}px`, async ({
     page,
   }) => {
