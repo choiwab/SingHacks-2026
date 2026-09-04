@@ -1,6 +1,52 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory highlights matching note channels at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const channel of ["Email", "Meeting"]) {
+      const matches =
+        channel === "Meeting" ? ["Meeting", "meeting"] : ["Email"];
+      await search.fill(channel.toLowerCase());
+      await expect(search).toBeFocused();
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 2 notes",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(1);
+      await expect(notes.locator("mark")).toHaveText(matches);
+      await notes.getByRole("button", { name: "Why?" }).click();
+      const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+      await expect(drawer).toContainText("data/rm_notes.json");
+      await expect(drawer).toContainText(channel);
+      await page.keyboard.press("Escape");
+      await expect(drawer).toHaveCount(0);
+      await expect(notes.getByRole("button", { name: "Why?" })).toBeFocused();
+      await expect(notes.locator("mark")).toHaveText(matches);
+    }
+    await search.fill("email risk");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await expect(notes.locator("mark")).toHaveText(["risk", "Risk", "Email"]);
+    await searchRegion
+      .getByRole("button", { name: "clear", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await expect(notes.locator("mark")).toHaveCount(0);
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`dismissing an earlier review failure returns to an unfinished edit at ${width}px`, async ({
     page,
   }) => {

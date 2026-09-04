@@ -1362,8 +1362,11 @@ export function MemoryPanel({
             <div className={styles.note} key={note.id}>
               <Caption1>
                 {String(note.record.note_date)} ·{" "}
-                {String(note.record.channel ?? "Note")} ·{" "}
-                {String(note.record.rm_name ?? "RM")}
+                <Highlight
+                  text={String(note.record.channel ?? "Note")}
+                  terms={terms}
+                />{" "}
+                · {String(note.record.rm_name ?? "RM")}
               </Caption1>
               <Body1>
                 <Highlight
