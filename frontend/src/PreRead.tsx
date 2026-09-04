@@ -430,7 +430,12 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Where you left off">
-              <WorkflowList items={preRead.workflow} clientId={clientId} />
+              <WorkflowList
+                items={preRead.workflow}
+                clientId={clientId}
+                clientName={preRead.name}
+                authorship={reviewState}
+              />
             </BriefSection>
           </div>
         )}

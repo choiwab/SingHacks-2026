@@ -1,6 +1,77 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`workflow evidence retains the client, status, and review at ${width}px`, async ({
+    page,
+  }) => {
+    await page.route("**/api/reviews", async (route) => {
+      await route.fulfill({
+        json: {
+          review: {
+            ...route.request().postDataJSON(),
+            timestamp: "2026-09-05T10:00:00Z",
+            rm: "Priscilla Ong",
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    for (const client of [
+      {
+        name: "Margarethe Voss-Brenner",
+        system: "CRM",
+        status: "Email logged 2026-05-29",
+        source: "data/rm_notes.json · row rm_notes:N-006",
+      },
+      {
+        name: "Abdullah Al-Mansoori",
+        system: "Gmail",
+        status: "No thread linked",
+        source: "data/clients.csv · row clients:CL-0019",
+      },
+    ]) {
+      await page
+        .getByRole("navigation", { name: "Client switcher" })
+        .getByRole("button", { name: new RegExp(client.name) })
+        .click();
+      const workflow = page.getByRole("region", { name: "Where you left off" });
+      const item = workflow
+        .getByRole("listitem")
+        .filter({ hasText: client.status });
+      const why = item.getByRole("button", { name: "Why?", exact: true });
+      for (const authorship of [
+        "Generated · awaiting RM review",
+        "Approved by the RM",
+      ]) {
+        if (authorship === "Approved by the RM") {
+          await page.getByRole("button", { name: "Approve pre-read" }).click();
+          await expect(page.getByRole("status").last()).toContainText(
+            "Approved",
+          );
+        }
+        await why.focus();
+        await why.press("Enter");
+        const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+        const claim = drawer.getByRole("region", { name: "Generated claim" });
+        await expect(claim).toContainText(
+          `${client.name} · ${client.system}: ${client.status}`,
+        );
+        await expect(claim).toContainText(authorship);
+        await expect(drawer).toContainText(client.source);
+        expect(
+          await drawer.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true);
+        await page.keyboard.press("Escape");
+        await expect(drawer).not.toBeVisible();
+        await expect(why).toBeFocused();
+        await expect(item).toContainText(client.status);
+      }
+    }
+  });
+
   test(`discrepancy evidence retains both sides of the comparison at ${width}px`, async ({
     page,
   }) => {

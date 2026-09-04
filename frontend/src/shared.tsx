@@ -105,9 +105,13 @@ export function CitedList({
 export function WorkflowList({
   items,
   clientId,
+  clientName,
+  authorship,
 }: {
   items: WorkflowContext[];
   clientId: string;
+  clientName: string;
+  authorship: Authorship;
 }) {
   const styles = useStyles();
 
@@ -121,7 +125,12 @@ export function WorkflowList({
           </div>
           {item.citations.length > 0 && (
             <div className={styles.itemActions}>
-              <WhyButton citations={item.citations} clientId={clientId} />
+              <WhyButton
+                citations={item.citations}
+                clientId={clientId}
+                claim={`${clientName} · ${item.system}: ${item.status}`}
+                authorship={authorship}
+              />
             </div>
           )}
         </li>
