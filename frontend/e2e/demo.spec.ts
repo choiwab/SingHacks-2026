@@ -1883,12 +1883,13 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     const submitted: { action: string; text: string }[] = [];
+    const errorMessage = `Review ledger unavailable for reference ${"REFERENCE".repeat(30)}.`;
     await page.route("**/api/reviews", async (route) => {
       submitted.push(route.request().postDataJSON());
       await route.fulfill({
         status: 503,
         contentType: "application/json",
-        body: JSON.stringify({ detail: "Review ledger unavailable" }),
+        body: JSON.stringify({ detail: errorMessage }),
       });
     });
     await page.setViewportSize({ width, height: 844 });
@@ -1909,12 +1910,22 @@ for (const width of [1280, 390]) {
       await retry.click();
       for (let attempt = 0; attempt < 2; attempt += 1) {
         const alert = page.getByRole("alert");
-        await expect(alert).toContainText("Review ledger unavailable");
+        await expect(alert).toContainText(errorMessage);
+        for (const container of [alert, page.getByRole("main")]) {
+          await expect
+            .poll(() =>
+              container.evaluate(
+                (element) => element.scrollWidth <= element.clientWidth,
+              ),
+            )
+            .toBe(true);
+        }
         const requestCount = submitted.length;
         const dismiss = alert.getByRole("button", {
           name: "Dismiss the review error",
         });
         await dismiss.focus();
+        await expect(dismiss).toBeInViewport();
         await page.keyboard.press("Enter");
         await expect(alert).toHaveCount(0);
         await expect(retry).toBeFocused();

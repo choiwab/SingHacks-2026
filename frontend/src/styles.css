@@ -204,6 +204,7 @@ h2 {
 
 .review-error {
   margin-top: 1.5rem;
+  overflow-wrap: anywhere;
 }
 
 .review-bar {
