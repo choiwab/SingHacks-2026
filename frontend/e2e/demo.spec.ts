@@ -1,6 +1,48 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`dashboard tabs lead keyboard users into their named panel at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Overview", exact: true }).click();
+
+    for (const name of ["Overview", "Insights", "Data", "Memory"]) {
+      const tab = page.getByRole("tab", { name, exact: true });
+      await expect(tab).toBeFocused();
+      await tab.press("Enter");
+      await expect(tab).toHaveAttribute("aria-selected", "true");
+      const panel = page.getByRole("tabpanel", { name, exact: true });
+      await page.keyboard.press("Tab");
+      await expect(panel).toBeFocused();
+      await expect(tab).toHaveAttribute(
+        "aria-controls",
+        await panel.evaluate((element) => element.id),
+      );
+      await expect(panel).toHaveCSS("outline-style", "solid");
+      await page.keyboard.press("Tab");
+      expect(
+        await panel.evaluate((element) =>
+          element.contains(document.activeElement),
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Shift+Tab");
+      await expect(panel).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(tab).toBeFocused();
+      await page.keyboard.press("ArrowRight");
+    }
+    await expect(
+      page.getByRole("tab", { name: "Overview", exact: true }),
+    ).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`review decisions require saving or cancelling the opening edit at ${width}px`, async ({
     page,
   }) => {

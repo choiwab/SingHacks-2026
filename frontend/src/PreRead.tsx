@@ -20,7 +20,7 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { DismissRegular } from "@fluentui/react-icons";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
@@ -51,6 +51,12 @@ const TABS = [
 type TabValue = (typeof TABS)[number]["value"];
 
 const useStyles = makeStyles({
+  tabPanel: {
+    ":focus-visible": {
+      outline: `2px solid ${tokens.colorStrokeFocus2}`,
+      outlineOffset: "2px",
+    },
+  },
   brief: {
     display: "grid",
     rowGap: tokens.spacingVerticalXL,
@@ -147,6 +153,7 @@ export function PreRead({
   const [emptyOpening, setEmptyOpening] = useState(false);
   const [pending, setPending] = useState<ReviewAction | null>(null);
   const [tab, setTab] = useState<TabValue>("overview");
+  const panelId = useId();
   const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
   const editPanel = useRef<HTMLDivElement>(null);
@@ -268,17 +275,29 @@ export function PreRead({
 
       <TabList
         className="dashboard-tabs"
+        aria-label="Client intelligence"
         selectedValue={tab}
         onTabSelect={(_, data) => setTab(data.value as TabValue)}
       >
         {TABS.map((item) => (
-          <Tab key={item.value} id={`tab-${item.value}`} value={item.value}>
+          <Tab
+            key={item.value}
+            id={`tab-${item.value}`}
+            value={item.value}
+            aria-controls={panelId}
+          >
             {item.label}
           </Tab>
         ))}
       </TabList>
 
-      <div role="tabpanel" aria-labelledby={`tab-${tab}`}>
+      <div
+        id={panelId}
+        className={styles.tabPanel}
+        role="tabpanel"
+        aria-labelledby={`tab-${tab}`}
+        tabIndex={0}
+      >
         {tab === "insights" && (
           <InsightsPanel
             preRead={{
