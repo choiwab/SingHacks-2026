@@ -1084,7 +1084,7 @@ for (const width of [1280, 390]) {
     ).toBe(true);
   });
 
-  test(`client search tolerates name separators at ${width}px`, async ({
+  test(`client search matches all name parts in any order at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -1096,6 +1096,9 @@ for (const width of [1280, 390]) {
       "  VOSS   BRENNER  ",
       "Voss-Brenner",
       "Voss\u2011Brenner",
+      "Margarethe Brenner",
+      "  BRENNER   margarethe  ",
+      "Bren Marg",
     ]) {
       await search.fill(query);
       await expect(switcher.getByRole("status")).toHaveText(
@@ -1107,6 +1110,15 @@ for (const width of [1280, 390]) {
       ).toBeVisible();
       await expect(search).toBeFocused();
     }
+    await search.fill("Margarethe Abdullah");
+    await expect(switcher.getByRole("status")).toHaveText(
+      "0 of 20 clients shown",
+    );
+    await expect(
+      switcher.getByRole("button", { name: /Margarethe|Abdullah/ }),
+    ).toHaveCount(0);
+    await expect(search).toBeFocused();
+    await search.fill("Brenner Margarethe");
     await switcher
       .getByRole("button", { name: /Margarethe Voss-Brenner/ })
       .click();
@@ -1119,7 +1131,7 @@ for (const width of [1280, 390]) {
     await expect(
       switcher.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
     ).toHaveAttribute("aria-current", "true");
-    await search.fill("Al Mansoori");
+    await search.fill("Mansoori Abdullah");
     await expect(switcher.getByRole("status")).toHaveText(
       "1 of 20 clients shown",
     );

@@ -210,9 +210,11 @@ function ClientSwitcher({
         .trim();
     const needle = normalizeName(query);
     if (!needle) return ranking;
-    return ranking.filter((client) =>
-      normalizeName(client.name).includes(needle),
-    );
+    const terms = needle.split(" ");
+    return ranking.filter((client) => {
+      const name = normalizeName(client.name);
+      return terms.every((term) => name.includes(term));
+    });
   }, [ranking, query]);
 
   useEffect(() => {
