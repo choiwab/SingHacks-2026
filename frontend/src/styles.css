@@ -165,15 +165,6 @@ h2 {
   color: var(--ink);
 }
 
-.screen-kicker p span {
-  margin-right: 0.45rem;
-  color: var(--signal);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .back-link,
 .why-link,
 .scenario-link {

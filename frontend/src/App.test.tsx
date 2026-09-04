@@ -111,15 +111,31 @@ describe("Monday Brief", () => {
     expect(screen.getByText("Data Current")).toBeVisible();
     expect(screen.getByRole("heading", { name: "What changed" })).toBeVisible();
 
-    await user.click(screen.getByRole("tab", { name: "Insights" }));
-    // The profile fact is context, so only the two discrepancies rank.
-    const insights = screen.getAllByRole("heading", { level: 3 });
-    expect(insights.map((node) => node.textContent)).toEqual([
+    // Top insights sit above the tabs, so they stay visible on every tab
+    // (PRD 5.4). The profile fact is context, so only the two discrepancies
+    // rank, highest severity first.
+    const top = screen.getByRole("region", { name: "Top insights" });
+    expect(
+      within(top)
+        .getAllByRole("heading", { level: 3 })
+        .map((node) => node.textContent),
+    ).toEqual([
       "Equity is above the mandate limit.",
       "German inheritance tax instalment starts in 36 days.",
-      "Suggested question",
-      "What we are not sure about",
     ]);
+    // Why it matters: the narrator's line when it adds something, and the
+    // quantified stake from the fact's own calculation inputs when it does not.
+    expect(within(top).getByText("Equity increased.")).toBeVisible();
+    expect(
+      within(top).getByText(/€3,400,000 falls due in 36 days/),
+    ).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Insights" }));
+    expect(
+      screen.getByText("Every insight for this client is shown above."),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Also active" })).toBeVisible();
+    expect(within(top).getAllByRole("heading", { level: 3 })).toHaveLength(2);
     expect(
       screen.queryByRole("heading", { name: "What changed" }),
     ).not.toBeInTheDocument();
@@ -174,7 +190,7 @@ describe("Monday Brief", () => {
     ]);
     expect(
       within(topics).getByText(
-        "Equity sits at 71.5% against a 30% maximum, 41.5 points out, measured Household look-through; strictest applicable band.",
+        "41.5 points outside the 30% maximum, measured Household look-through; strictest applicable band.",
       ),
     ).toBeVisible();
     expect(

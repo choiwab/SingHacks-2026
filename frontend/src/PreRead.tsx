@@ -23,6 +23,7 @@ import {
   InsightsPanel,
   MemoryPanel,
   OpenCommitments,
+  TopInsights,
   TwoMinuteSummary,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
@@ -78,7 +79,7 @@ export function PreRead({
         to="/"
         replace
         state={{
-          notice: `Client ${clientId || "requested"} was not found. Showing the RM dashboard.`,
+          notice: `Client ${clientId || "requested"} was not found. Showing the dashboard.`,
         }}
       />
     );
@@ -143,9 +144,8 @@ export function PreRead({
           ← RM dashboard
         </button>
         <p>
-          Selected priority{" "}
           <strong>
-            #{rank + 1} · score {rankedClient?.score ?? 0}
+            Priority #{rank + 1} · score {rankedClient?.score ?? 0}
           </strong>
         </p>
       </div>
@@ -169,6 +169,8 @@ export function PreRead({
           }}
         />
       </div>
+
+      <TopInsights preRead={preRead} facts={facts} />
 
       <TabList
         className="dashboard-tabs"
@@ -353,7 +355,7 @@ export function PreRead({
         <div className="edit-panel">
           <Field
             label="Edit the opening line"
-            hint="Saving stores this wording as an RM-authored version in the review log."
+            hint="Saved to the review log as your wording."
           >
             <Textarea
               ref={editField}
@@ -371,7 +373,7 @@ export function PreRead({
         <MessageBar intent="error" role="alert" className="review-error">
           <MessageBarBody>
             <MessageBarTitle>The review was not saved.</MessageBarTitle>
-            {reviewError} The brief stays open, so no decision was lost.
+            {reviewError} The brief stays open.
           </MessageBarBody>
           <MessageBarActions
             containerAction={
@@ -393,7 +395,7 @@ export function PreRead({
       >
         <div className="review-copy">
           <strong>RM checkpoint</strong>
-          <span>Only this decision is written to the review log.</span>
+          <span>Only this decision is logged.</span>
         </div>
         <div className="review-actions">
           <Button

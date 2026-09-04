@@ -177,17 +177,15 @@ export function Home({
       )}
 
       <header className={styles.header}>
-        <Caption1 className={styles.eyebrow}>
-          RM dashboard · Priscilla Ong, Asia desk
-        </Caption1>
+        <Caption1 className={styles.eyebrow}>RM dashboard</Caption1>
         <Title3 as="h1" id="home-title">
           Who needs you this week
         </Title3>
         <Body1>
-          {booked.length === 1 ? "1 meeting" : `${booked.length} meetings`}{" "}
-          booked this week · {ready} of {booked.length}{" "}
-          {booked.length === 1 ? "brief" : "briefs"} ready for the room. Data as
-          of {projection.as_of}.
+          {booked.length === 1 ? "1 meeting" : `${booked.length} meetings`} this
+          week · {ready} of {booked.length}{" "}
+          {booked.length === 1 ? "brief" : "briefs"} ready. Data as of{" "}
+          {projection.as_of}.
         </Body1>
         <Caption1 className={styles.eyebrow}>
           Ranked by {projection.ranking_formula}
@@ -208,8 +206,8 @@ export function Home({
             Priority queue
           </Subtitle2>
           <Caption1 className={styles.eyebrow}>
-            Top {queue.length} of {projection.ranking.length}. Use the client
-            switcher for the rest.
+            Top {queue.length} of {projection.ranking.length}. The rest are in
+            the switcher.
           </Caption1>
         </div>
         <ul className={styles.queue} aria-labelledby="queue-title">

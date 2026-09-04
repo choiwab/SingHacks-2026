@@ -201,7 +201,7 @@ function ClientSwitcher({
     <nav className={styles.switcher} aria-label="Client switcher">
       <div className={styles.switcherHead}>
         <Body1Strong>Clients</Body1Strong>
-        <Caption1>{ranking.length} ranked by priority</Caption1>
+        <Caption1>{ranking.length}, ranked by priority</Caption1>
       </div>
       <SearchBox
         placeholder="Search clients"
@@ -243,7 +243,7 @@ function ClientSwitcher({
         })}
         {matches.length === 0 && (
           <li className={styles.empty}>
-            <Caption1>No client matches “{query}”.</Caption1>
+            <Caption1>No match for “{query}”.</Caption1>
           </li>
         )}
       </ul>

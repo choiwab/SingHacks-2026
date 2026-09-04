@@ -259,14 +259,13 @@ export function EvidenceProvider({
             Why?
           </DrawerHeaderTitle>
           <Caption1>
-            Cited facts, holdings, events, market inputs, and note rows appear
-            below.
+            The cited facts, holdings, events, market inputs and note rows.
           </Caption1>
         </DrawerHeader>
         <DrawerBody className={styles.body}>
           {request?.claim && (
             <section className={styles.claim} aria-label="Generated claim">
-              <Caption1>The claim on the dashboard</Caption1>
+              <Caption1>Claim on the dashboard</Caption1>
               <Body1>{request.claim}</Body1>
               {authorship && (
                 <Badge appearance="tint" color={authorship.color}>
@@ -284,7 +283,7 @@ export function EvidenceProvider({
               />
             ))
           ) : (
-            <Body1>No source row is attached to this line.</Body1>
+            <Body1>No source row for this line.</Body1>
           )}
         </DrawerBody>
       </OverlayDrawer>

@@ -6,6 +6,7 @@ import {
   Caption1,
   Subtitle2,
   makeStyles,
+  mergeClasses,
   shorthands,
   tokens,
 } from "@fluentui/react-components";
@@ -90,6 +91,13 @@ const useStyles = makeStyles({
     flexDirection: "column",
     rowGap: tokens.spacingVerticalL,
     paddingBlock: tokens.spacingVerticalL,
+  },
+  topInsights: {
+    // Separates the always-visible insight strip from the tabs beneath it.
+    paddingBlockEnd: tokens.spacingVerticalXXL,
+    borderBottomWidth: "2px",
+    borderBottomStyle: "solid",
+    borderBottomColor: tokens.colorNeutralStroke2,
   },
   cards: {
     display: "grid",
@@ -277,7 +285,9 @@ function stake(fact: ProjectionFact, currency?: string): string {
   switch (fact.kind) {
     case "mandate_gap": {
       const n = fact.numbers;
-      return `${n.asset_class} sits at ${n.actual_pct}% against a ${n.limit_pct}% ${n.boundary}, ${Math.abs(n.gap_pct).toFixed(1)} points out, measured ${n.scope}.`;
+      // The headline already states the actual and the limit; the stake adds
+      // how far out it is and what the measurement covers.
+      return `${Math.abs(n.gap_pct).toFixed(1)} points outside the ${n.limit_pct}% ${n.boundary}, measured ${n.scope}.`;
     }
     case "deadline": {
       const n = fact.numbers;
@@ -393,7 +403,7 @@ export function CompactCalendar({
         })}
         {meetings.length === 0 && (
           <li className={styles.empty}>
-            <Caption1>No meetings are booked this week.</Caption1>
+            <Caption1>No meetings booked this week.</Caption1>
           </li>
         )}
       </ul>
@@ -452,8 +462,7 @@ export function DashboardHeader({
           Data {health.label}
         </Badge>
         <Caption1>
-          Insights generated from data as of {asOf} · {preRead.language}{" "}
-          reporting
+          Data as of {asOf} · reporting in {preRead.language}
         </Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
@@ -468,18 +477,78 @@ export function DashboardHeader({
   );
 }
 
-export function InsightsPanel({
-  preRead,
-  facts,
-  authorship,
+/**
+ * Ranked insight candidates: every non-profile fact, highest severity first.
+ * The dashboard shows the leading three (PRD 5.4); the Insights tab shows the
+ * rest, so a lower-severity fact is still reachable without competing for
+ * attention on the first screen.
+ */
+function rankedInsights(facts: ProjectionFact[]) {
+  return facts
+    .filter((fact) => fact.kind !== "profile")
+    .sort((a, b) => SEVERITY[a.kind].rank - SEVERITY[b.kind].rank);
+}
+
+/**
+ * The narrator's line for a fact, when it says something the headline does not
+ * already say. Otherwise the quantified stake, so "why it matters" is never
+ * blank on a card.
+ */
+function whyItMatters(
+  fact: ProjectionFact,
+  supporting: Map<string, string>,
+  currency: string | undefined,
+) {
+  const narrative = supporting.get(fact.id);
+  return narrative && narrative !== fact.what
+    ? narrative
+    : stake(fact, currency);
+}
+
+function InsightCard({
+  fact,
+  clientId,
+  state,
+  matters,
 }: {
-  preRead: ClientPreRead;
-  facts: ProjectionFact[];
-  authorship: Authorship;
+  fact: ProjectionFact;
+  clientId: string;
+  state: "Changed" | "Unchanged";
+  matters: string;
 }) {
   const styles = useStyles();
-  // A fact counts as changed when a "what changed" line cites it, or when the
-  // fact engine itself emitted it as a snapshot delta (PRD 5.4).
+  const severity = SEVERITY[fact.kind];
+  return (
+    <article className={styles.card}>
+      <div className={styles.cardMeta}>
+        <Badge appearance="filled" color={severity.color}>
+          {severity.label}
+        </Badge>
+        <Badge appearance="outline" color="informative">
+          {FACT_GROUP[fact.kind]}
+        </Badge>
+        <Badge appearance="tint" color="informative">
+          {state}
+        </Badge>
+      </div>
+      <Subtitle2 as="h3">{fact.what}</Subtitle2>
+      <Body1 as="p" className={styles.summary}>
+        {matters}
+      </Body1>
+      <Caption1>Confidence: {fact.confidence}</Caption1>
+      <div className={styles.action}>
+        <WhyButton citations={[fact.id]} clientId={clientId} />
+      </div>
+    </article>
+  );
+}
+
+/**
+ * Reads which facts the brief describes as having moved. A fact counts as
+ * changed when a "what changed" line cites it, or when the fact engine itself
+ * emitted it as a snapshot delta (PRD 5.4).
+ */
+function useInsightContext(preRead: ClientPreRead, facts: ProjectionFact[]) {
   const changed = new Set(
     preRead.what_changed.flatMap((item) => item.citations),
   );
@@ -492,59 +561,105 @@ export function InsightsPanel({
         ),
       ),
   );
-  const insights = facts
-    .filter((fact) => fact.kind !== "profile")
-    .sort((a, b) => SEVERITY[a.kind].rank - SEVERITY[b.kind].rank)
-    .slice(0, 3);
+  const currency = facts.find(factOfKind("profile"))?.numbers.currency;
+  const state = (fact: ProjectionFact) =>
+    changed.has(fact.id) || fact.kind === "change"
+      ? ("Changed" as const)
+      : ("Unchanged" as const);
+  const matters = (fact: ProjectionFact) =>
+    whyItMatters(fact, supporting, currency);
+  return { state, matters };
+}
 
-  if (insights.length === 0)
-    return (
-      <div className={styles.panel}>
-        <Body1 className={styles.empty}>
-          No deterministic fact reached the insight threshold for this client.
-        </Body1>
+/**
+ * PRD 5.4's top insights. They sit above the tabs rather than inside one, so
+ * the client summary, the discrepancies and the brief action are all visible
+ * from a single interaction.
+ */
+export function TopInsights({
+  preRead,
+  facts,
+}: {
+  preRead: ClientPreRead;
+  facts: ProjectionFact[];
+}) {
+  const styles = useStyles();
+  const { state, matters } = useInsightContext(preRead, facts);
+  const insights = rankedInsights(facts).slice(0, 3);
+
+  return (
+    <section
+      className={mergeClasses(styles.panel, styles.topInsights)}
+      aria-labelledby="top-insights-title"
+    >
+      <div className={styles.group}>
+        <Subtitle2 as="h2" id="top-insights-title">
+          Top insights
+        </Subtitle2>
+        <Caption1>Highest severity first.</Caption1>
       </div>
-    );
+      {insights.length === 0 ? (
+        <Body1 className={styles.empty}>No insights for this client.</Body1>
+      ) : (
+        <div className={styles.cards}>
+          {insights.map((fact) => (
+            <InsightCard
+              key={fact.id}
+              fact={fact}
+              clientId={preRead.client_id}
+              state={state(fact)}
+              matters={matters(fact)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The Insights tab (PRD 5.6): the insights the top three pushed below the fold,
+ * plus the suggested question and the single uncertainty that apply to all of
+ * them.
+ */
+export function InsightsPanel({
+  preRead,
+  facts,
+  authorship,
+}: {
+  preRead: ClientPreRead;
+  facts: ProjectionFact[];
+  authorship: Authorship;
+}) {
+  const styles = useStyles();
+  const { state, matters } = useInsightContext(preRead, facts);
+  const rest = rankedInsights(facts).slice(3);
 
   return (
     <div className={styles.panel}>
-      <Caption1>
-        The three highest-severity discrepancies the fact engine produced.
-      </Caption1>
-      <div className={styles.cards}>
-        {insights.map((fact) => {
-          const severity = SEVERITY[fact.kind];
-          const state =
-            changed.has(fact.id) || fact.kind === "change"
-              ? "Changed"
-              : "Unchanged";
-          // The narrator often restates the fact verbatim; only show the line
-          // when it adds something the headline does not already say.
-          const narrative = supporting.get(fact.id);
-          const matters = narrative === fact.what ? "" : narrative;
-          return (
-            <article className={styles.card} key={fact.id}>
-              <div className={styles.cardMeta}>
-                <Badge appearance="filled" color={severity.color}>
-                  {severity.label}
-                </Badge>
-                <Badge appearance="outline" color="informative">
-                  {FACT_GROUP[fact.kind]}
-                </Badge>
-                <Badge appearance="tint" color="informative">
-                  {state}
-                </Badge>
-              </div>
-              <Subtitle2 as="h3">{fact.what}</Subtitle2>
-              {matters && <Body1>{matters}</Body1>}
-              <Caption1>Confidence: {fact.confidence}</Caption1>
-              <div className={styles.action}>
-                <WhyButton citations={[fact.id]} clientId={preRead.client_id} />
-              </div>
-            </article>
-          );
-        })}
-      </div>
+      <section className={styles.group} aria-labelledby="also-active-title">
+        <Subtitle2 as="h3" id="also-active-title">
+          Also active
+        </Subtitle2>
+        <Caption1>Lower-severity facts, below the top three.</Caption1>
+        {rest.length === 0 ? (
+          <Body1 className={styles.empty}>
+            Every insight for this client is shown above.
+          </Body1>
+        ) : (
+          <div className={styles.cards}>
+            {rest.map((fact) => (
+              <InsightCard
+                key={fact.id}
+                fact={fact}
+                clientId={preRead.client_id}
+                state={state(fact)}
+                matters={matters(fact)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
       <section className={styles.group} aria-label="Suggested question">
         <Subtitle2 as="h3">Suggested question</Subtitle2>
         <Body1>{preRead.opening.text}</Body1>
@@ -662,9 +777,7 @@ export function DiscussionTopics({
 
   if (topics.length === 0)
     return (
-      <Body1 className={styles.empty}>
-        No deterministic fact reached the agenda threshold for this client.
-      </Body1>
+      <Body1 className={styles.empty}>No agenda topics for this client.</Body1>
     );
 
   return (
@@ -716,9 +829,7 @@ export function OpenCommitments({
 
   if (commitments.length === 0)
     return (
-      <Body1 className={styles.empty}>
-        No planned cash need is recorded against this client.
-      </Body1>
+      <Body1 className={styles.empty}>No planned cash needs recorded.</Body1>
     );
 
   return (
@@ -762,8 +873,8 @@ export function DataPanel({
   return (
     <div className={styles.panel}>
       <Caption1>
-        Every deterministic fact behind this client, with the calculation inputs
-        and a link to its exact source rows.
+        Every fact behind this client, with its calculation inputs and source
+        rows.
       </Caption1>
       {kinds.map((kind) => (
         <section
@@ -834,9 +945,7 @@ export function MemoryPanel({
       <section className={styles.group} aria-label="RM notes">
         <Subtitle2 as="h3">RM notes</Subtitle2>
         {notes.length === 0 ? (
-          <Body1 className={styles.empty}>
-            No RM note is recorded for this client.
-          </Body1>
+          <Body1 className={styles.empty}>No RM notes recorded.</Body1>
         ) : (
           notes.map((note) => (
             <div className={styles.note} key={note.id}>

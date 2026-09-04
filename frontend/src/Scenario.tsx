@@ -31,7 +31,7 @@ export function Scenario({
         to="/"
         replace
         state={{
-          notice: `Client ${clientId || "requested"} was not found. Showing the RM dashboard.`,
+          notice: `Client ${clientId || "requested"} was not found. Showing the dashboard.`,
         }}
       />
     );
@@ -56,15 +56,13 @@ export function Scenario({
         >
           ← Pre-read
         </button>
-        <p>
-          <span>Feature 02</span> Evidence-backed Scenario Rehearsal
-        </p>
+        <p>Scenario rehearsal</p>
       </div>
 
       <header className="scenario-heading">
         <div>
           <p className="eyebrow accent">Precomputed · {preRead.name}</p>
-          <h1 id="scenario-title">Rehearse the Strait conversation.</h1>
+          <h1 id="scenario-title">Rehearse the Strait conversation</h1>
         </div>
         <div className="scenario-toggle" role="group" aria-label="Scenario">
           <button

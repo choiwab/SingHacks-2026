@@ -108,7 +108,7 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
                 to="/"
                 replace
                 state={{
-                  notice: "That page was not found. Showing the RM dashboard.",
+                  notice: "Page not found. Showing the dashboard.",
                 }}
               />
             }
@@ -137,7 +137,7 @@ export function App() {
           setError(
             reason instanceof Error
               ? reason.message
-              : "The projection could not be loaded.",
+              : "Could not reach the server.",
           );
       });
     return () => {
@@ -150,14 +150,14 @@ export function App() {
       return (
         <Spinner
           role="status"
-          label="Preparing the RM dashboard…"
+          label="Loading the dashboard…"
           labelPosition="below"
         />
       );
     return (
       <MessageBar intent="error" role="alert" className="app-status-message">
         <MessageBarBody>
-          <MessageBarTitle>The dashboard could not load.</MessageBarTitle>
+          <MessageBarTitle>The dashboard did not load.</MessageBarTitle>
           {error}
         </MessageBarBody>
         <MessageBarActions>
