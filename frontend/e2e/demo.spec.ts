@@ -1,6 +1,54 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`scenario evidence retains the selected range and caveat at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    for (const client of [
+      { id: "CL-0014", name: "Lau Chi Ming", currency: "HKD" },
+      { id: "CL-0019", name: "Abdullah Al-Mansoori", currency: "USD" },
+    ]) {
+      await page.goto(`/clients/${client.id}/scenario`);
+      for (const scenario of ["Strait reopens", "Strait escalates"]) {
+        await page.getByRole("button", { name: scenario, exact: true }).click();
+        const result = page.getByRole("region", {
+          name: scenario,
+          exact: true,
+        });
+        const range = await result.locator(".range-value").innerText();
+        const percentage = await result.locator(".range-percent").innerText();
+        const why = result.getByRole("button", { name: "Why this range?" });
+        await why.focus();
+        await why.press("Enter");
+        const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+        const claim = drawer.getByRole("region", { name: "Generated claim" });
+        await expect(claim).toContainText(client.name);
+        await expect(claim).toContainText(scenario);
+        await expect(claim).toContainText(range);
+        await expect(claim).toContainText(client.currency);
+        await expect(claim).toContainText(percentage);
+        await expect(claim).toContainText("Estimated range · not a forecast.");
+        await expect(
+          drawer.getByText(/data\/event_log\.csv · row /).first(),
+        ).toBeVisible();
+        expect(
+          await drawer.evaluate(
+            (element) => element.scrollWidth <= element.clientWidth,
+          ),
+        ).toBe(true);
+        await page.keyboard.press("Escape");
+        await expect(drawer).not.toBeVisible();
+        await expect(why).toBeFocused();
+      }
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`the switcher reveals the selected client after meeting navigation at ${width}px`, async ({
     page,
   }) => {

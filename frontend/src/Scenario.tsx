@@ -39,6 +39,12 @@ export function Scenario({
   }
 
   const scenario = pair[scenarioKey];
+  const valueRange = `${money(scenario.low_delta, scenario.currency)} to ${money(scenario.high_delta, scenario.currency)}`;
+  const percentRange = `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of today's portfolio`;
+  const disclaimer = scenario.disclaimer.replace(
+    "Precomputed range, ",
+    "Estimated range · ",
+  );
   const scale = (value: number) =>
     Math.max(0, Math.min(100, ((value + 20) / 40) * 100));
   const left = scale(scenario.low_pct);
@@ -90,17 +96,12 @@ export function Scenario({
           <p className="scenario-label" id="scenario-name">
             {scenario.name}
           </p>
-          <p className="range-value">
-            {money(scenario.low_delta, scenario.currency)} to{" "}
-            {money(scenario.high_delta, scenario.currency)}
-          </p>
-          <p className="range-percent">
-            {percent(scenario.low_pct)} to {percent(scenario.high_pct)} of
-            today&apos;s portfolio
-          </p>
+          <p className="range-value">{valueRange}</p>
+          <p className="range-percent">{percentRange}</p>
           <WhyButton
             citations={scenario.citations}
             clientId={clientId}
+            claim={`${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${disclaimer}`}
             children="Why this range?"
           />
         </div>
@@ -121,12 +122,7 @@ export function Scenario({
               }}
             />
           </div>
-          <p>
-            {scenario.disclaimer.replace(
-              "Precomputed range, ",
-              "Estimated range · ",
-            )}
-          </p>
+          <p>{disclaimer}</p>
         </div>
       </section>
 
