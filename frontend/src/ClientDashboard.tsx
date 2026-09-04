@@ -317,6 +317,20 @@ const factOfKind =
   (fact: ProjectionFact): fact is FactOf<K> =>
     fact.kind === kind;
 
+function mandateBreached(fact: FactOf<"mandate_gap">) {
+  const n = fact.numbers;
+  return n.boundary === "minimum"
+    ? n.actual_pct < n.limit_pct
+    : n.actual_pct > n.limit_pct;
+}
+
+function insightSeverity(fact: ProjectionFact) {
+  if (fact.kind === "mandate_gap" && !mandateBreached(fact)) {
+    return { rank: 5, label: "Within limit", color: "informative" as const };
+  }
+  return SEVERITY[fact.kind];
+}
+
 function formatMoney(amount: number, currency: string | null | undefined) {
   const rounded = Math.round(amount);
   if (!currency) return formatNumber(rounded);
@@ -336,6 +350,8 @@ function stake(fact: ProjectionFact, currency?: string): string {
   switch (fact.kind) {
     case "mandate_gap": {
       const n = fact.numbers;
+      if (!mandateBreached(fact))
+        return `Within the ${n.limit_pct}% ${n.boundary}, measured ${n.scope}.`;
       // The headline already states the actual and the limit; the stake adds
       // how far out it is and what the measurement covers.
       return `${Math.abs(n.gap_pct).toFixed(1)} points outside the ${n.limit_pct}% ${n.boundary}, measured ${n.scope}.`;
@@ -397,10 +413,7 @@ export function measure(fact: ProjectionFact): Measure | undefined {
         actual: n.actual_pct,
         limit: n.limit_pct,
         scale,
-        breached:
-          n.boundary === "minimum"
-            ? n.actual_pct < n.limit_pct
-            : n.actual_pct > n.limit_pct,
+        breached: mandateBreached(fact),
       };
     }
     case "facility": {
@@ -476,6 +489,8 @@ function askAbout(fact: ProjectionFact): string {
   switch (fact.kind) {
     case "mandate_gap": {
       const n = fact.numbers;
+      if (!mandateBreached(fact))
+        return `Does the ${n.limit_pct}% ${n.boundary} for ${n.asset_class} still fit your objectives?`;
       return `Do you want ${n.asset_class} brought back inside the ${n.limit_pct}% ${n.boundary}, or should we revisit the mandate itself?`;
     }
     case "deadline": {
@@ -671,7 +686,7 @@ export function DashboardHeader({
 function rankedInsights(facts: ProjectionFact[]) {
   return facts
     .filter((fact) => fact.kind !== "profile")
-    .sort((a, b) => SEVERITY[a.kind].rank - SEVERITY[b.kind].rank);
+    .sort((a, b) => insightSeverity(a).rank - insightSeverity(b).rank);
 }
 
 /**
@@ -704,7 +719,7 @@ function InsightCard({
   uncertainty?: string;
 }) {
   const styles = useStyles();
-  const severity = SEVERITY[fact.kind];
+  const severity = insightSeverity(fact);
   return (
     <article className={styles.card}>
       <div className={styles.cardMeta}>
@@ -973,10 +988,7 @@ export function DiscussionTopics({
 }) {
   const styles = useStyles();
   const currency = facts.find(factOfKind("profile"))?.numbers.currency;
-  const topics = facts
-    .filter((fact) => fact.kind !== "profile")
-    .sort((a, b) => SEVERITY[a.kind].rank - SEVERITY[b.kind].rank)
-    .slice(0, 3);
+  const topics = rankedInsights(facts).slice(0, 3);
 
   if (topics.length === 0)
     return (
@@ -988,7 +1000,7 @@ export function DiscussionTopics({
       {topics.map((fact, index) => (
         <li className={styles.topic} key={fact.id}>
           <div className={styles.cardMeta}>
-            <Badge appearance="filled" color={SEVERITY[fact.kind].color}>
+            <Badge appearance="filled" color={insightSeverity(fact).color}>
               Topic {index + 1}
             </Badge>
             <Badge appearance="outline" color="informative">

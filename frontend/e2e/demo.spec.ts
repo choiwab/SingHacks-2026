@@ -1,6 +1,57 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`within-limit mandates do not displace active topics at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0019/pre-read");
+    const top = page.getByRole("region", { name: "Top insights", exact: true });
+    const topics = page.getByRole("region", {
+      name: "Three discussion topics",
+    });
+    await expect(top.getByRole("heading", { level: 3 })).toHaveCount(3);
+    await expect(top).not.toContainText("Structured Products");
+    await expect(top).toContainText("Connected positions represent 42.1%");
+    await expect(topics).not.toContainText("Structured Products");
+
+    await page.getByRole("tab", { name: "Insights", exact: true }).click();
+    const mandate = page.getByRole("article").filter({
+      has: page.getByRole("heading", {
+        name: "Structured Products is 12.9% against a 15% maximum.",
+        exact: true,
+      }),
+    });
+    await expect(mandate).toContainText("Within limit");
+    await expect(mandate).toContainText("Within the 15% maximum");
+    await expect(mandate).toContainText(
+      "Does the 15% maximum for Structured Products still fit your objectives?",
+    );
+    await expect(mandate).not.toContainText("brought back inside");
+    await mandate.getByRole("button", { name: "Why?" }).click();
+    const drawer = page.getByRole("dialog", { name: "Why?" });
+    await expect(drawer).toContainText("Structured Products is 12.9%");
+    await expect(drawer).toContainText("data/mandates.csv");
+    await page.keyboard.press("Escape");
+    await expect(mandate.getByRole("button", { name: "Why?" })).toBeFocused();
+    expect(
+      await mandate.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+
+    await page.goto("/clients/CL-0003/pre-read");
+    const breached = top.getByRole("article").first();
+    await expect(breached).toContainText("High");
+    await expect(breached).toContainText(
+      "Equity is 71.5% against a 30% maximum.",
+    );
+    await expect(breached).toContainText("brought back inside");
+  });
+
   test(`client search reports results without moving focus at ${width}px`, async ({
     page,
   }) => {

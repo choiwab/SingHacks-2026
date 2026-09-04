@@ -27,6 +27,73 @@ function projectionResponse() {
 }
 
 describe("Monday Brief", () => {
+  it.each([
+    ["maximum", 12.9, 15, false],
+    ["maximum", 15, 15, false],
+    ["maximum", 15.1, 15, true],
+    ["minimum", 7.1, 5, false],
+    ["minimum", 5, 5, false],
+    ["minimum", 4.9, 5, true],
+    ["minimum", 0, 0, false],
+  ] as const)(
+    "labels a %s mandate at %s against %s correctly",
+    async (boundary, actual, limit, breached) => {
+      const projection = structuredClone(projectionFixture);
+      const fact = projection.facts["CL-0003"].find(
+        (f) => f.kind === "mandate_gap",
+      )!;
+      if (fact.kind !== "mandate_gap")
+        throw new Error("Missing mandate fixture");
+      fact.numbers = {
+        ...fact.numbers,
+        boundary,
+        actual_pct: actual,
+        limit_pct: limit,
+        gap_pct: breached ? 0.1 : 0,
+      };
+      fact.what = `Equity is ${actual}% against a ${limit}% ${boundary}.`;
+      projection.pre_reads["CL-0003"].rules_money = [];
+      projection.pre_reads["CL-0003"].what_changed = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.resolve(new Response(JSON.stringify(projection)))),
+      );
+      render(
+        <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+          <App />
+        </MemoryRouter>,
+      );
+      const top = await screen.findByRole("region", {
+        name: "Top insights",
+      });
+      const cards = within(top).getAllByRole("article");
+      const mandate = cards.find((card) =>
+        within(card).queryByRole("heading", { name: fact.what }),
+      )!;
+      expect(mandate).toHaveTextContent(breached ? "High" : "Within limit");
+      expect(mandate).toHaveTextContent(
+        breached ? "brought back inside" : "still fit your objectives?",
+      );
+      if (breached) {
+        expect(cards[0]).toBe(mandate);
+      } else {
+        expect(cards.at(-1)).toBe(mandate);
+        expect(mandate).toHaveTextContent(`Within the ${limit}% ${boundary}`);
+        expect(mandate).not.toHaveTextContent("points outside");
+      }
+      const topics = screen.getByRole("region", {
+        name: "Three discussion topics",
+      });
+      expect(
+        within(topics)
+          .getAllByRole("heading", { level: 3 })
+          .map((h) => h.textContent),
+      ).toEqual(
+        cards.map((card) => within(card).getByRole("heading").textContent),
+      );
+    },
+  );
+
   it("loads one projection and shares it across the routed workflow", async () => {
     const fetch = vi.fn(() => Promise.resolve(projectionResponse()));
     vi.stubGlobal("fetch", fetch);
