@@ -1,6 +1,44 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`client search reports results without moving focus at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    const switcher = page.getByRole("navigation", { name: "Client switcher" });
+    const search = switcher.getByRole("searchbox", { name: "Search clients" });
+    const results = switcher.getByRole("status");
+    await expect(results).toHaveText("20 clients, ranked by priority");
+
+    await search.fill("Margarethe");
+    await expect(results).toHaveText("1 of 20 clients shown");
+    await expect(results).toHaveAttribute("aria-atomic", "true");
+    await expect(switcher.getByRole("listitem")).toHaveCount(1);
+    await expect(search).toBeFocused();
+
+    await search.fill("nobody");
+    await expect(results).toHaveText("0 of 20 clients shown");
+    await expect(switcher.getByText("No match for “nobody”.")).toBeVisible();
+    await expect(search).toBeFocused();
+    await search.press("ControlOrMeta+A");
+    await search.press("Backspace");
+    await expect(results).toHaveText("20 clients, ranked by priority");
+    await expect(search).toBeFocused();
+    await expect(switcher.getByRole("listitem")).toHaveCount(20);
+
+    await search.fill("   ");
+    await expect(results).toHaveText("20 clients, ranked by priority");
+    await switcher.getByRole("button", { name: "clear", exact: true }).click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`short Memory queries filter notes at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0007/pre-read");

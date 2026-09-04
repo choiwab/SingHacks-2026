@@ -78,6 +78,11 @@ describe("Monday Brief", () => {
     expect(
       within(switcher).getByRole("button", { name: /Abdullah Al-Mansoori/ }),
     ).toBeVisible();
+    const search = within(switcher).getByRole("searchbox", {
+      name: "Search clients",
+    });
+    const results = within(switcher).getByRole("status");
+    expect(results).toHaveTextContent("2 clients, ranked by priority");
 
     await user.type(
       within(switcher).getByRole("searchbox", { name: "Search clients" }),
@@ -89,6 +94,17 @@ describe("Monday Brief", () => {
     expect(
       within(switcher).getByRole("button", { name: /Margarethe Voss-Brenner/ }),
     ).toBeVisible();
+    expect(results).toHaveTextContent("1 of 2 clients shown");
+    expect(search).toHaveFocus();
+
+    await user.clear(search);
+    await user.type(search, "nobody");
+    expect(results).toHaveTextContent("0 of 2 clients shown");
+    expect(within(switcher).getByText("No match for “nobody”.")).toBeVisible();
+
+    await user.click(within(switcher).getByRole("button", { name: "clear" }));
+    expect(results).toHaveTextContent("2 clients, ranked by priority");
+    expect(search).toHaveFocus();
   });
 
   it("moves through the Overview, Insights, Data, and Memory tabs", async () => {
@@ -275,7 +291,11 @@ describe("Monday Brief", () => {
     // A region abbreviation remains searchable; lowercase "us" is question glue.
     await user.clear(search);
     await user.type(search, "What did she say to us about FX?");
-    expect(screen.getByRole("status")).toHaveTextContent("mention fx.");
+    expect(
+      within(
+        screen.getByRole("region", { name: "Search the client memory" }),
+      ).getByRole("status"),
+    ).toHaveTextContent("mention fx.");
     expect(within(notes).getAllByRole("button", { name: "Why?" })).toHaveLength(
       1,
     );
@@ -286,7 +306,11 @@ describe("Monday Brief", () => {
     ).toHaveTextContent("FX");
     await user.clear(search);
     await user.type(search, "US");
-    expect(screen.getByRole("status")).toHaveTextContent("mention us.");
+    expect(
+      within(
+        screen.getByRole("region", { name: "Search the client memory" }),
+      ).getByRole("status"),
+    ).toHaveTextContent("mention us.");
     expect(within(notes).getAllByRole("button", { name: "Why?" })).toHaveLength(
       1,
     );
@@ -466,9 +490,9 @@ describe("Monday Brief", () => {
     expect(
       await screen.findByRole("heading", { name: "Who needs you this week" }),
     ).toBeVisible();
-    expect(screen.getByRole("status")).toHaveTextContent(
-      /CL-9999 was not found/,
-    );
+    expect(
+      within(screen.getByRole("main")).getByRole("status"),
+    ).toHaveTextContent(/CL-9999 was not found/);
   });
 
   it("ranks the week's meetings, tracks brief state, and switches client", async () => {

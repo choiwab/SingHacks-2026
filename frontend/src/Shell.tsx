@@ -213,7 +213,11 @@ function ClientSwitcher({
     <nav className={styles.switcher} aria-label="Client switcher">
       <div className={styles.switcherHead}>
         <Body1Strong>Clients</Body1Strong>
-        <Caption1>{ranking.length}, ranked by priority</Caption1>
+        <Caption1 role="status" aria-atomic="true">
+          {query.trim()
+            ? `${matches.length} of ${ranking.length} clients shown`
+            : `${ranking.length} clients, ranked by priority`}
+        </Caption1>
       </div>
       <SearchBox
         placeholder="Search clients"
