@@ -1084,7 +1084,7 @@ for (const width of [1280, 390]) {
     ).toBe(true);
   });
 
-  test(`client search matches all name parts in any order at ${width}px`, async ({
+  test(`client search matches names and IDs in any order at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -1099,6 +1099,11 @@ for (const width of [1280, 390]) {
       "Margarethe Brenner",
       "  BRENNER   margarethe  ",
       "Bren Marg",
+      "CL-0003",
+      "  cl-0003  ",
+      "0003",
+      "0003 Margarethe",
+      "Brenner CL-0003",
     ]) {
       await search.fill(query);
       await expect(switcher.getByRole("status")).toHaveText(
@@ -1110,15 +1115,21 @@ for (const width of [1280, 390]) {
       ).toBeVisible();
       await expect(search).toBeFocused();
     }
-    await search.fill("Margarethe Abdullah");
-    await expect(switcher.getByRole("status")).toHaveText(
-      "0 of 20 clients shown",
-    );
-    await expect(
-      switcher.getByRole("button", { name: /Margarethe|Abdullah/ }),
-    ).toHaveCount(0);
-    await expect(search).toBeFocused();
-    await search.fill("Brenner Margarethe");
+    for (const query of [
+      "Margarethe Abdullah",
+      "Margarethe CL-0019",
+      "CL-9999",
+    ]) {
+      await search.fill(query);
+      await expect(switcher.getByRole("status")).toHaveText(
+        "0 of 20 clients shown",
+      );
+      await expect(switcher.getByRole("listitem")).toHaveText(
+        `No match for “${query}”.`,
+      );
+      await expect(search).toBeFocused();
+    }
+    await search.fill("CL-0003");
     await switcher
       .getByRole("button", { name: /Margarethe Voss-Brenner/ })
       .click();
@@ -1131,7 +1142,7 @@ for (const width of [1280, 390]) {
     await expect(
       switcher.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
     ).toHaveAttribute("aria-current", "true");
-    await search.fill("Mansoori Abdullah");
+    await search.fill("CL-0019 Abdullah");
     await expect(switcher.getByRole("status")).toHaveText(
       "1 of 20 clients shown",
     );

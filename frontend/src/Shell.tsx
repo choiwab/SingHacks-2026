@@ -203,17 +203,17 @@ function ClientSwitcher({
   const selectedButton = useRef<HTMLButtonElement>(null);
 
   const matches = useMemo(() => {
-    const normalizeName = (name: string) =>
-      name
+    const normalizeSearch = (value: string) =>
+      value
         .toLowerCase()
         .replace(/[\p{Pd}\s]+/gu, " ")
         .trim();
-    const needle = normalizeName(query);
+    const needle = normalizeSearch(query);
     if (!needle) return ranking;
     const terms = needle.split(" ");
     return ranking.filter((client) => {
-      const name = normalizeName(client.name);
-      return terms.every((term) => name.includes(term));
+      const searchable = normalizeSearch(`${client.name} ${client.client_id}`);
+      return terms.every((term) => searchable.includes(term));
     });
   }, [ranking, query]);
 
@@ -236,7 +236,7 @@ function ClientSwitcher({
         </Caption1>
       </div>
       <SearchBox
-        placeholder="Search clients"
+        placeholder="Search by name or ID"
         aria-label="Search clients"
         value={query}
         onChange={(_, data) => setQuery(data.value)}
