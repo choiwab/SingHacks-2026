@@ -281,6 +281,33 @@ describe("Monday Brief", () => {
     ).toBeVisible();
   });
 
+  it("makes every PRD 5.5 brief block a named region the RM can jump to", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(projectionResponse())),
+    );
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    await screen.findByRole("region", { name: "Two-minute summary" });
+    for (const name of [
+      "Three discussion topics",
+      "What changed",
+      "You said / Data says",
+      "Rules & money",
+      "Open commitments",
+      "Suggested opening",
+      "What we are not sure about",
+      "Where you left off",
+    ]) {
+      const block = screen.getByRole("region", { name });
+      expect(within(block).getByRole("heading", { name })).toBeVisible();
+    }
+  });
+
   it("expands evidence and restores focus to the Why button", async () => {
     vi.stubGlobal(
       "fetch",

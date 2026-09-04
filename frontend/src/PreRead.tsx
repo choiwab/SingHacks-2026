@@ -1,14 +1,23 @@
 import {
+  Body1,
   Button,
+  Caption1,
   Field,
+  Link,
   MessageBar,
   MessageBarActions,
   MessageBarBody,
   MessageBarTitle,
   Spinner,
+  Subtitle1,
+  Subtitle2,
   Tab,
   TabList,
   Textarea,
+  makeStyles,
+  mergeClasses,
+  shorthands,
+  tokens,
 } from "@fluentui/react-components";
 import { DismissRegular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
@@ -40,6 +49,76 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]["value"];
 
+const useStyles = makeStyles({
+  brief: {
+    display: "grid",
+    rowGap: tokens.spacingVerticalXL,
+    paddingBlock: tokens.spacingVerticalXL,
+  },
+  section: {
+    display: "grid",
+    rowGap: tokens.spacingVerticalM,
+  },
+  panel: {
+    display: "grid",
+    rowGap: tokens.spacingVerticalS,
+    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    backgroundColor: tokens.colorNeutralBackground1,
+    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  },
+  /** "You said" beside "Data says" once there is room for two columns. */
+  gapPair: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(18rem, 1fr))",
+    gap: tokens.spacingHorizontalM,
+  },
+  dataSays: {
+    backgroundColor: tokens.colorStatusDangerBackground1,
+    ...shorthands.borderColor(tokens.colorStatusDangerBorder1),
+  },
+  dataSaysText: {
+    color: tokens.colorStatusDangerForeground1,
+  },
+  label: {
+    color: tokens.colorNeutralForeground3,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+  },
+  quote: {
+    maxWidth: "44ch",
+    ...shorthands.margin(0),
+  },
+  prose: {
+    maxWidth: "60ch",
+  },
+  actions: {
+    display: "flex",
+    justifyContent: "flex-start",
+  },
+});
+
+/**
+ * One block of the meeting brief (PRD 5.5). The section carries its own
+ * accessible name so each block is a landmark the RM can jump between.
+ */
+function BriefSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const styles = useStyles();
+
+  return (
+    <section className={styles.section} aria-label={title}>
+      <Subtitle1 as="h2">{title}</Subtitle1>
+      {children}
+    </section>
+  );
+}
+
 export function PreRead({
   projection,
   reviews,
@@ -49,6 +128,7 @@ export function PreRead({
   reviews: Record<string, Authorship>;
   onReviewed: (clientId: string, state: Authorship) => void;
 }) {
+  const styles = useStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const preRead = projection.pre_reads[clientId];
@@ -136,13 +216,9 @@ export function PreRead({
   return (
     <section className="screen pre-read-screen" aria-labelledby="client-name">
       <div className="screen-kicker">
-        <button
-          className="back-link"
-          type="button"
-          onClick={() => navigate("/")}
-        >
+        <Link as="button" type="button" onClick={() => navigate("/")}>
           ← RM dashboard
-        </button>
+        </Link>
         <p>
           <strong>
             Priority #{rank + 1} · score {rankedClient?.score ?? 0}
@@ -197,157 +273,105 @@ export function PreRead({
           <MemoryPanel preRead={preRead} evidence={projection.evidence} />
         )}
         {tab === "overview" && (
-          <>
-            <div className="pre-read-ledger">
-              <section
-                className="brief-block summary-block"
-                aria-labelledby="summary-title"
-              >
-                <div className="block-heading">
-                  <p>01</p>
-                  <h2 id="summary-title">Two-minute summary</h2>
-                </div>
-                <TwoMinuteSummary
-                  preRead={preRead}
-                  ranked={rankedClient}
-                  facts={facts}
-                  authorship={reviewState}
-                />
-              </section>
+          <div className={styles.brief}>
+            <BriefSection title="Two-minute summary">
+              <TwoMinuteSummary
+                preRead={preRead}
+                ranked={rankedClient}
+                facts={facts}
+                authorship={reviewState}
+              />
+            </BriefSection>
 
-              <section
-                className="brief-block topics-block"
-                aria-labelledby="topics-title"
-              >
-                <div className="block-heading">
-                  <p>02</p>
-                  <h2 id="topics-title">Three discussion topics</h2>
-                </div>
-                <DiscussionTopics facts={facts} clientId={clientId} />
-              </section>
+            <BriefSection title="Three discussion topics">
+              <DiscussionTopics facts={facts} clientId={clientId} />
+            </BriefSection>
 
-              <section
-                className="brief-block changed-block"
-                aria-labelledby="changed-title"
-              >
-                <div className="block-heading">
-                  <p>03</p>
-                  <h2 id="changed-title">What changed</h2>
-                </div>
-                <CitedList
-                  items={preRead.what_changed}
-                  clientId={clientId}
-                  authorship={reviewState}
-                  className="change-list"
-                />
-              </section>
+            <BriefSection title="What changed">
+              <CitedList
+                items={preRead.what_changed}
+                clientId={clientId}
+                authorship={reviewState}
+              />
+            </BriefSection>
 
-              <section
-                className="brief-block gap-block"
-                aria-labelledby="gap-title"
-              >
-                <div className="block-heading">
-                  <p>04</p>
-                  <h2 id="gap-title">You said / Data says</h2>
+            <BriefSection title="You said / Data says">
+              <div className={styles.gapPair}>
+                <div className={styles.panel}>
+                  <Caption1 className={styles.label}>You said</Caption1>
+                  <Subtitle2 as="p" className={styles.quote}>
+                    “{preRead.gap.belief}”
+                  </Subtitle2>
                 </div>
-                <div className="gap-pair">
-                  <div>
-                    <span>You said</span>
-                    <p>“{preRead.gap.belief}”</p>
-                  </div>
-                  <div className="data-says">
-                    <span>Data says</span>
-                    <p>{preRead.gap.data}</p>
+                <div className={mergeClasses(styles.panel, styles.dataSays)}>
+                  <Caption1 className={styles.label}>Data says</Caption1>
+                  <Subtitle2
+                    as="p"
+                    className={mergeClasses(styles.quote, styles.dataSaysText)}
+                  >
+                    {preRead.gap.data}
+                  </Subtitle2>
+                  <div className={styles.actions}>
                     <WhyButton
                       citations={preRead.gap.citations}
                       clientId={clientId}
                       claim={preRead.gap.data}
                       authorship={reviewState}
-                      inverse
                     />
                   </div>
                 </div>
-              </section>
+              </div>
+            </BriefSection>
 
-              <section
-                className="brief-block rules-block"
-                aria-labelledby="rules-title"
-              >
-                <div className="block-heading">
-                  <p>05</p>
-                  <h2 id="rules-title">Rules &amp; money</h2>
-                </div>
-                <CitedList
-                  items={preRead.rules_money}
-                  clientId={clientId}
-                  authorship={reviewState}
-                  className="rule-list"
-                />
-              </section>
+            <BriefSection title="Rules & money">
+              <CitedList
+                items={preRead.rules_money}
+                clientId={clientId}
+                authorship={reviewState}
+              />
+            </BriefSection>
 
-              <section
-                className="brief-block commitments-block"
-                aria-labelledby="commitments-title"
-              >
-                <div className="block-heading">
-                  <p>06</p>
-                  <h2 id="commitments-title">Open commitments</h2>
-                </div>
-                <OpenCommitments
-                  facts={facts}
-                  evidence={projection.evidence}
-                  clientId={clientId}
-                />
-              </section>
+            <BriefSection title="Open commitments">
+              <OpenCommitments
+                facts={facts}
+                evidence={projection.evidence}
+                clientId={clientId}
+              />
+            </BriefSection>
 
-              <section
-                className="brief-block opening-block"
-                aria-labelledby="opening-title"
-              >
-                <div className="block-heading">
-                  <p>07</p>
-                  <h2 id="opening-title">Suggested opening</h2>
+            <BriefSection title="Suggested opening">
+              <div className={styles.panel}>
+                <Caption1 className={styles.label}>{preRead.language}</Caption1>
+                <Subtitle2 as="p" className={styles.quote}>
+                  {currentOpening}
+                </Subtitle2>
+                <div className={styles.actions}>
+                  <WhyButton
+                    citations={preRead.opening.citations}
+                    clientId={clientId}
+                    claim={currentOpening}
+                    authorship={reviewState}
+                  />
                 </div>
-                <p className="language">{preRead.language}</p>
-                <blockquote>{currentOpening}</blockquote>
-                <WhyButton
-                  citations={preRead.opening.citations}
-                  clientId={clientId}
-                  claim={currentOpening}
-                  authorship={reviewState}
-                  inverse
-                />
-              </section>
+              </div>
+            </BriefSection>
 
-              <section
-                className="brief-block unsure-block"
-                aria-labelledby="unsure-title"
-              >
-                <div className="block-heading">
-                  <p>08</p>
-                  <h2 id="unsure-title">What we are not sure about</h2>
-                </div>
-                <p>{preRead.uncertainty.text}</p>
+            <BriefSection title="What we are not sure about">
+              <Body1 className={styles.prose}>{preRead.uncertainty.text}</Body1>
+              <div className={styles.actions}>
                 <WhyButton
                   citations={preRead.uncertainty.citations}
                   clientId={clientId}
                   claim={preRead.uncertainty.text}
                   authorship={reviewState}
                 />
-              </section>
-            </div>
-
-            <section
-              className="workflow-strip"
-              aria-labelledby="workflow-title"
-            >
-              <div>
-                <p className="eyebrow">CRM · Gmail · Teams · Map · Notes</p>
-                <h2 id="workflow-title">Where you left off</h2>
               </div>
+            </BriefSection>
+
+            <BriefSection title="Where you left off">
               <WorkflowList items={preRead.workflow} clientId={clientId} />
-            </section>
-          </>
+            </BriefSection>
+          </div>
         )}
       </div>
 
@@ -429,13 +453,13 @@ export function PreRead({
             {receipt}
           </p>
         )}
-        <button
-          className="scenario-link"
+        <Link
+          as="button"
           type="button"
           onClick={() => navigate(`/clients/${clientId}/scenario`)}
         >
           Rehearse a Strait scenario →
-        </button>
+        </Link>
       </div>
       {toast && (
         <div className="toast" role="status" aria-live="polite">

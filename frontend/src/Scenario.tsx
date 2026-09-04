@@ -1,3 +1,4 @@
+import { Link } from "@fluentui/react-components";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
@@ -49,13 +50,13 @@ export function Scenario({
       aria-labelledby="scenario-title"
     >
       <div className="screen-kicker">
-        <button
-          className="back-link"
+        <Link
+          as="button"
           type="button"
           onClick={() => navigate(`/clients/${clientId}/pre-read`)}
         >
           ← Pre-read
-        </button>
+        </Link>
         <p>
           <strong>Scenario rehearsal</strong>
         </p>
@@ -133,15 +134,9 @@ export function Scenario({
         className="scenario-detail"
         aria-labelledby="scenario-detail-title"
       >
-        <div className="block-heading">
-          <p>Talk through</p>
-          <h2 id="scenario-detail-title">What changes</h2>
-        </div>
-        <CitedList
-          items={scenario.bullets}
-          clientId={clientId}
-          className="scenario-bullets"
-        />
+        <p className="eyebrow">Talk through</p>
+        <h2 id="scenario-detail-title">What changes</h2>
+        <CitedList items={scenario.bullets} clientId={clientId} />
       </section>
     </section>
   );
