@@ -367,6 +367,36 @@ describe("Monday Brief", () => {
     expect(why).toHaveFocus();
   });
 
+  it("discloses an unresolved claim citation even when no evidence resolves", async () => {
+    const projection = structuredClone(projectionFixture);
+    projection.facts["CL-0003"] = projection.facts["CL-0003"].filter(
+      (fact) => fact.id !== "CL-0003:fact:gap",
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify(projection)))),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    const changed = await screen.findByRole("region", { name: "What changed" });
+    await user.click(
+      within(changed).getAllByRole("button", { name: "Why?" })[0],
+    );
+    const drawer = screen.getByRole("dialog", { name: "Why?" });
+    expect(within(drawer).getByRole("alert")).toHaveTextContent(
+      "Evidence trail is incomplete.",
+    );
+    expect(within(drawer).getByRole("listitem")).toHaveTextContent(
+      "CL-0003:fact:gap",
+    );
+    expect(within(drawer).getByText("Equity increased.")).toBeVisible();
+    expect(within(drawer).queryAllByRole("article")).toHaveLength(0);
+  });
+
   it("redirects an invalid client to an accessible notice", async () => {
     vi.stubGlobal(
       "fetch",

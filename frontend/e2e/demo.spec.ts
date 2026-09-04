@@ -1,6 +1,52 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`incomplete evidence is disclosed at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.route("**/api/monday-brief", async (route) => {
+      const response = await route.fetch();
+      const projection = await response.json();
+      const fact = projection.facts["CL-0003"].find(
+        (item: { kind: string }) => item.kind === "mandate_gap",
+      );
+      // One missing source and event must not disappear behind the valid rows.
+      fact.source_rows.push(
+        "holdings:missing-source",
+        "holdings:missing-source",
+      );
+      fact.event_ids.push("event:missing-event");
+      await route.fulfill({ response, json: projection });
+    });
+    await page.goto("/clients/CL-0003/pre-read");
+    const why = page
+      .getByRole("region", { name: "Top insights", exact: true })
+      .getByRole("button", { name: "Why?" });
+    await why.first().click();
+    const drawer = page.getByRole("dialog", { name: "Why?" });
+    const warning = drawer.getByRole("alert");
+    await expect(warning).toContainText("Evidence trail is incomplete");
+    await expect(warning.getByRole("listitem")).toHaveCount(2);
+    await expect(warning).toContainText("holdings:missing-source");
+    await expect(warning).toContainText("event:missing-event");
+    await expect(drawer).toContainText("Deterministic fact");
+    await expect(drawer).toContainText("data/holdings.csv");
+    expect(
+      await warning.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    expect(
+      await warning.evaluate(
+        (element) => element.scrollHeight <= element.clientHeight,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(why.first()).toBeFocused();
+    await why.nth(1).click();
+    await expect(drawer).toBeVisible();
+    await expect(drawer.getByRole("alert")).toHaveCount(0);
+  });
+
   test(`RM note sources preserve search and keyboard focus at ${width}px`, async ({
     page,
   }) => {

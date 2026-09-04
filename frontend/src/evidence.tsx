@@ -7,6 +7,9 @@ import {
   DrawerBody,
   DrawerHeader,
   DrawerHeaderTitle,
+  MessageBar,
+  MessageBarBody,
+  MessageBarTitle,
   OverlayDrawer,
   Subtitle2,
   makeStyles,
@@ -79,6 +82,10 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius(tokens.borderRadiusMedium),
     backgroundColor: tokens.colorNeutralBackground3,
   },
+  missing: {
+    flexShrink: 0,
+    overflowWrap: "anywhere",
+  },
   record: {
     display: "flex",
     flexDirection: "column",
@@ -119,10 +126,11 @@ function expandCitations(
   projection: MondayBriefProjection,
   clientId: string,
   citations: CitationId[],
-): ExpandedEvidence[] {
+): { records: ExpandedEvidence[]; missing: CitationId[] } {
   const facts = projection.facts[clientId] ?? [];
   const factMap = new Map(facts.map((fact) => [fact.id, fact]));
   const records: ExpandedEvidence[] = [];
+  const missing: CitationId[] = [];
   const queue = [...citations];
   const seen = new Set<string>();
 
@@ -140,9 +148,10 @@ function expandCitations(
 
     const evidence = projection.evidence[citation];
     if (evidence) records.push({ type: "evidence", value: evidence });
+    else missing.push(citation);
   }
 
-  return records;
+  return { records, missing };
 }
 
 function formatValue(value: unknown) {
@@ -232,9 +241,9 @@ export function EvidenceProvider({
     setRequest(null);
     trigger.current?.focus();
   }, []);
-  const records = request
+  const { records, missing } = request
     ? expandCitations(projection, request.clientId, request.citations)
-    : [];
+    : { records: [], missing: [] };
   const authorship = request?.authorship && AUTHORSHIP[request.authorship];
 
   return (
@@ -267,6 +276,24 @@ export function EvidenceProvider({
           </Caption1>
         </DrawerHeader>
         <DrawerBody className={styles.body}>
+          {missing.length > 0 && (
+            <MessageBar
+              intent="warning"
+              role="alert"
+              className={styles.missing}
+            >
+              <MessageBarBody>
+                <MessageBarTitle>Evidence trail is incomplete.</MessageBarTitle>
+                These citations are unavailable in the loaded data. Confirm the
+                missing sources before relying on this claim.
+                <ul aria-label="Unavailable citations">
+                  {missing.map((citation) => (
+                    <li key={citation}>{citation}</li>
+                  ))}
+                </ul>
+              </MessageBarBody>
+            </MessageBar>
+          )}
           {request?.claim && (
             <section className={styles.claim} aria-label="Generated claim">
               <Caption1>Claim on the dashboard</Caption1>
