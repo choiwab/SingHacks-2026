@@ -546,10 +546,12 @@ export function CompactCalendar({
   projection,
   reviews,
   selectedClient,
+  onOpenSelectedBrief,
 }: {
   projection: MondayBriefProjection;
   reviews: Record<string, Authorship>;
   selectedClient: string;
+  onOpenSelectedBrief?: () => void;
 }) {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -586,9 +588,13 @@ export function CompactCalendar({
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 className={`${styles.meeting} ${selected ? styles.meetingSelected : ""}`}
-                onClick={() =>
-                  navigate(`/clients/${client.client_id}/pre-read`)
-                }
+                onClick={() => {
+                  if (selected && onOpenSelectedBrief) {
+                    onOpenSelectedBrief();
+                  } else {
+                    navigate(`/clients/${client.client_id}/pre-read`);
+                  }
+                }}
               >
                 <Caption1 className={styles.meetingWhen}>
                   {client.meeting}

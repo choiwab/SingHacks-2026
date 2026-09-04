@@ -1,6 +1,47 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`selected meeting opens the brief from every tab at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const meeting = page
+      .getByRole("navigation", { name: "This week's meetings" })
+      .getByRole("button", { name: /Margarethe/ });
+    const historyLength = await page.evaluate(() => history.length);
+
+    // Reopening this meeting must preserve an unfinished opening edit.
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const draft = page.getByRole("textbox", { name: "Edit the opening line" });
+    await draft.fill("An unfinished meeting opening.");
+
+    for (const tab of ["Memory", "Data", "Insights", "Overview"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await meeting.focus();
+      await meeting.press("Enter");
+      await expect(
+        page.getByRole("tab", { name: "Overview", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      const panel = page.getByRole("tabpanel", { name: "Overview" });
+      await expect(panel).toBeFocused();
+      await expect(panel).toHaveCSS("outline-style", "solid");
+      await expect(
+        page.getByRole("heading", { name: "Two-minute summary" }),
+      ).toBeInViewport();
+      await expect(draft).toHaveValue("An unfinished meeting opening.");
+      await expect(
+        page.getByRole("button", { name: "Approve pre-read" }),
+      ).toBeDisabled();
+    }
+    expect(await page.evaluate(() => history.length)).toBe(historyLength);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`client search tolerates name separators at ${width}px`, async ({
     page,
   }) => {

@@ -159,6 +159,7 @@ export function PreRead({
   const editPanel = useRef<HTMLDivElement>(null);
   const editButton = useRef<HTMLButtonElement>(null);
   const reviewBar = useRef<HTMLElement>(null);
+  const briefPanel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -253,6 +254,11 @@ export function PreRead({
         projection={projection}
         reviews={reviews}
         selectedClient={clientId}
+        onOpenSelectedBrief={() => {
+          flushSync(() => setTab("overview"));
+          briefPanel.current?.focus({ preventScroll: true });
+          briefPanel.current?.scrollIntoView({ block: "start" });
+        }}
       />
 
       <div className="client-heading">
@@ -293,6 +299,7 @@ export function PreRead({
 
       <div
         id={panelId}
+        ref={briefPanel}
         className={styles.tabPanel}
         role="tabpanel"
         aria-labelledby={`tab-${tab}`}
