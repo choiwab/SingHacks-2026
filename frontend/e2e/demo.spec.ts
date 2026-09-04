@@ -1,6 +1,63 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory search survives tab changes and stays client scoped at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const memory = page.getByRole("tab", { name: "Memory", exact: true });
+    await memory.click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    await search.fill("risk");
+
+    for (const tab of ["Data", "Insights", "Overview"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await memory.focus();
+      await memory.press("Enter");
+      await expect(memory).toBeFocused();
+      await expect(search).toHaveValue("risk");
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 2 notes",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(1);
+      await expect(notes.locator("mark")).toHaveCount(2);
+      await expect(notes).not.toContainText("safe and boring");
+    }
+
+    await search.focus();
+    await searchRegion
+      .getByRole("button", { name: "clear", exact: true })
+      .click();
+    await expect(search).toBeFocused();
+    await page.getByRole("tab", { name: "Data", exact: true }).click();
+    await memory.click();
+    await expect(search).toHaveValue("");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+
+    await search.fill("risk");
+    const switcher = page.getByRole("navigation", { name: "Client switcher" });
+    for (const client of [
+      /Alistair Pemberton-Hale/,
+      /Margarethe Voss-Brenner/,
+    ]) {
+      await switcher.getByRole("button", { name: client }).click();
+      await memory.click();
+      await expect(search).toHaveValue("");
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+      await expect(notes.locator("mark")).toHaveCount(0);
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`selected meeting opens the brief from every tab at ${width}px`, async ({
     page,
   }) => {

@@ -153,6 +153,7 @@ export function PreRead({
   const [emptyOpening, setEmptyOpening] = useState(false);
   const [pending, setPending] = useState<ReviewAction | null>(null);
   const [tab, setTab] = useState<TabValue>("overview");
+  const [memoryQuery, setMemoryQuery] = useState("");
   const panelId = useId();
   const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
@@ -317,7 +318,12 @@ export function PreRead({
         )}
         {tab === "data" && <DataPanel facts={facts} clientId={clientId} />}
         {tab === "memory" && (
-          <MemoryPanel preRead={preRead} evidence={projection.evidence} />
+          <MemoryPanel
+            preRead={preRead}
+            evidence={projection.evidence}
+            query={memoryQuery}
+            onQueryChange={setMemoryQuery}
+          />
         )}
         {tab === "overview" && (
           <div className={styles.brief}>

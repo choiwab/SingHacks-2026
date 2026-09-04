@@ -11,7 +11,6 @@ import {
   shorthands,
   tokens,
 } from "@fluentui/react-components";
-import { useState } from "react";
 
 import type {
   ClientPreRead,
@@ -1229,12 +1228,15 @@ function retrieve<T>(items: T[], terms: string[], text: (item: T) => string) {
 export function MemoryPanel({
   preRead,
   evidence,
+  query,
+  onQueryChange,
 }: {
   preRead: ClientPreRead;
   evidence: MondayBriefProjection["evidence"];
+  query: string;
+  onQueryChange: (query: string) => void;
 }) {
   const styles = useStyles();
-  const [query, setQuery] = useState("");
   const terms = queryTerms(query);
   const notes = Object.values(evidence)
     .filter(
@@ -1263,7 +1265,7 @@ export function MemoryPanel({
           placeholder="What did she say about risk?"
           aria-label="Search this client's RM notes"
           value={query}
-          onChange={(_, data) => setQuery(data.value)}
+          onChange={(_, data) => onQueryChange(data.value)}
         />
         <Caption1 role="status">
           {terms.length === 0
