@@ -1,14 +1,13 @@
-"""Evidence validation between generated content and human review."""
+"""Preserved legacy pre-read gate; not a verifier for the new MeetingPack contract."""
 
 from __future__ import annotations
 
 from typing import Any, Literal
 
-from app.client_flow.state import ClientFlowState
-from app.client_flow.tools.evidence import collect_citations
+from app.wealth_intelligence.evidence import collect_citations
 
 
-def evidence_gate(state: ClientFlowState) -> dict[str, Any]:
+def evidence_gate(state: dict[str, Any]) -> dict[str, Any]:
     """Member 4: block briefs with uncited claims or unresolved evidence."""
     brief = state.get("meeting_brief", {})
     facts = {fact["id"]: fact for fact in state.get("fact_bundle", [])}
@@ -56,7 +55,7 @@ def evidence_gate(state: ClientFlowState) -> dict[str, Any]:
 
 
 def route_verification(
-    state: ClientFlowState,
+    state: dict[str, Any],
 ) -> Literal["human_review", "needs_confirmation"]:
     report = state.get("verification_report", {})
     return "human_review" if report.get("passed") else "needs_confirmation"

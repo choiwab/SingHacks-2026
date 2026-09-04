@@ -1,4 +1,4 @@
-"""Small helpers for traversing claim-to-evidence references."""
+"""Data-team helper for traversing claim-to-evidence references."""
 
 from __future__ import annotations
 

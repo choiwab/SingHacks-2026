@@ -1,0 +1,396 @@
+{
+  "schema_version": 1,
+  "client_id": "CL-0003",
+  "as_of": "2026-08-26",
+  "version": "provisional-updated",
+  "facts": [
+    {
+      "id": "CL-0003:fact:profile",
+      "what": "Margarethe Voss-Brenner has a Conservative profile.",
+      "source_rows": [
+        "clients:CL-0003"
+      ],
+      "event_ids": [],
+      "confidence": "high",
+      "kind": "profile",
+      "numbers": {
+        "name": "Margarethe Voss-Brenner",
+        "currency": "EUR",
+        "language": "German",
+        "residence": "Singapore",
+        "booking_centre": "Singapore",
+        "risk_tolerance_score": 2,
+        "life_stage": "Recently inherited - transition"
+      }
+    },
+    {
+      "id": "CL-0003:fact:change-1",
+      "what": "Global Luxury and Consumer Brands Fund changed by -532,400.",
+      "source_rows": [
+        "holdings:2025-12-31:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+      ],
+      "event_ids": [
+        "event_log:2026-07-29:84745b7a2a697078"
+      ],
+      "confidence": "medium",
+      "kind": "change",
+      "numbers": {
+        "instrument": "Global Luxury and Consumer Brands Fund",
+        "delta": -532400,
+        "currency": "EUR"
+      }
+    },
+    {
+      "id": "CL-0003:fact:change-2",
+      "what": "US Technology Leaders Fund changed by 400,589.",
+      "source_rows": [
+        "holdings:2025-12-31:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003"
+      ],
+      "event_ids": [
+        "event_log:2026-06-05:a31a98cfa1524e3e"
+      ],
+      "confidence": "medium",
+      "kind": "change",
+      "numbers": {
+        "instrument": "US Technology Leaders Fund",
+        "delta": 400588.61,
+        "currency": "EUR"
+      }
+    },
+    {
+      "id": "CL-0003:fact:change-3",
+      "what": "EUR Investment Grade Bond Fund changed by -138,000.",
+      "source_rows": [
+        "holdings:2025-12-31:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209"
+      ],
+      "event_ids": [
+        "event_log:2026-06-19:7f37072cbaf751cc"
+      ],
+      "confidence": "medium",
+      "kind": "change",
+      "numbers": {
+        "instrument": "EUR Investment Grade Bond Fund",
+        "delta": -138000,
+        "currency": "EUR"
+      }
+    },
+    {
+      "id": "CL-0003:fact:mandate-gap",
+      "what": "Equity is 71.5% against a 30% maximum.",
+      "source_rows": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "mandates:CONS:equity"
+      ],
+      "event_ids": [],
+      "confidence": "high",
+      "kind": "mandate_gap",
+      "numbers": {
+        "asset_class": "Equity",
+        "actual_pct": 71.5,
+        "limit_pct": 30,
+        "boundary": "maximum",
+        "gap_pct": 41.5,
+        "scope": "Household look-through; strictest applicable band"
+      }
+    },
+    {
+      "id": "CL-0003:fact:deadline",
+      "what": "German inheritance tax instalment starts in 36 days.",
+      "source_rows": [
+        "planned_cash_needs:CN-004"
+      ],
+      "event_ids": [],
+      "confidence": "high",
+      "kind": "deadline",
+      "numbers": {
+        "days": 36,
+        "amount": 3400000,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "amount_in_portfolio_currency": 3400000,
+        "portfolio_currency": "EUR",
+        "coverage_pct": 527.5,
+        "description": "German inheritance tax instalment"
+      }
+    },
+    {
+      "id": "CL-0003:fact:concentration",
+      "what": "Connected positions represent 26.1% of the portfolio.",
+      "source_rows": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+      ],
+      "event_ids": [],
+      "confidence": "high",
+      "kind": "concentration",
+      "numbers": {
+        "weight_pct": 26.1,
+        "value": 5293200
+      }
+    }
+  ],
+  "signals": [
+    {
+      "id": "CL-0003:signal:mandate-gap",
+      "topic": "safe risk",
+      "fact_ids": [
+        "CL-0003:fact:mandate-gap"
+      ],
+      "score": 95,
+      "components": {
+        "gap": 93,
+        "deadline": 91,
+        "consequence": 100
+      },
+      "uncertainty": "Confirm current client intent and the funding plan before considering action."
+    },
+    {
+      "id": "CL-0003:signal:deadline",
+      "topic": "tax payment low volatility",
+      "fact_ids": [
+        "CL-0003:fact:deadline"
+      ],
+      "score": 95,
+      "components": {
+        "gap": 93,
+        "deadline": 91,
+        "consequence": 100
+      },
+      "uncertainty": "Confirm the tax-payment funding plan and current preference for low volatility."
+    },
+    {
+      "id": "CL-0003:signal:concentration",
+      "topic": "risk concentration",
+      "fact_ids": [
+        "CL-0003:fact:concentration"
+      ],
+      "score": 95,
+      "components": {
+        "gap": 93,
+        "deadline": 91,
+        "consequence": 100
+      },
+      "uncertainty": "Confirm current client intent and the funding plan before considering action."
+    }
+  ],
+  "evidence": {
+    "clients:CL-0003": {
+      "id": "clients:CL-0003",
+      "kind": "Clients",
+      "title": "Margarethe Voss-Brenner",
+      "source": "data/clients.csv",
+      "record": {
+        "client_id": "CL-0003",
+        "client_name": "Margarethe Voss-Brenner",
+        "country_of_residence": "Singapore",
+        "booking_centre": "Singapore",
+        "base_currency": "EUR",
+        "risk_profile": "Conservative",
+        "objectives": "Understand and de-risk the inherited portfolio; secure a stable income; German inheritance tax planning",
+        "reporting_language": "German",
+        "risk_tolerance_score": 2,
+        "life_stage": "Recently inherited - transition"
+      }
+    },
+    "event_log:2026-06-05:a31a98cfa1524e3e": {
+      "id": "event_log:2026-06-05:a31a98cfa1524e3e",
+      "kind": "Event Log",
+      "title": "Event matched through US technology, concentrated equity, collateralised lending",
+      "source": "data/event_log.csv",
+      "record": {
+        "event_date": "2026-06-05",
+        "event_type": "Market",
+        "region": "United States",
+        "description": "Megacap technology complex briefly sheds around USD 2 trillion in market value on AI capital expenditure concerns before recovering later in the month.",
+        "primary_transmission": "US technology, concentrated equity, collateralised lending"
+      }
+    },
+    "event_log:2026-06-19:7f37072cbaf751cc": {
+      "id": "event_log:2026-06-19:7f37072cbaf751cc",
+      "kind": "Event Log",
+      "title": "Event matched through Long-duration fixed income",
+      "source": "data/event_log.csv",
+      "record": {
+        "event_date": "2026-06-19",
+        "event_type": "Market",
+        "region": "United States",
+        "description": "US 10-year Treasury yield rises to about 4.46%, near its highest level in more than a year.",
+        "primary_transmission": "Long-duration fixed income"
+      }
+    },
+    "event_log:2026-07-29:84745b7a2a697078": {
+      "id": "event_log:2026-07-29:84745b7a2a697078",
+      "kind": "Event Log",
+      "title": "Event matched through Duration, growth equity valuations",
+      "source": "data/event_log.csv",
+      "record": {
+        "event_date": "2026-07-29",
+        "event_type": "Policy",
+        "region": "United States",
+        "description": "Federal Reserve holds again at 3.50-3.75% with three dissents. US 10-year yield reaches 4.71% by month end. Market pricing shifts from cuts toward possible hikes.",
+        "primary_transmission": "Duration, growth equity valuations"
+      }
+    },
+    "holdings:2025-12-31:PF-0005:SYN-EQ-0003": {
+      "id": "holdings:2025-12-31:PF-0005:SYN-EQ-0003",
+      "kind": "Holdings",
+      "title": "US Technology Leaders Fund at 2025-12-31",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2025-12-31",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-EQ-0003",
+        "instrument_name": "US Technology Leaders Fund",
+        "market_value_base": 1768275.86,
+        "price_local": 512.8,
+        "quantity": 4000
+      }
+    },
+    "holdings:2025-12-31:PF-0005:SYN-EQ-0010": {
+      "id": "holdings:2025-12-31:PF-0005:SYN-EQ-0010",
+      "kind": "Holdings",
+      "title": "Global Luxury and Consumer Brands Fund at 2025-12-31",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2025-12-31",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-EQ-0010",
+        "instrument_name": "Global Luxury and Consumer Brands Fund",
+        "market_value_base": 5825600,
+        "price_local": 264.8,
+        "quantity": 22000
+      }
+    },
+    "holdings:2025-12-31:PF-0005:SYN-FI-0209": {
+      "id": "holdings:2025-12-31:PF-0005:SYN-FI-0209",
+      "kind": "Holdings",
+      "title": "EUR Investment Grade Bond Fund at 2025-12-31",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2025-12-31",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-FI-0209",
+        "instrument_name": "EUR Investment Grade Bond Fund",
+        "market_value_base": 1996000,
+        "price_local": 99.8,
+        "quantity": 20000
+      }
+    },
+    "holdings:2026-08-26:PF-0005:SYN-EQ-0003": {
+      "id": "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+      "kind": "Holdings",
+      "title": "US Technology Leaders Fund at 2026-08-26",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2026-08-26",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-EQ-0003",
+        "instrument_name": "US Technology Leaders Fund",
+        "market_value_base": 2168864.47,
+        "price_local": 592.1,
+        "quantity": 4000
+      }
+    },
+    "holdings:2026-08-26:PF-0005:SYN-EQ-0004": {
+      "id": "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+      "kind": "Holdings",
+      "title": "Current Equity holding",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2026-08-26",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-EQ-0004",
+        "instrument_name": "European Equity Fund",
+        "asset_class": "Equity",
+        "market_value_base": 3321000,
+        "weight_pct": 16.3496
+      }
+    },
+    "holdings:2026-08-26:PF-0005:SYN-EQ-0010": {
+      "id": "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+      "kind": "Holdings",
+      "title": "Global Luxury and Consumer Brands Fund at 2026-08-26",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2026-08-26",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-EQ-0010",
+        "instrument_name": "Global Luxury and Consumer Brands Fund",
+        "market_value_base": 5293200,
+        "price_local": 240.6,
+        "quantity": 22000
+      }
+    },
+    "holdings:2026-08-26:PF-0005:SYN-FI-0209": {
+      "id": "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+      "kind": "Holdings",
+      "title": "EUR Investment Grade Bond Fund at 2026-08-26",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2026-08-26",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-FI-0209",
+        "instrument_name": "EUR Investment Grade Bond Fund",
+        "market_value_base": 1858000,
+        "price_local": 92.9,
+        "quantity": 20000
+      }
+    },
+    "holdings:2026-08-26:PF-0005:SYN-ST-0107": {
+      "id": "holdings:2026-08-26:PF-0005:SYN-ST-0107",
+      "kind": "Holdings",
+      "title": "Current Equity holding",
+      "source": "data/holdings.csv",
+      "record": {
+        "snapshot_date": "2026-08-26",
+        "portfolio_id": "PF-0005",
+        "instrument_id": "SYN-ST-0107",
+        "instrument_name": "Nordvind Industrial AB",
+        "asset_class": "Equity",
+        "market_value_base": 3732300,
+        "weight_pct": 18.3745
+      }
+    },
+    "mandates:CONS:equity": {
+      "id": "mandates:CONS:equity",
+      "kind": "Mandates",
+      "title": "Conservative Equity band",
+      "source": "data/mandates.csv",
+      "record": {
+        "mandate_code": "CONS",
+        "mandate_name": "Conservative",
+        "asset_class": "Equity",
+        "min_pct": 10,
+        "max_pct": 30
+      }
+    },
+    "planned_cash_needs:CN-004": {
+      "id": "planned_cash_needs:CN-004",
+      "kind": "Planned Cash Needs",
+      "title": "German inheritance tax instalment",
+      "source": "data/planned_cash_needs.csv",
+      "record": {
+        "need_id": "CN-004",
+        "description": "German inheritance tax instalment",
+        "currency": "EUR",
+        "amount": 3400000,
+        "due_from": "2026-10-01",
+        "due_to": "2026-12-31",
+        "certainty": "Confirmed"
+      }
+    }
+  },
+  "quality_issues": [],
+  "change_report": {
+    "previous_version": "provisional-initial",
+    "changed_fact_ids": [],
+    "changed_signal_ids": [
+      "CL-0003:signal:deadline"
+    ]
+  }
+}

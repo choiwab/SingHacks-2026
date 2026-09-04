@@ -1,4 +1,4 @@
-"""Sample adapter from the existing deterministic pipeline to graph artifacts."""
+"""Legacy selected-client projection adapter, owned by the data team."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ from datetime import date
 from pathlib import Path
 from typing import Any, TypedDict
 
-from app.client_flow.tools.evidence import collect_citations
 from app.wealth_intelligence import build_monday_brief
+from app.wealth_intelligence.evidence import collect_citations
 
 
 class ClientArtifacts(TypedDict):

@@ -1,4 +1,4 @@
-"""Read-only source inspection tools owned by the context layer."""
+"""Legacy read-only source inspection tools, owned by the data team."""
 
 from __future__ import annotations
 
