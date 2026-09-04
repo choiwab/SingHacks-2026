@@ -196,6 +196,60 @@ describe("Monday Brief", () => {
     ).toBeVisible();
   });
 
+  it("ranks the week's meetings, tracks brief state, and switches client", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).endsWith("/api/reviews")
+            ? new Response(
+                JSON.stringify({
+                  review: {
+                    review_id: "r-1",
+                    client_id: "CL-0003",
+                    action: "Approve",
+                    text: "",
+                    rm: "Priscilla Ong",
+                    timestamp: "2026-09-05T09:00:00+00:00",
+                  },
+                }),
+                {
+                  status: 200,
+                  headers: { "Content-Type": "application/json" },
+                },
+              )
+            : projectionResponse(),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0019/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    // The calendar remounts with the pre-read, so it is re-queried each time.
+    const bookedMeeting = () =>
+      within(
+        screen.getByRole("navigation", { name: "This week's meetings" }),
+      ).getByRole("button", { name: /Margarethe Voss-Brenner/ });
+    await screen.findByRole("navigation", { name: "This week's meetings" });
+    const booked = bookedMeeting();
+    expect(booked).toHaveTextContent("Mon 10:30");
+    expect(booked).toHaveTextContent("Needs review");
+    expect(booked).not.toHaveAttribute("aria-current");
+
+    await user.click(booked);
+    expect(
+      await screen.findByRole("heading", { name: "Margarethe Voss-Brenner" }),
+    ).toBeVisible();
+    expect(bookedMeeting()).toHaveAttribute("aria-current", "true");
+
+    await user.click(screen.getByRole("button", { name: "Approve pre-read" }));
+    await waitFor(() => expect(bookedMeeting()).toHaveTextContent("Ready"));
+  });
+
   it("surfaces review failures without leaving the pre-read", async () => {
     const fetch = vi.fn((input: RequestInfo | URL) => {
       if (String(input).endsWith("/api/reviews")) {

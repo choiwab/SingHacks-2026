@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { saveReview } from "./api";
 import {
+  CompactCalendar,
   DashboardHeader,
   DataPanel,
   InsightsPanel,
@@ -23,7 +24,15 @@ const TABS = [
 
 type TabValue = (typeof TABS)[number]["value"];
 
-export function PreRead({ projection }: { projection: MondayBriefProjection }) {
+export function PreRead({
+  projection,
+  reviews,
+  onReviewed,
+}: {
+  projection: MondayBriefProjection;
+  reviews: Record<string, Authorship>;
+  onReviewed: (clientId: string, state: Authorship) => void;
+}) {
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const preRead = projection.pre_reads[clientId];
@@ -31,11 +40,11 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
   const [editedOpening, setEditedOpening] = useState(
     preRead?.opening.text ?? "",
   );
-  const [reviewState, setReviewState] = useState<Authorship>("Unreviewed");
   const [receipt, setReceipt] = useState("");
   const [toast, setToast] = useState("");
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<TabValue>("overview");
+  const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
   const reviewBar = useRef<HTMLElement>(null);
 
@@ -77,7 +86,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
         Reject: "Rejected",
       };
       const label = labels[action];
-      setReviewState(label);
+      onReviewed(clientId, label);
       const time = new Date(response.review.timestamp).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -121,6 +130,12 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
           </strong>
         </p>
       </div>
+
+      <CompactCalendar
+        projection={projection}
+        reviews={reviews}
+        selectedClient={clientId}
+      />
 
       <div className="client-heading">
         <DashboardHeader

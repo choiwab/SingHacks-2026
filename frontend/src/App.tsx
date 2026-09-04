@@ -1,10 +1,17 @@
 import { FluentProvider, teamsLightTheme } from "@fluentui/react-components";
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useParams,
+} from "react-router-dom";
 
 import { getMondayBrief } from "./api";
 import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
+import type { Authorship } from "./evidence";
 import type { MondayBriefProjection } from "./contracts";
 import { MondayList } from "./MondayList";
 import { PreRead } from "./PreRead";
@@ -34,8 +41,25 @@ function useRoute(projection: MondayBriefProjection) {
   return { route, selectedClient } as const;
 }
 
+/**
+ * React Router keeps one PreRead instance alive across `:clientId` changes, so
+ * the key remounts it and stops one client's edit, receipt, or open tab from
+ * being shown under the next client's name.
+ */
+function PreReadRoute(props: {
+  projection: MondayBriefProjection;
+  reviews: Record<string, Authorship>;
+  onReviewed: (clientId: string, state: Authorship) => void;
+}) {
+  const { clientId = "" } = useParams();
+  return <PreRead key={clientId} {...props} />;
+}
+
 function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
   const { route, selectedClient } = useRoute(projection);
+  // The RM's review decisions live above the routes so the compact calendar and
+  // the dashboard header agree on which briefs are ready.
+  const [reviews, setReviews] = useState<Record<string, Authorship>>({});
 
   return (
     <EvidenceProvider projection={projection}>
@@ -51,7 +75,15 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
           <Route path="/" element={<MondayList projection={projection} />} />
           <Route
             path="/clients/:clientId/pre-read"
-            element={<PreRead projection={projection} />}
+            element={
+              <PreReadRoute
+                projection={projection}
+                reviews={reviews}
+                onReviewed={(clientId, state) =>
+                  setReviews((current) => ({ ...current, [clientId]: state }))
+                }
+              />
+            }
           />
           <Route
             path="/clients/:clientId/scenario"

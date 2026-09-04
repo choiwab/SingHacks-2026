@@ -16,6 +16,8 @@ import type {
   ProjectionFact,
   RankedClient,
 } from "./contracts";
+import { useNavigate } from "react-router-dom";
+
 import type { Authorship } from "./evidence";
 import { WhyButton } from "./shared";
 
@@ -44,6 +46,9 @@ const FACT_GROUP: Record<ProjectionFact["kind"], string> = {
   concentration: "Concentration",
   change: "Snapshot change",
 };
+
+/** Matches the shell breakpoint where the client switcher becomes a strip. */
+const NARROW = "@media (max-width: 60rem)";
 
 const useStyles = makeStyles({
   header: {
@@ -151,6 +156,45 @@ const useStyles = makeStyles({
   empty: {
     color: tokens.colorNeutralForeground3,
   },
+  calendar: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXS,
+    paddingBlockEnd: tokens.spacingVerticalL,
+  },
+  strip: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: tokens.spacingHorizontalS,
+    listStyleType: "none",
+    ...shorthands.margin(0),
+    ...shorthands.padding(0),
+    // Narrow windows scroll the week sideways, like the client strip above it,
+    // rather than pushing the client name below the fold.
+    [NARROW]: { flexWrap: "nowrap", overflowX: "auto" },
+  },
+  meeting: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    rowGap: "2px",
+    minWidth: "13rem",
+    cursor: "pointer",
+    textAlign: "left",
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
+    backgroundColor: tokens.colorNeutralBackground1,
+    ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover },
+  },
+  meetingSelected: {
+    ...shorthands.borderColor(tokens.colorBrandStroke1),
+    backgroundColor: tokens.colorBrandBackground2,
+  },
+  meetingWhen: {
+    color: tokens.colorNeutralForeground3,
+    fontVariantNumeric: "tabular-nums",
+  },
 });
 
 function formatNumber(value: unknown) {
@@ -183,6 +227,101 @@ function dataHealth(facts: ProjectionFact[]) {
     return { label: "Needs confirmation", color: "warning" as const };
   if (facts.length === 0) return { label: "Stale", color: "danger" as const };
   return { label: "Current", color: "success" as const };
+}
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+const BRIEF_STATE = {
+  Ready: { label: "Ready", color: "success" as const },
+  "Needs review": { label: "Needs review", color: "warning" as const },
+  "Not prepared": { label: "Not prepared", color: "danger" as const },
+};
+
+/**
+ * Readiness of a client's meeting brief (PRD 5.3). A brief only counts as ready
+ * once the RM has approved or edited it; a rejected one goes back in the queue.
+ */
+export function briefState(
+  hasPreRead: boolean,
+  authorship: Authorship,
+): keyof typeof BRIEF_STATE {
+  if (!hasPreRead) return "Not prepared";
+  if (authorship === "Approved" || authorship === "Edited") return "Ready";
+  return "Needs review";
+}
+
+/**
+ * The RM's booked meetings for the week, ordered by day and time. Selecting one
+ * switches the whole dashboard to that client (PRD 5.3); the MVP never edits or
+ * synchronizes the meetings themselves.
+ */
+export function CompactCalendar({
+  projection,
+  reviews,
+  selectedClient,
+}: {
+  projection: MondayBriefProjection;
+  reviews: Record<string, Authorship>;
+  selectedClient: string;
+}) {
+  const styles = useStyles();
+  const navigate = useNavigate();
+  const meetings = projection.ranking
+    .filter((client) => client.meeting)
+    .sort((a, b) => {
+      const day =
+        DAYS.indexOf((a.meeting ?? "").slice(0, 3)) -
+        DAYS.indexOf((b.meeting ?? "").slice(0, 3));
+      return day || (a.meeting ?? "").localeCompare(b.meeting ?? "");
+    });
+
+  return (
+    <nav className={styles.calendar} aria-label="This week's meetings">
+      <Body1Strong>This week</Body1Strong>
+      <Caption1>
+        {meetings.length === 1
+          ? "1 meeting booked"
+          : `${meetings.length} meetings booked`}
+      </Caption1>
+      <ul className={styles.strip}>
+        {meetings.map((client) => {
+          const selected = client.client_id === selectedClient;
+          const state =
+            BRIEF_STATE[
+              briefState(
+                Boolean(projection.pre_reads[client.client_id]),
+                reviews[client.client_id] ?? "Unreviewed",
+              )
+            ];
+          return (
+            <li key={client.client_id}>
+              <button
+                type="button"
+                aria-current={selected ? "true" : undefined}
+                className={`${styles.meeting} ${selected ? styles.meetingSelected : ""}`}
+                onClick={() =>
+                  navigate(`/clients/${client.client_id}/pre-read`)
+                }
+              >
+                <Caption1 className={styles.meetingWhen}>
+                  {client.meeting}
+                </Caption1>
+                <Body1Strong>{client.name}</Body1Strong>
+                <Badge appearance="tint" color={state.color} size="small">
+                  {state.label}
+                </Badge>
+              </button>
+            </li>
+          );
+        })}
+        {meetings.length === 0 && (
+          <li className={styles.empty}>
+            <Caption1>No meetings are booked this week.</Caption1>
+          </li>
+        )}
+      </ul>
+    </nav>
+  );
 }
 
 export function DashboardHeader({

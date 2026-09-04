@@ -24,6 +24,17 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.getByRole("button", { name: "Approve pre-read" }).click();
   await expect(page.getByRole("status").last()).toContainText("Approved");
 
+  // The compact calendar tracks brief readiness across the dashboard (PRD 5.3).
+  const calendar = page.getByRole("navigation", {
+    name: "This week's meetings",
+  });
+  await expect(
+    calendar.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+  ).toContainText("Ready");
+  await expect(
+    calendar.getByRole("button", { name: /Abdullah Al-Mansoori/ }),
+  ).toContainText("Needs review");
+
   // The evidence trail reports who authored the approved claim (PRD 5.7).
   await page.getByRole("button", { name: "Why?" }).first().click();
   await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
@@ -33,6 +44,12 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     .getByRole("dialog", { name: "Why?" })
     .getByRole("button", { name: "Close source trail" })
     .click();
+
+  // Selecting a meeting switches the whole dashboard to that client (PRD 5.3).
+  await calendar.getByRole("button", { name: /Abdullah Al-Mansoori/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Abdullah Al-Mansoori" }),
+  ).toBeVisible();
 
   await page.goto("/clients/CL-0019/scenario");
   await expect(
