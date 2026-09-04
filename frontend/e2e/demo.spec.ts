@@ -1,6 +1,80 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`discussion evidence retains the agenda and review at ${width}px`, async ({
+    page,
+  }) => {
+    await page.route("**/api/reviews", async (route) => {
+      await route.fulfill({
+        json: {
+          review: {
+            ...route.request().postDataJSON(),
+            timestamp: "2026-09-05T10:00:00Z",
+            rm: "Priscilla Ong",
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const topics = page
+      .getByRole("region", { name: "Three discussion topics" })
+      .getByRole("listitem");
+    await expect(topics).toHaveCount(3);
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    for (let index = 0; index < 3; index += 1) {
+      const topic = topics.nth(index);
+      const headline = await topic.getByRole("heading").innerText();
+      const paragraphs = await topic.locator("p").allTextContents();
+      expect(paragraphs).toHaveLength(2);
+      const why = topic.getByRole("button", { name: "Why?", exact: true });
+      await why.focus();
+      await why.press("Enter");
+      const claim = drawer.getByRole("region", { name: "Generated claim" });
+      await expect(claim).toContainText(
+        `Margarethe Voss-Brenner · Topic ${index + 1} · ${headline}`,
+      );
+      await expect(claim).toContainText(paragraphs[0]);
+      await expect(claim).toContainText(`Ask: ${paragraphs[1]}`);
+      await expect(drawer).toContainText("Generated · awaiting RM review");
+      await expect(drawer).toContainText("Calculation inputs and result");
+      await expect(drawer).toContainText(
+        index === 1
+          ? "data/planned_cash_needs.csv · row planned_cash_needs:CN-004"
+          : "data/holdings.csv · row holdings:",
+      );
+      await expect(drawer).toContainText("as of 2026-08-26");
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+      await expect(why).toBeFocused();
+    }
+    await page.getByRole("button", { name: "Approve pre-read" }).click();
+    await expect(page.getByRole("status").last()).toContainText("Approved");
+    await topics
+      .first()
+      .getByRole("button", { name: "Why?", exact: true })
+      .click();
+    await expect(drawer).toContainText("Approved by the RM");
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    await topics
+      .first()
+      .getByRole("button", { name: "Why?", exact: true })
+      .click();
+    await expect(drawer).toContainText("Abdullah Al-Mansoori · Topic 1");
+    await expect(drawer).toContainText("Generated · awaiting RM review");
+    await expect(drawer).not.toContainText("Margarethe");
+  });
+
   test(`commitment evidence retains the client and cash-need terms at ${width}px`, async ({
     page,
   }) => {

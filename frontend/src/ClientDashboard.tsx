@@ -994,9 +994,13 @@ export function TwoMinuteSummary({
 export function DiscussionTopics({
   facts,
   clientId,
+  clientName,
+  authorship,
 }: {
   facts: ProjectionFact[];
   clientId: string;
+  clientName: string;
+  authorship: Authorship;
 }) {
   const styles = useStyles();
   const currency = facts.find(factOfKind("profile"))?.numbers.currency;
@@ -1009,31 +1013,40 @@ export function DiscussionTopics({
 
   return (
     <ol className={styles.topics}>
-      {topics.map((fact, index) => (
-        <li className={styles.topic} key={fact.id}>
-          <div className={styles.cardMeta}>
-            <Badge appearance="filled" color={insightSeverity(fact).color}>
-              Topic {index + 1}
-            </Badge>
-            <Badge appearance="outline" color="informative">
-              {FACT_GROUP[fact.kind]}
-            </Badge>
-          </div>
-          <Subtitle2 as="h3">{fact.what}</Subtitle2>
-          <Body1 as="p" className={styles.summary}>
-            {stake(fact, currency)}
-          </Body1>
-          <div className={styles.note}>
-            <Caption1 className={styles.term}>Ask</Caption1>
+      {topics.map((fact, index) => {
+        const summary = stake(fact, currency);
+        const question = askAbout(fact);
+        return (
+          <li className={styles.topic} key={fact.id}>
+            <div className={styles.cardMeta}>
+              <Badge appearance="filled" color={insightSeverity(fact).color}>
+                Topic {index + 1}
+              </Badge>
+              <Badge appearance="outline" color="informative">
+                {FACT_GROUP[fact.kind]}
+              </Badge>
+            </div>
+            <Subtitle2 as="h3">{fact.what}</Subtitle2>
             <Body1 as="p" className={styles.summary}>
-              {askAbout(fact)}
+              {summary}
             </Body1>
-          </div>
-          <div className={styles.headerActions}>
-            <WhyButton citations={[fact.id]} clientId={clientId} />
-          </div>
-        </li>
-      ))}
+            <div className={styles.note}>
+              <Caption1 className={styles.term}>Ask</Caption1>
+              <Body1 as="p" className={styles.summary}>
+                {question}
+              </Body1>
+            </div>
+            <div className={styles.headerActions}>
+              <WhyButton
+                citations={[fact.id]}
+                clientId={clientId}
+                claim={`${clientName} · Topic ${index + 1} · ${fact.what} ${summary} Ask: ${question}`}
+                authorship={authorship}
+              />
+            </div>
+          </li>
+        );
+      })}
     </ol>
   );
 }

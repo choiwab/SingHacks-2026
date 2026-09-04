@@ -345,7 +345,12 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Three discussion topics">
-              <DiscussionTopics facts={facts} clientId={clientId} />
+              <DiscussionTopics
+                facts={facts}
+                clientId={clientId}
+                clientName={preRead.name}
+                authorship={reviewState}
+              />
             </BriefSection>
 
             <BriefSection title="What changed">
