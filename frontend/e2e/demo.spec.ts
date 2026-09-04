@@ -33,12 +33,25 @@ for (const width of [1280, 390]) {
       '"risk with mone"',
       '"gold position"',
       '"risk with money.*"',
+      '"4m"',
+      '"4m falls"',
+      '"EUR 3"',
+      '"2026-05"',
+      '"006"',
     ]) {
       await search.fill(query);
       await expect(panel.getByRole("status")).toHaveText(
-        `0 of 2 notes and 0 of 1 belief mention ${query}.`,
+        `0 of 2 notes and 0 of 1 belief mention ${query.toLowerCase()}.`,
       );
       await expect(panel.locator("mark")).toHaveCount(0);
+    }
+    for (const wording of ["3.4m", "EUR 3.4m", "2026-05-29", "N-006"]) {
+      await search.fill(`"${wording}"`);
+      await expect(panel.getByRole("status")).toHaveText(
+        `1 of 2 notes and 0 of 1 belief mention "${wording.toLowerCase()}".`,
+      );
+      await expect(notes.locator("mark")).toHaveText(wording);
+      await expect(search).toBeFocused();
     }
     await search.fill('"safe and boring"');
     await expect(notes.locator("mark")).toHaveText("safe and boring");

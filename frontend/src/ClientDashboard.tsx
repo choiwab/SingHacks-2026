@@ -1277,11 +1277,18 @@ function matchScore(text: string, terms: string[]): number {
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
   if (term.startsWith('"') && term.endsWith('"')) {
-    const phrase = term
-      .slice(1, -1)
+    const wording = term.slice(1, -1);
+    const phrase = wording
       .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
       .replace(/\s+/gu, "\\s+");
-    return `(?<![\\p{L}\\p{N}])${phrase}(?![\\p{L}\\p{N}])`;
+    // Exact wording must not start or end partway through a number.
+    const start = /^[+−-]?\p{N}/u.test(wording)
+      ? "(?<![\\p{L}\\p{N}.+−-]|\\p{N},)"
+      : "(?<![\\p{L}\\p{N}])";
+    const end = /\p{N}$/u.test(wording)
+      ? "(?![\\p{L}\\p{N}]|[.,-]\\p{N})"
+      : "(?![\\p{L}\\p{N}])";
+    return `${start}${phrase}${end}`;
   }
   const literal = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (/^(?:n-\d+|\d{4}-\d{2}-\d{2})$/.test(term))
