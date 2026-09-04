@@ -10,9 +10,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from app.monday_brief import MondayBriefProjection, build_monday_brief, save_projection
-from app.monday_brief.models import ReviewRequest, ReviewResponse
-from app.monday_brief.reviews import ReviewLedger
+from app.wealth_intelligence import MondayBriefProjection, build_monday_brief, save_projection
+from app.wealth_intelligence.models import ReviewRequest, ReviewResponse
+from app.wealth_intelligence.reviews import ReviewLedger
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"

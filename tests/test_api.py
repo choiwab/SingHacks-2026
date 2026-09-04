@@ -6,7 +6,7 @@ from pathlib import Path
 import httpx
 
 from app.main import create_app
-from app.monday_brief import build_monday_brief
+from app.wealth_intelligence import build_monday_brief
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 

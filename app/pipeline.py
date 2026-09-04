@@ -13,7 +13,7 @@ from typing import Any
 
 import pandas as pd
 
-from app.monday_brief.policy import POLICY
+from app.wealth_intelligence.policy import POLICY
 
 AS_OF = date(2026, 8, 26)
 SNAPSHOT = "2026-08-26"
@@ -587,6 +587,96 @@ def _belief_extractor(
     return beliefs
 
 
+def _build_gap(
+    client_id: str,
+    facts_by_key: dict[str, dict[str, Any]],
+    belief: dict[str, Any],
+) -> dict[str, Any]:
+    mandate = facts_by_key["mandate-gap"]
+    facility = facts_by_key.get("facility")
+    concentration = facts_by_key["concentration"]
+    if client_id == "CL-0003":
+        data_text = (
+            f"Equity is {mandate['numbers']['actual_pct']:.1f}% against a "
+            f"{mandate['numbers']['limit_pct']:.0f}% limit."
+        )
+        fact_citations = [mandate["id"]]
+    elif client_id == "CL-0014" and facility:
+        data_text = (
+            f"Property-linked positions are {concentration['numbers']['weight_pct']:.1f}% "
+            f"and facility LTV is {facility['numbers']['ltv_pct']:.2f}%."
+        )
+        fact_citations = [concentration["id"], facility["id"]]
+    elif client_id == "CL-0019":
+        data_text = (
+            f"Shipping and energy-linked positions are "
+            f"{concentration['numbers']['weight_pct']:.1f}% of the portfolio."
+        )
+        fact_citations = [concentration["id"]]
+    else:
+        selected_fact = mandate if mandate["numbers"]["gap_pct"] else concentration
+        data_text = selected_fact["what"]
+        fact_citations = [selected_fact["id"]]
+    return {
+        "id": f"{client_id}:gap:1",
+        "belief": belief["text"],
+        "data": data_text,
+        "citations": belief["citations"] + fact_citations,
+    }
+
+
+def _build_priority(
+    client_id: str,
+    facts_by_key: dict[str, dict[str, Any]],
+    gap: dict[str, Any],
+) -> dict[str, Any]:
+    mandate = facts_by_key["mandate-gap"]
+    deadline = facts_by_key["deadline"]
+    facility = facts_by_key.get("facility")
+    concentration = facts_by_key["concentration"]
+    mandate_gap = float(mandate["numbers"]["gap_pct"])
+    facility_pressure = max(0, 20 - float(facility["numbers"]["gap_pct"]) * 5) if facility else 0.0
+    coverage = float(deadline["numbers"].get("coverage_pct", 999))
+    liquidity_pressure = max(0, 30 - min(coverage, 100) * 0.3)
+    gap_size = min(100, 10 + mandate_gap * 2 + facility_pressure)
+    closeness = max(8, 100 - min(float(deadline["numbers"]["days"]), 365) / 4)
+    profile = facts_by_key["profile"]["numbers"]
+    vulnerability = (10 - float(profile["risk_tolerance_score"])) * 3
+    if "inherited" in str(profile["life_stage"]).lower():
+        vulnerability += 12
+    consequence = min(
+        100,
+        20
+        + mandate_gap
+        + facility_pressure * 2
+        + liquidity_pressure
+        + concentration["numbers"]["weight_pct"] / 4
+        + vulnerability,
+    )
+    weighted_score = (
+        gap_size**POLICY.scoring.gap
+        * closeness**POLICY.scoring.deadline
+        * consequence**POLICY.scoring.consequence
+    )
+    total_weight = POLICY.scoring.gap + POLICY.scoring.deadline + POLICY.scoring.consequence
+    score = round(weighted_score ** (1 / total_weight))
+    return {
+        "client_id": client_id,
+        "name": profile["name"],
+        "score": score,
+        "components": {
+            "gap": round(gap_size),
+            "deadline": round(closeness),
+            "consequence": round(consequence),
+        },
+        "meeting": POLICY.meetings.get(client_id),
+        "meeting_source": "Calendar preview" if client_id in POLICY.meetings else None,
+        "reason": gap["data"],
+        "urgency": "now" if score >= 65 else "soon" if score >= 45 else "watch",
+        "citations": gap["citations"],
+    }
+
+
 def _gap_matcher(
     facts: dict[str, list[dict[str, Any]]],
     beliefs: dict[str, list[dict[str, Any]]],
@@ -594,88 +684,12 @@ def _gap_matcher(
     gaps: dict[str, list[dict[str, Any]]] = {}
     ranking = []
     for client_id, client_facts in facts.items():
-        by_key = {fact["id"].rsplit(":", 1)[-1]: fact for fact in client_facts}
-        mandate = by_key["mandate-gap"]
-        deadline = by_key["deadline"]
-        facility = by_key.get("facility")
-        concentration = by_key["concentration"]
+        facts_by_key = {fact["id"].rsplit(":", 1)[-1]: fact for fact in client_facts}
         belief = beliefs.get(client_id, [{"text": "No note on file.", "citations": []}])[0]
-        if client_id == "CL-0003":
-            data_text = (
-                f"Equity is {mandate['numbers']['actual_pct']:.1f}% against a "
-                f"{mandate['numbers']['limit_pct']:.0f}% limit."
-            )
-            citations = belief["citations"] + [mandate["id"]]
-        elif client_id == "CL-0014" and facility:
-            data_text = (
-                f"Property-linked positions are {concentration['numbers']['weight_pct']:.1f}% "
-                f"and facility LTV is {facility['numbers']['ltv_pct']:.2f}%."
-            )
-            citations = belief["citations"] + [concentration["id"], facility["id"]]
-        elif client_id == "CL-0019":
-            data_text = (
-                f"Shipping and energy-linked positions are "
-                f"{concentration['numbers']['weight_pct']:.1f}% of the portfolio."
-            )
-            citations = belief["citations"] + [concentration["id"]]
-        else:
-            data_text = mandate["what"] if mandate["numbers"]["gap_pct"] else concentration["what"]
-            citations = belief["citations"] + [
-                mandate["id"] if mandate["numbers"]["gap_pct"] else concentration["id"]
-            ]
-        gap = {
-            "id": f"{client_id}:gap:1",
-            "belief": belief["text"],
-            "data": data_text,
-            "citations": citations,
-        }
+        gap = _build_gap(client_id, facts_by_key, belief)
         gaps[client_id] = [gap]
+        ranking.append(_build_priority(client_id, facts_by_key, gap))
 
-        mandate_gap = float(mandate["numbers"]["gap_pct"])
-        facility_pressure = 0.0
-        if facility:
-            facility_pressure = max(0, 20 - float(facility["numbers"]["gap_pct"]) * 5)
-        coverage = float(deadline["numbers"].get("coverage_pct", 999))
-        liquidity_pressure = max(0, 30 - min(coverage, 100) * 0.3)
-        gap_size = min(100, 10 + mandate_gap * 2 + facility_pressure)
-        closeness = max(8, 100 - min(float(deadline["numbers"]["days"]), 365) / 4)
-        profile = by_key["profile"]["numbers"]
-        vulnerability = (10 - float(profile["risk_tolerance_score"])) * 3
-        if "inherited" in str(profile["life_stage"]).lower():
-            vulnerability += 12
-        consequence = min(
-            100,
-            20
-            + mandate_gap
-            + facility_pressure * 2
-            + liquidity_pressure
-            + concentration["numbers"]["weight_pct"] / 4
-            + vulnerability,
-        )
-        weighted_score = (
-            gap_size**POLICY.scoring.gap
-            * closeness**POLICY.scoring.deadline
-            * consequence**POLICY.scoring.consequence
-        )
-        total_weight = POLICY.scoring.gap + POLICY.scoring.deadline + POLICY.scoring.consequence
-        score = round(weighted_score ** (1 / total_weight))
-        ranking.append(
-            {
-                "client_id": client_id,
-                "name": by_key["profile"]["numbers"]["name"],
-                "score": score,
-                "components": {
-                    "gap": round(gap_size),
-                    "deadline": round(closeness),
-                    "consequence": round(consequence),
-                },
-                "meeting": POLICY.meetings.get(client_id),
-                "meeting_source": "Calendar preview" if client_id in POLICY.meetings else None,
-                "reason": data_text,
-                "urgency": "now" if score >= 65 else "soon" if score >= 45 else "watch",
-                "citations": citations,
-            }
-        )
     ranking.sort(key=lambda item: item["score"], reverse=True)
     return gaps, ranking
 
