@@ -118,10 +118,6 @@ function renderList() {
   });
   meetingGrid.replaceChildren(...days);
 
-  const first = state.data.ranking[0];
-  const parts = first.components;
-  $("#formula-example").textContent =
-    `${first.name}: ${parts.gap} × ${parts.deadline} × ${parts.consequence} = ${first.score}.`;
 }
 
 function renderCitedList(items, target) {

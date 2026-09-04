@@ -57,7 +57,6 @@ Who needs Priscilla first?
 - Urgency marker with a text-equivalent priority rank.
 - Upcoming meeting when connected calendar preview data exists.
 - Priority score.
-- A **Why this order?** disclosure.
 
 ### Priority Calendar layout
 

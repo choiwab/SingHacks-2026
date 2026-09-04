@@ -48,7 +48,6 @@ button {
 }
 
 button:focus-visible,
-summary:focus-visible,
 textarea:focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
@@ -184,43 +183,8 @@ h2 {
 }
 
 .calendar-hero {
-  display: grid;
   padding-bottom: 2rem;
   border-bottom: 2px solid var(--rule);
-  gap: 2rem;
-}
-
-.order-explainer {
-  align-self: end;
-}
-
-.order-explainer summary {
-  width: max-content;
-  min-height: 2.75rem;
-  cursor: pointer;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 2.75rem;
-}
-
-.order-explainer summary::marker {
-  color: var(--signal);
-}
-
-.formula-body {
-  display: grid;
-  max-width: 38rem;
-  padding: 1rem 0 0;
-  color: var(--muted);
-  gap: 0.6rem;
-}
-
-.formula-body p {
-  margin: 0;
-}
-
-.formula-body strong {
-  color: var(--ink);
 }
 
 .feature-intro {
@@ -1095,10 +1059,6 @@ blockquote {
 
   .screen {
     padding: 3rem 1.5rem 6rem;
-  }
-
-  .calendar-hero {
-    grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 0.8fr);
   }
 
   .feature-intro {
