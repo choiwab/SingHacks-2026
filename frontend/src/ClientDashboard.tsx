@@ -1226,10 +1226,23 @@ const STOPWORDS = new Set(
  * ponytail: keyword scoring, swap for a pipeline retriever if one ever lands.
  */
 function queryTerms(query: string): string[] {
+  // Quoted wording is one literal term, including conversational words.
+  const phrases: string[] = [];
+  const keywords = query.replace(
+    /"([^"\n]+)"|“([^”\n]+)”/gu,
+    (_, straight, curly) => {
+      const phrase = String(straight ?? curly)
+        .trim()
+        .replace(/\s+/gu, " ");
+      if (phrase) phrases.push(`"${phrase.toLowerCase()}"`);
+      return " ";
+    },
+  );
   return [
-    ...new Set(
-      (
-        query
+    ...new Set([
+      ...phrases,
+      ...(
+        keywords
           // Keep dotted country abbreviations intact before splitting punctuation.
           .replace(
             /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
@@ -1251,7 +1264,7 @@ function queryTerms(query: string): string[] {
         .map((word) =>
           word.toLowerCase().replaceAll(",", "").replaceAll("−", "-"),
         ),
-    ),
+    ]),
   ];
 }
 
@@ -1263,6 +1276,13 @@ function matchScore(text: string, terms: string[]): number {
 
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
+  if (term.startsWith('"') && term.endsWith('"')) {
+    const phrase = term
+      .slice(1, -1)
+      .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+      .replace(/\s+/gu, "\\s+");
+    return `(?<![\\p{L}\\p{N}])${phrase}(?![\\p{L}\\p{N}])`;
+  }
   const literal = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   if (/^(?:n-\d+|\d{4}-\d{2}-\d{2})$/.test(term))
     return `(?<![\\p{L}\\p{N}-])${literal}(?![\\p{L}\\p{N}-])`;
@@ -1360,7 +1380,11 @@ export function MemoryPanel({
           dismiss={{ "aria-label": "Clear note search" }}
           value={query}
           onChange={(_, data) => onQueryChange(data.value)}
+          aria-describedby="memory-search-hint"
         />
+        <Caption1 id="memory-search-hint">
+          Search by topic, or use double quotes for an exact phrase.
+        </Caption1>
         <Caption1 role="status">
           {terms.length === 0 &&
             query.trim() &&

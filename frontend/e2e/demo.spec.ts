@@ -1,6 +1,77 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory retrieves exact quoted phrases at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Memory" });
+    const search = panel.getByRole("searchbox");
+    const notes = panel.getByRole("region", { name: "RM notes", exact: true });
+    const beliefs = panel.getByRole("region", { name: "Extracted beliefs" });
+    await expect(search).toHaveAccessibleDescription(
+      "Search by topic, or use double quotes for an exact phrase.",
+    );
+    for (const query of [
+      '"risk with money"',
+      "“RISK WITH MONEY”",
+      '"risk   with money"',
+    ]) {
+      await search.fill(query);
+      await expect(panel.getByRole("status")).toHaveText(
+        '1 of 2 notes and 1 of 1 belief mention "risk with money".',
+      );
+      await expect(notes.locator("mark")).toHaveText("risk with money");
+      await expect(beliefs.locator("mark")).toHaveText("risk with money");
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    for (const query of [
+      '"risk with cash"',
+      '"risk with mone"',
+      '"gold position"',
+      '"risk with money.*"',
+    ]) {
+      await search.fill(query);
+      await expect(panel.getByRole("status")).toHaveText(
+        `0 of 2 notes and 0 of 1 belief mention ${query}.`,
+      );
+      await expect(panel.locator("mark")).toHaveCount(0);
+    }
+    await search.fill('"safe and boring"');
+    await expect(notes.locator("mark")).toHaveText("safe and boring");
+    await expect(beliefs.locator("mark")).toHaveCount(0);
+    const why = notes.getByRole("button", { name: "Why?", exact: true });
+    await why.click();
+    await expect(
+      page.getByRole("dialog", { name: "Why?", exact: true }),
+    ).toContainText("N-006");
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    // Unquoted topics retain the existing OR behavior alongside phrases.
+    await search.fill('"safe and boring" risk');
+    await expect(panel.getByRole("status")).toHaveText(
+      '2 of 2 notes and 1 of 1 belief mention "safe and boring" or risk.',
+    );
+    // Unfinished quotes remain usable while the RM is typing.
+    await search.fill('"risk');
+    await expect(panel.getByRole("status")).toHaveText(
+      "1 of 2 notes and 1 of 1 belief mention risk.",
+    );
+    await panel.getByRole("button", { name: "Clear note search" }).click();
+    await expect(search).toBeFocused();
+    await expect(
+      notes.getByRole("button", { name: "Why?", exact: true }),
+    ).toHaveCount(2);
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`Memory retrieves notes by their RM author at ${width}px`, async ({
     page,
   }) => {
