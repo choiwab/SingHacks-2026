@@ -212,6 +212,23 @@ describe("Monday Brief", () => {
     // The matching word is marked in both the note and the extracted belief.
     expect(screen.getAllByText("safe", { selector: "mark" })).toHaveLength(2);
 
+    const noteSource = within(
+      screen.getByRole("region", { name: "RM notes" }),
+    ).getByRole("button", { name: "Why?" });
+    await user.click(noteSource);
+    const sourceTrail = screen.getByRole("dialog", { name: "Why?" });
+    expect(sourceTrail).toHaveTextContent("data/rm_notes.json · row note:1");
+    expect(sourceTrail).toHaveTextContent("Keep it safe.");
+    expect(sourceTrail).not.toHaveTextContent("Berlin apartment");
+    expect(
+      within(sourceTrail).queryByRole("region", { name: "Generated claim" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      within(sourceTrail).getByRole("button", { name: "Close source trail" }),
+    );
+    expect(noteSource).toHaveFocus();
+    expect(search).toHaveValue("What did she say about safe?");
+
     await user.clear(search);
     await user.type(search, "custody");
     expect(

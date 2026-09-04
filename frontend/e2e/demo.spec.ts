@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`RM note sources preserve search and keyboard focus at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    const sources = notes.getByRole("button", { name: "Why?" });
+    await expect(sources).toHaveCount(2);
+    const search = page.getByRole("searchbox", {
+      name: "Search this client's RM notes",
+    });
+
+    for (const [query, date, otherDate] of [
+      ["risk", "2026-02-16", "2026-05-29"],
+      ["boring", "2026-05-29", "2026-02-16"],
+    ]) {
+      await search.fill(query);
+      await expect(sources).toHaveCount(1);
+      await sources.focus();
+      await page.keyboard.press("Enter");
+      const drawer = page.getByRole("dialog", { name: "Why?" });
+      await expect(drawer).toBeVisible();
+      await expect(drawer.getByRole("article")).toHaveCount(1);
+      await expect(drawer).toContainText("data/rm_notes.json · row rm_notes:");
+      await expect(drawer).toContainText(date);
+      await expect(drawer).not.toContainText(otherDate);
+      await expect(drawer).toContainText("CL-0003");
+      await expect(drawer).toContainText("Priscilla Ong");
+      await expect(
+        drawer.getByRole("region", { name: "Generated claim" }),
+      ).toHaveCount(0);
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).toHaveCount(0);
+      await expect(sources).toBeFocused();
+      await expect(search).toHaveValue(query);
+      await expect(notes.locator("mark").first()).toContainText(query);
+    }
+  });
+
   test(`client navigation moves keyboard focus into the new screen at ${width}px`, async ({
     page,
   }) => {

@@ -1281,6 +1281,9 @@ export function MemoryPanel({
                   terms={terms}
                 />
               </Body1>
+              <div className={styles.action}>
+                <WhyButton citations={[note.id]} clientId={preRead.client_id} />
+              </div>
             </div>
           ))
         )}
