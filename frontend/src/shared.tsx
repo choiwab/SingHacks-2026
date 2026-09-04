@@ -76,10 +76,12 @@ export function CitedList({
   items,
   clientId,
   authorship,
+  evidenceContext,
 }: {
   items: CitedText[];
   clientId: string;
   authorship?: Authorship;
+  evidenceContext?: string;
 }) {
   const styles = useStyles();
 
@@ -92,7 +94,7 @@ export function CitedList({
             <WhyButton
               citations={item.citations}
               clientId={clientId}
-              claim={item.text}
+              claim={[evidenceContext, item.text].filter(Boolean).join(" ")}
               authorship={authorship}
             />
           </div>

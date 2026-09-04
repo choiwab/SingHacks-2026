@@ -1,6 +1,57 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`scenario sector evidence retains client, scenario, and caveat at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0019/scenario");
+    for (const client of ["Abdullah Al-Mansoori", "Margarethe Voss-Brenner"]) {
+      if (client === "Margarethe Voss-Brenner") {
+        await page
+          .getByRole("navigation", { name: "Client switcher" })
+          .getByRole("button", { name: new RegExp(client) })
+          .click();
+        await page.getByRole("tab", { name: "Scenario rehearsal" }).click();
+      }
+      for (const scenario of ["Strait reopens", "Strait escalates"]) {
+        await page.getByRole("button", { name: scenario, exact: true }).click();
+        const cards = page
+          .getByRole("region", { name: "What changes", exact: true })
+          .getByRole("listitem");
+        expect(await cards.count()).toBeGreaterThan(0);
+        for (const card of await cards.all()) {
+          const sector = await card.locator("span").first().innerText();
+          const why = card.getByRole("button", { name: "Why?", exact: true });
+          await why.focus();
+          await why.press("Enter");
+          const drawer = page.getByRole("dialog", {
+            name: "Why?",
+            exact: true,
+          });
+          await expect(
+            drawer.getByRole("region", { name: "Generated claim" }),
+          ).toHaveText(
+            `Claim on the dashboard${client} · ${scenario}. Estimated range · not a forecast. ${sector}`,
+          );
+          await expect(drawer).toContainText("data/holdings.csv");
+          await expect(drawer).toContainText("data/event_log.csv");
+          expect(
+            await drawer.evaluate(
+              (element) => element.scrollWidth <= element.clientWidth,
+            ),
+          ).toBe(true);
+          await page.keyboard.press("Escape");
+          await expect(drawer).not.toBeVisible();
+          await expect(why).toBeFocused();
+        }
+        await expect(
+          page.getByRole("button", { name: scenario, exact: true }),
+        ).toHaveAttribute("aria-pressed", "true");
+      }
+    }
+  });
+
   test(`data evidence retains the selected client and fact at ${width}px`, async ({
     page,
   }) => {

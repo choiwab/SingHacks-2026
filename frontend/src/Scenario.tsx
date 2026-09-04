@@ -132,7 +132,11 @@ export function Scenario({
       >
         <p className="eyebrow">Talk through</p>
         <h2 id="scenario-detail-title">What changes</h2>
-        <CitedList items={scenario.bullets} clientId={clientId} />
+        <CitedList
+          items={scenario.bullets}
+          clientId={clientId}
+          evidenceContext={`${preRead.name} · ${scenario.name}. ${disclaimer}`}
+        />
       </section>
     </section>
   );
