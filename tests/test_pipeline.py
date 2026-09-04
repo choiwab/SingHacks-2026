@@ -3,8 +3,8 @@ from pathlib import Path
 
 import pytest
 
-from app.monday_brief import MondayBriefProjection, build_monday_brief
-from app.monday_brief.models import MandateFact
+from app.wealth_intelligence import MondayBriefProjection, build_monday_brief
+from app.wealth_intelligence.models import MandateFact
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 

@@ -11,9 +11,9 @@ from typing import Any, cast
 import pandas as pd
 from pydantic import ValidationError
 
-from app.monday_brief.errors import ProjectionBuildError, ProjectionDiagnostic
-from app.monday_brief.models import MondayBriefProjection
 from app.pipeline import TABLE_NAMES, _build_projection
+from app.wealth_intelligence.errors import ProjectionBuildError, ProjectionDiagnostic
+from app.wealth_intelligence.models import MondayBriefProjection
 
 BASELINE = "2025-12-31"
 
@@ -194,7 +194,7 @@ def _orphans(
             )
 
 
-def _validate_scalar_columns(
+def _validate_numeric_columns(
     tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
 ) -> None:
     for name, fields in NUMERIC_COLUMNS.items():
@@ -212,6 +212,11 @@ def _validate_scalar_columns(
                         field=field,
                     )
                 )
+
+
+def _validate_date_columns(
+    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+) -> None:
     for name, fields in DATE_COLUMNS.items():
         frame = tables[name]
         for field in fields:
@@ -226,6 +231,13 @@ def _validate_scalar_columns(
                         field=field,
                     )
                 )
+
+
+def _validate_scalar_columns(
+    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+) -> None:
+    _validate_numeric_columns(tables, diagnostics)
+    _validate_date_columns(tables, diagnostics)
 
 
 def _duplicate_composite(
@@ -258,11 +270,8 @@ def _has_fx_path(market: pd.DataFrame, currency: str, snapshot: str) -> bool:
     return f"USD{currency}" in codes or f"{currency}USD" in codes
 
 
-def _validate_sources(
-    tables: dict[str, pd.DataFrame],
-    notes: list[dict[str, Any]],
-    as_of: date,
-    diagnostics: list[ProjectionDiagnostic],
+def _validate_required_columns(
+    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
 ) -> None:
     for name, required in REQUIRED_COLUMNS.items():
         frame = tables.get(name)
@@ -278,20 +287,13 @@ def _validate_sources(
                 )
             )
 
-    if diagnostics:
-        return
 
-    _validate_scalar_columns(tables, diagnostics)
-
-    clients = tables["clients"]
-    portfolios = tables["portfolios"]
+def _validate_unique_keys(
+    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+) -> None:
     holdings = tables["holdings"]
     mandates = tables["mandates"]
-    needs = tables["planned_cash_needs"]
-    facilities = tables["credit_facilities"]
     market = tables["market_context"]
-    snapshot = as_of.isoformat()
-
     for name, field in (
         ("clients", "client_id"),
         ("portfolios", "portfolio_id"),
@@ -331,6 +333,16 @@ def _validate_sources(
         diagnostics,
     )
 
+
+def _validate_foreign_keys(
+    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+) -> None:
+    clients = tables["clients"]
+    portfolios = tables["portfolios"]
+    holdings = tables["holdings"]
+    mandates = tables["mandates"]
+    needs = tables["planned_cash_needs"]
+    facilities = tables["credit_facilities"]
     client_ids = set(clients["client_id"].astype(str))
     portfolio_ids = set(portfolios["portfolio_id"].astype(str))
     mandate_codes = set(mandates["mandate_code"].astype(str))
@@ -344,6 +356,13 @@ def _validate_sources(
     _orphans(holdings, "holdings.csv", "portfolio_id", portfolio_ids, diagnostics)
     _orphans(portfolios, "portfolios.csv", "mandate_code", mandate_codes, diagnostics)
 
+
+def _validate_notes(
+    notes: list[dict[str, Any]],
+    clients: pd.DataFrame,
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
+    client_ids = set(clients["client_id"].astype(str))
     note_ids: set[str] = set()
     for index, note in enumerate(notes, start=1):
         for field in sorted(NOTE_FIELDS - set(note)):
@@ -385,11 +404,19 @@ def _validate_sources(
             _diagnostic("rm_notes.json", "missing_client_note", f"no note for {client_id}")
         )
 
+
+def _validate_portfolio_snapshots(
+    holdings: pd.DataFrame,
+    clients: pd.DataFrame,
+    snapshot: str,
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
+    client_ids = set(clients["client_id"].astype(str))
+    holding_client_ids = holdings["client_id"].astype(str)
+    holding_snapshots = holdings["snapshot_date"].astype(str)
     for client_id in sorted(client_ids):
-        rows = holdings[
-            (holdings["client_id"].astype(str) == client_id)
-            & (holdings["snapshot_date"].astype(str) == snapshot)
-        ]
+        client_rows = holding_client_ids.eq(client_id)
+        rows = holdings[client_rows & holding_snapshots.eq(snapshot)]
         if rows.empty:
             diagnostics.append(
                 _diagnostic(
@@ -399,9 +426,7 @@ def _validate_sources(
                 )
             )
             continue
-        baseline_rows = holdings["client_id"].astype(str).eq(client_id) & holdings[
-            "snapshot_date"
-        ].astype(str).eq(BASELINE)
+        baseline_rows = client_rows & holding_snapshots.eq(BASELINE)
         if not baseline_rows.any():
             diagnostics.append(
                 _diagnostic(
@@ -422,6 +447,15 @@ def _validate_sources(
                 )
             )
 
+
+def _validate_fx_quotes(
+    tables: dict[str, pd.DataFrame],
+    snapshot: str,
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
+    holdings = tables["holdings"]
+    needs = tables["planned_cash_needs"]
+    market = tables["market_context"]
     used_currencies = set(needs["currency"].astype(str)) | set(
         holdings["portfolio_ccy"].astype(str)
     )
@@ -450,6 +484,25 @@ def _validate_sources(
             )
 
 
+def _validate_sources(
+    tables: dict[str, pd.DataFrame],
+    notes: list[dict[str, Any]],
+    as_of: date,
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
+    _validate_required_columns(tables, diagnostics)
+    if diagnostics:
+        return
+
+    snapshot = as_of.isoformat()
+    _validate_scalar_columns(tables, diagnostics)
+    _validate_unique_keys(tables, diagnostics)
+    _validate_foreign_keys(tables, diagnostics)
+    _validate_notes(notes, tables["clients"], diagnostics)
+    _validate_portfolio_snapshots(tables["holdings"], tables["clients"], snapshot, diagnostics)
+    _validate_fx_quotes(tables, snapshot, diagnostics)
+
+
 def _fact_kind(fact_id: str) -> str:
     key = fact_id.rsplit(":", 1)[-1]
     if key.startswith("change-"):
@@ -457,9 +510,9 @@ def _fact_kind(fact_id: str) -> str:
     return {"mandate-gap": "mandate_gap", "profile": "profile"}.get(key, key)
 
 
-def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]) -> None:
-    evidence_ids = set(raw["evidence"])
-    fact_ids = {fact["id"] for client_facts in raw["facts"].values() for fact in client_facts}
+def _validate_ranked_client_sections(
+    raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]
+) -> None:
     ranked_clients = {priority["client_id"] for priority in raw["ranking"]}
     for section in ("facts", "pre_reads", "scenarios"):
         section_clients = set(raw[section])
@@ -471,6 +524,13 @@ def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagno
                     f"{client_id} is ranked but absent from {section}",
                 )
             )
+
+
+def _validate_fact_references(
+    raw: dict[str, Any],
+    evidence_ids: set[str],
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
     for client_id, client_facts in raw["facts"].items():
         for fact in client_facts:
             fact["kind"] = _fact_kind(fact["id"])
@@ -483,7 +543,13 @@ def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagno
                             f"{client_id} fact references {citation!r}",
                         )
                     )
-    valid_citations = evidence_ids | fact_ids
+
+
+def _validate_pre_read_references(
+    raw: dict[str, Any],
+    valid_citations: set[str],
+    diagnostics: list[ProjectionDiagnostic],
+) -> None:
     cited_groups = []
     for pre_read in raw["pre_reads"].values():
         cited_groups.extend(pre_read["what_changed"])
@@ -497,6 +563,9 @@ def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagno
                 diagnostics.append(
                     _diagnostic("projection", "unresolved_citation", f"unknown {citation!r}")
                 )
+
+
+def _validate_scenario_ranges(raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]) -> None:
     for client_id, scenarios in raw["scenarios"].items():
         for scenario_name, scenario in scenarios.items():
             numeric = (
@@ -525,6 +594,15 @@ def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagno
                         f"{client_id} {scenario_name} has an unordered range",
                     )
                 )
+
+
+def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]) -> None:
+    evidence_ids = set(raw["evidence"])
+    fact_ids = {fact["id"] for client_facts in raw["facts"].values() for fact in client_facts}
+    _validate_ranked_client_sections(raw, diagnostics)
+    _validate_fact_references(raw, evidence_ids, diagnostics)
+    _validate_pre_read_references(raw, evidence_ids | fact_ids, diagnostics)
+    _validate_scenario_ranges(raw, diagnostics)
 
 
 def build_monday_brief(source_dir: Path, *, as_of: date) -> MondayBriefProjection:

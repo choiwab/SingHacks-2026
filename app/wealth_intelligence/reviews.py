@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.monday_brief.models import ReviewRecord, ReviewRequest
+from app.wealth_intelligence.models import ReviewRecord, ReviewRequest
 
 
 class ReviewLedger:
