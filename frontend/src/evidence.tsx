@@ -26,6 +26,7 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 
 import type {
   CitationId,
@@ -224,7 +225,13 @@ export function EvidenceProvider({
   children: ReactNode;
 }) {
   const styles = useStyles();
-  const [request, setRequest] = useState<EvidenceRequest | null>(null);
+  const { pathname } = useLocation();
+  const [request, setRequest] = useState<
+    (EvidenceRequest & { pathname: string }) | null
+  >(null);
+  // Browser history can change the client or screen while the modal is open.
+  // Discard its evidence before rendering the new route; navigation owns focus.
+  if (request && request.pathname !== pathname) setRequest(null);
   // Tabster does not restore focus for a drawer opened without a DialogTrigger,
   // so the "Why?" button that opened the trail is refocused on close.
   const trigger = useRef<HTMLElement | null>(null);
@@ -232,10 +239,10 @@ export function EvidenceProvider({
     () => ({
       openEvidence: (next) => {
         trigger.current = document.activeElement as HTMLElement | null;
-        setRequest(next);
+        setRequest({ ...next, pathname });
       },
     }),
-    [],
+    [pathname],
   );
   const close = useCallback(() => {
     setRequest(null);

@@ -1,6 +1,49 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`browser history dismisses evidence from the previous route at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    const whyProfile = page.getByRole("button", { name: "Why this profile?" });
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    await whyProfile.click();
+    await expect(drawer).toContainText("clients:CL-0019");
+
+    await page.goBack();
+    await expect(page).toHaveURL(/\/clients\/CL-0003\/pre-read$/);
+    await expect(drawer).not.toBeVisible();
+    await expect(page.getByRole("main")).toBeFocused();
+    await whyProfile.click();
+    await expect(drawer).toContainText("clients:CL-0003");
+    await expect(drawer).not.toContainText("clients:CL-0019");
+
+    await page.goForward();
+    await expect(page).toHaveURL(/\/clients\/CL-0019\/pre-read$/);
+    await expect(drawer).not.toBeVisible();
+    await expect(page.getByRole("main")).toBeFocused();
+    await page.getByRole("tab", { name: "Scenario rehearsal" }).click();
+    await page.getByRole("button", { name: "Why this range?" }).click();
+    await expect(drawer).toContainText("Estimated range · not a forecast.");
+    await page.goBack();
+    await expect(drawer).not.toBeVisible();
+    await expect(page.getByRole("main")).toBeFocused();
+    await page.goForward();
+    await expect(drawer).not.toBeVisible();
+    const whyRange = page.getByRole("button", { name: "Why this range?" });
+    await whyRange.focus();
+    await whyRange.press("Enter");
+    await expect(drawer).toContainText("Abdullah Al-Mansoori");
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
+    await expect(whyRange).toBeFocused();
+  });
+
   test(`scenario evidence retains the selected range and caveat at ${width}px`, async ({
     page,
   }) => {
