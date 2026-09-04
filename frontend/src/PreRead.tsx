@@ -414,7 +414,10 @@ export function PreRead({
 
             <BriefSection title="Suggested opening">
               <div className={styles.panel}>
-                <Caption1 className={styles.label}>{preRead.language}</Caption1>
+                <Caption1 className={styles.label}>
+                  Reporting preference: {preRead.language}
+                </Caption1>
+                <Caption1>The opening may use a different language.</Caption1>
                 <Subtitle2 as="p" className={styles.quote}>
                   {currentOpening}
                 </Subtitle2>

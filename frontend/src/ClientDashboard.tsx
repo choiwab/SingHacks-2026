@@ -696,7 +696,7 @@ export function DashboardHeader({
           Data {health.label}
         </Badge>
         <Caption1>
-          Data as of {asOf} · reporting in {preRead.language}
+          Data as of {asOf} · reporting preference: {preRead.language}
         </Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
