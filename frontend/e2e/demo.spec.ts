@@ -170,7 +170,7 @@ for (const width of [1280, 390]) {
     await search.fill("What did she say?");
     await expect(status).toContainText(guidance);
     await searchRegion
-      .getByRole("button", { name: "clear", exact: true })
+      .getByRole("button", { name: "Clear note search", exact: true })
       .click();
     await expect(search).toBeFocused();
     await expect(status).not.toContainText(guidance);
@@ -213,7 +213,7 @@ for (const width of [1280, 390]) {
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
     await expect(notes.locator("mark")).toHaveText(["risk", "Risk", "Email"]);
     await searchRegion
-      .getByRole("button", { name: "clear", exact: true })
+      .getByRole("button", { name: "Clear note search", exact: true })
       .click();
     await expect(search).toBeFocused();
     await expect(notes.locator("mark")).toHaveCount(0);
@@ -971,7 +971,9 @@ for (const width of [1280, 390]) {
     const search = clients.getByRole("searchbox");
     await search.fill("Margarethe");
     await expect(selected).toHaveCount(0);
-    await clients.getByRole("button", { name: "clear", exact: true }).click();
+    await clients
+      .getByRole("button", { name: "Clear client search", exact: true })
+      .click();
     await expectSelectionInView();
     await expect(search).toBeFocused();
 
@@ -1087,7 +1089,7 @@ for (const width of [1280, 390]) {
     );
     await expect(search).toBeFocused();
     await searchRegion
-      .getByRole("button", { name: "clear", exact: true })
+      .getByRole("button", { name: "Clear note search", exact: true })
       .click();
     await expect(search).toBeFocused();
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
@@ -1140,7 +1142,7 @@ for (const width of [1280, 390]) {
 
     await search.focus();
     await searchRegion
-      .getByRole("button", { name: "clear", exact: true })
+      .getByRole("button", { name: "Clear note search", exact: true })
       .click();
     await expect(search).toBeFocused();
     await page.getByRole("tab", { name: "Data", exact: true }).click();
@@ -1277,7 +1279,9 @@ for (const width of [1280, 390]) {
       page.getByRole("heading", { name: "Abdullah Al-Mansoori", exact: true }),
     ).toBeVisible();
     await search.focus();
-    await switcher.getByRole("button", { name: "clear", exact: true }).click();
+    await switcher
+      .getByRole("button", { name: "Clear client search", exact: true })
+      .click();
     await expect(switcher.getByRole("status")).toHaveText(
       "20 clients, ranked by priority",
     );
@@ -1416,7 +1420,9 @@ for (const width of [1280, 390]) {
 
     await search.fill("   ");
     await expect(results).toHaveText("20 clients, ranked by priority");
-    await switcher.getByRole("button", { name: "clear", exact: true }).click();
+    await switcher
+      .getByRole("button", { name: "Clear client search", exact: true })
+      .click();
     await expect(search).toHaveValue("");
     await expect(search).toBeFocused();
     expect(
@@ -1455,7 +1461,7 @@ for (const width of [1280, 390]) {
     await expect(notes).toContainText("No note mentions fx. Try another word.");
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
     await searchRegion
-      .getByRole("button", { name: "clear", exact: true })
+      .getByRole("button", { name: "Clear note search", exact: true })
       .click();
     await expect(search).toHaveValue("");
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);

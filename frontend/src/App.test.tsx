@@ -169,7 +169,9 @@ describe("Monday Brief", () => {
     expect(results).toHaveTextContent("0 of 2 clients shown");
     expect(within(switcher).getByText("No match for “nobody”.")).toBeVisible();
 
-    await user.click(within(switcher).getByRole("button", { name: "clear" }));
+    await user.click(
+      within(switcher).getByRole("button", { name: "Clear client search" }),
+    );
     expect(results).toHaveTextContent("2 clients, ranked by priority");
     expect(search).toHaveFocus();
   });

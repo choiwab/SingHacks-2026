@@ -1329,6 +1329,7 @@ export function MemoryPanel({
           className={styles.search}
           placeholder="What did they say about risk?"
           aria-label="Search this client's RM notes"
+          dismiss={{ "aria-label": "Clear note search" }}
           value={query}
           onChange={(_, data) => onQueryChange(data.value)}
         />

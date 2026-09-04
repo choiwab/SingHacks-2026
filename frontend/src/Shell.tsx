@@ -238,6 +238,7 @@ function ClientSwitcher({
       <SearchBox
         placeholder="Search by name or ID"
         aria-label="Search clients"
+        dismiss={{ "aria-label": "Clear client search" }}
         value={query}
         onChange={(_, data) => setQuery(data.value)}
       />
