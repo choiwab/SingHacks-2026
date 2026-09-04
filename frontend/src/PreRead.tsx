@@ -21,6 +21,7 @@ import {
 } from "@fluentui/react-components";
 import { DismissRegular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { saveReview } from "./api";
@@ -240,7 +241,9 @@ export function PreRead({
           asOf={projection.as_of}
           reviewState={reviewState}
           onReviewBrief={() => {
-            setTab("overview");
+            // Commit the longer brief before measuring the checkpoint position.
+            flushSync(() => setTab("overview"));
+            reviewBar.current?.focus({ preventScroll: true });
             reviewBar.current?.scrollIntoView({ block: "center" });
           }}
         />
@@ -415,6 +418,9 @@ export function PreRead({
       <footer
         className="review-bar"
         ref={reviewBar}
+        role="region"
+        aria-label="RM checkpoint"
+        tabIndex={-1}
         aria-busy={pending !== null}
       >
         <div className="review-copy">

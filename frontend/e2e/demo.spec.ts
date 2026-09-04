@@ -1,5 +1,37 @@
 import { expect, test } from "@playwright/test";
 
+for (const width of [1280, 390]) {
+  test(`review shortcut reaches the checkpoint from every tab at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+
+    for (const tab of ["Memory", "Data", "Insights", "Overview"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      const shortcut = page.getByRole("button", {
+        name: "Review meeting brief",
+      });
+      await shortcut.focus();
+      await shortcut.press("Enter");
+
+      await expect(
+        page.getByRole("tab", { name: "Overview", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      await expect(
+        page.getByRole("button", { name: "Approve pre-read" }),
+      ).toBeInViewport();
+      await expect(
+        page.getByRole("region", { name: "RM checkpoint" }),
+      ).toBeFocused();
+      await page.keyboard.press("Tab");
+      await expect(
+        page.getByRole("button", { name: "Reject", exact: true }),
+      ).toBeFocused();
+    }
+  });
+}
+
 test("the first screen is an RM dashboard, not a calendar", async ({
   page,
 }) => {
