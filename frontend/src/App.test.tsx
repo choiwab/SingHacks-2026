@@ -333,13 +333,17 @@ describe("Monday Brief", () => {
     await user.click(
       await screen.findByRole("button", { name: "Approve pre-read" }),
     );
-    await waitFor(() =>
-      expect(screen.getByRole("status")).toHaveTextContent(
-        "Review ledger unavailable",
-      ),
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("The review was not saved.");
+    expect(alert).toHaveTextContent("Review ledger unavailable");
     expect(
       screen.getByRole("heading", { name: "Margarethe Voss-Brenner" }),
     ).toBeVisible();
+
+    // The failure stays until the RM dismisses it, unlike the success toast.
+    await user.click(
+      screen.getByRole("button", { name: "Dismiss the review error" }),
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

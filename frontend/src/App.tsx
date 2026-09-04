@@ -1,4 +1,13 @@
-import { FluentProvider, teamsLightTheme } from "@fluentui/react-components";
+import {
+  Button,
+  FluentProvider,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
+  MessageBarTitle,
+  Spinner,
+  teamsLightTheme,
+} from "@fluentui/react-components";
 import { useEffect, useMemo, useState } from "react";
 import {
   Navigate,
@@ -134,20 +143,32 @@ export function App() {
   }, [attempt]);
 
   const status = useMemo(() => {
-    if (!error) return <p role="status">Preparing the Monday list…</p>;
+    if (!error)
+      return (
+        <Spinner
+          role="status"
+          label="Preparing the Monday list…"
+          labelPosition="below"
+        />
+      );
     return (
-      <div role="alert">
-        <p>{error}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setError("");
-            setAttempt((value) => value + 1);
-          }}
-        >
-          Try again
-        </button>
-      </div>
+      <MessageBar intent="error" role="alert" className="app-status-message">
+        <MessageBarBody>
+          <MessageBarTitle>The dashboard could not load.</MessageBarTitle>
+          {error}
+        </MessageBarBody>
+        <MessageBarActions>
+          <Button
+            appearance="primary"
+            onClick={() => {
+              setError("");
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </MessageBarActions>
+      </MessageBar>
     );
   }, [error]);
 

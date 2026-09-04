@@ -50,6 +50,11 @@ body {
   text-align: center;
 }
 
+.app-status-message {
+  max-width: min(42rem, 100%);
+  text-align: start;
+}
+
 .route-notice {
   margin: 0 0 1.5rem;
   padding: 0.8rem 1rem;
@@ -666,21 +671,12 @@ blockquote {
   border-bottom: 1px solid var(--rule);
 }
 
-.edit-panel label {
-  display: block;
-  margin-bottom: 0.75rem;
-  font-weight: 700;
+.edit-panel textarea {
+  min-height: 8rem;
 }
 
-.edit-panel textarea {
-  width: 100%;
-  min-height: 8rem;
-  padding: 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 0;
-  background: var(--surface);
-  color: var(--ink);
-  resize: vertical;
+.review-error {
+  margin-top: 1.5rem;
 }
 
 .review-bar {
@@ -710,22 +706,9 @@ blockquote {
 
 .review-actions button {
   min-height: 3rem;
-  padding: 0 1rem;
-  border: 1px solid var(--ink);
-  background: transparent;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.review-actions button:disabled {
-  cursor: wait;
-  opacity: 0.55;
 }
 
 .review-actions .approve-button {
-  border-color: var(--signal);
-  background: var(--signal);
-  color: var(--surface);
   grid-column: 1 / -1;
   grid-row: 1;
 }
@@ -908,14 +891,6 @@ blockquote {
   .why-link:hover,
   .scenario-link:hover {
     color: var(--signal);
-  }
-
-  .review-actions button:hover {
-    background: var(--soft);
-  }
-
-  .review-actions .approve-button:hover {
-    background: var(--signal-dark);
   }
 }
 

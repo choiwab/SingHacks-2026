@@ -1,4 +1,16 @@
-import { Tab, TabList } from "@fluentui/react-components";
+import {
+  Button,
+  Field,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
+  MessageBarTitle,
+  Spinner,
+  Tab,
+  TabList,
+  Textarea,
+} from "@fluentui/react-components";
+import { DismissRegular } from "@fluentui/react-icons";
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
@@ -45,7 +57,10 @@ export function PreRead({
   );
   const [receipt, setReceipt] = useState("");
   const [toast, setToast] = useState("");
-  const [saving, setSaving] = useState(false);
+  // A failed review is kept until the RM dismisses it; only the confirmation
+  // is allowed to disappear on its own.
+  const [reviewError, setReviewError] = useState("");
+  const [pending, setPending] = useState<ReviewAction | null>(null);
   const [tab, setTab] = useState<TabValue>("overview");
   const reviewState = reviews[clientId] ?? "Unreviewed";
   const editField = useRef<HTMLTextAreaElement>(null);
@@ -78,7 +93,8 @@ export function PreRead({
     reviewState === "Edited" ? editedOpening.trim() : preRead.opening.text;
 
   const persistReview = async (action: ReviewAction) => {
-    setSaving(true);
+    setPending(action);
+    setReviewError("");
     try {
       const text = action === "Edit" ? editedOpening.trim() : currentOpening;
       const response = await saveReview({ client_id: clientId, action, text });
@@ -97,13 +113,13 @@ export function PreRead({
       setReceipt(`Review log · ${label} · ${time} · ${response.review.rm}`);
       setToast(`${label} for ${preRead.name}.`);
     } catch (error) {
-      setToast(
+      setReviewError(
         error instanceof Error
           ? error.message
           : "The review could not be saved.",
       );
     } finally {
-      setSaving(false);
+      setPending(null);
     }
   };
 
@@ -335,47 +351,74 @@ export function PreRead({
 
       {editing && (
         <div className="edit-panel">
-          <label htmlFor="edited-opening">Edit the opening line</label>
-          <textarea
-            ref={editField}
-            id="edited-opening"
-            rows={4}
-            value={editedOpening}
-            onChange={(event) => setEditedOpening(event.target.value)}
-          />
+          <Field
+            label="Edit the opening line"
+            hint="Saving stores this wording as an RM-authored version in the review log."
+          >
+            <Textarea
+              ref={editField}
+              id="edited-opening"
+              resize="vertical"
+              rows={4}
+              value={editedOpening}
+              onChange={(_event, data) => setEditedOpening(data.value)}
+            />
+          </Field>
         </div>
       )}
 
-      <footer className="review-bar" ref={reviewBar}>
+      {reviewError && (
+        <MessageBar intent="error" role="alert" className="review-error">
+          <MessageBarBody>
+            <MessageBarTitle>The review was not saved.</MessageBarTitle>
+            {reviewError} The brief stays open, so no decision was lost.
+          </MessageBarBody>
+          <MessageBarActions
+            containerAction={
+              <Button
+                appearance="transparent"
+                icon={<DismissRegular />}
+                aria-label="Dismiss the review error"
+                onClick={() => setReviewError("")}
+              />
+            }
+          />
+        </MessageBar>
+      )}
+
+      <footer
+        className="review-bar"
+        ref={reviewBar}
+        aria-busy={pending !== null}
+      >
         <div className="review-copy">
           <strong>RM checkpoint</strong>
           <span>Only this decision is written to the review log.</span>
         </div>
         <div className="review-actions">
-          <button
-            type="button"
-            className="reject-button"
-            disabled={saving}
+          <Button
+            disabledFocusable={pending !== null}
+            icon={pending === "Reject" ? <Spinner size="tiny" /> : undefined}
             onClick={() => void persistReview("Reject")}
           >
             Reject
-          </button>
-          <button
-            type="button"
-            className="edit-button"
-            disabled={saving}
+          </Button>
+          <Button
+            disabledFocusable={pending !== null}
+            icon={pending === "Edit" ? <Spinner size="tiny" /> : undefined}
             onClick={handleEdit}
           >
             {editing ? "Save edit" : "Edit"}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            appearance="primary"
             className="approve-button"
-            disabled={saving}
+            disabledFocusable={pending !== null}
+            icon={pending === "Approve" ? <Spinner size="tiny" /> : undefined}
             onClick={() => void persistReview("Approve")}
           >
             Approve pre-read
-          </button>
+          </Button>
         </div>
       </footer>
       <div className="next-step">
