@@ -236,6 +236,18 @@ connect, and explain the results.
 The graph adds value through explicit state, inspectable intermediate artifacts, conditional
 routing, and the human review interrupt. It should not become a complex multi-agent simulation.
 
+### Architecture overview
+
+![Planned RM intelligence agent and node architecture](assets/rm-intelligence-node-architecture.svg)
+
+The diagram is committed as a rendered SVG so it appears in Markdown viewers that do not support
+Mermaid. Its editable source is
+[`rm-intelligence-node-architecture.dot`](assets/rm-intelligence-node-architecture.dot).
+
+Solid arrows show runtime data or control flow. Dotted arrows show constrained tool access. Source
+records and deterministic facts remain immutable after their owning layer emits them; later nodes
+may reference them but cannot rewrite them.
+
 ### 6.1 Runtime execution graph
 
 ```mermaid
