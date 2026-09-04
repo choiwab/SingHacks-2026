@@ -350,15 +350,16 @@ describe("Monday Brief", () => {
       name: "Search this client's RM notes",
     });
     const notes = screen.getByRole("region", { name: "RM notes" });
-    for (const term of ["UK", "fx", "Q2"]) {
+    for (const term of ["UK", "fx", "Q2", "U.K.", "u.k", "U.S.", "u.s"]) {
       await user.clear(search);
       await user.type(search, term);
       expect(
         within(notes).getAllByRole("button", { name: "Why?" }),
       ).toHaveLength(1);
       expect(notes.querySelector("mark")?.textContent?.toLowerCase()).toBe(
-        term.toLowerCase(),
+        term.replaceAll(".", "").toLowerCase(),
       );
+      expect(search).toHaveValue(term);
       expect(notes).not.toHaveTextContent("ukulele");
     }
     // A region abbreviation remains searchable; lowercase "us" is question glue.

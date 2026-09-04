@@ -1569,6 +1569,17 @@ for (const width of [1280, 390]) {
     const search = searchRegion.getByRole("searchbox");
     const notes = page.getByRole("region", { name: "RM notes", exact: true });
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    for (const query of ["U.K.", "u.k", "What did he say about U.K.?"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 2 notes and 0 of 1 belief mention uk.",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(1);
+      await expect(notes.locator("mark")).toHaveText("UK");
+      await expect(notes).not.toContainText("additional gold purchase");
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
     await search.fill("UK");
     await expect(searchRegion.getByRole("status")).toContainText(
       "1 of 2 notes",
@@ -1592,6 +1603,18 @@ for (const width of [1280, 390]) {
       .click();
     await expect(search).toHaveValue("");
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await page.goto("/clients/CL-0006/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    for (const query of ["U.S.", "u.s", "What did she say to us about U.S.?"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 1 note and 1 of 1 belief mention us.",
+      );
+      await expect(notes.locator("mark")).toHaveText(["US", "US"]);
+      await expect(notes).toContainText("first US tuition instalment");
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

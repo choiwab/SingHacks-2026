@@ -1229,6 +1229,11 @@ function queryTerms(query: string): string[] {
   return [
     ...new Set(
       query
+        // Keep dotted country abbreviations intact before splitting punctuation.
+        .replace(
+          /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
+          (_, country: string) => `U${country.toUpperCase()}`,
+        )
         .split(/[^\p{L}\p{N}]+/u)
         .filter(
           (word) =>
