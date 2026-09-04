@@ -383,8 +383,15 @@ describe("Monday Brief", () => {
     ).toBeVisible();
     expect(bookedMeeting()).toHaveAttribute("aria-current", "true");
 
+    // The header states the review status of the brief on the page itself,
+    // not only inside the evidence drawer (PRD 6.6).
+    expect(
+      screen.getByText("Generated \u00b7 awaiting RM review"),
+    ).toBeVisible();
+
     await user.click(screen.getByRole("button", { name: "Approve pre-read" }));
     await waitFor(() => expect(bookedMeeting()).toHaveTextContent("Ready"));
+    expect(screen.getByText("Approved by the RM")).toBeVisible();
   });
 
   it("surfaces review failures without leaving the pre-read", async () => {

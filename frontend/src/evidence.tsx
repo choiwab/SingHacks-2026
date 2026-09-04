@@ -48,7 +48,11 @@ type ExpandedEvidence =
   | { type: "fact"; value: ProjectionFact }
   | { type: "evidence"; value: MondayBriefProjection["evidence"][string] };
 
-const AUTHORSHIP: Record<
+/**
+ * How a generated claim stands after RM review (PRD 6.6). Shared so the header
+ * badge and the evidence drawer never disagree about the same brief.
+ */
+export const AUTHORSHIP: Record<
   Authorship,
   { label: string; color: "warning" | "success" | "brand" | "danger" }
 > = {

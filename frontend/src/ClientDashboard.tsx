@@ -21,6 +21,7 @@ import type {
 } from "./contracts";
 import { useNavigate } from "react-router-dom";
 
+import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
 import { WhyButton } from "./shared";
 
@@ -477,7 +478,7 @@ export function DashboardHeader({
   ranked: RankedClient | undefined;
   facts: ProjectionFact[];
   asOf: string;
-  reviewState: string;
+  reviewState: Authorship;
   onReviewBrief: () => void;
 }) {
   const styles = useStyles();
@@ -522,9 +523,9 @@ export function DashboardHeader({
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
           </Button>
-          <div className={`review-state is-${reviewState.toLowerCase()}`}>
-            {reviewState}
-          </div>
+          <Badge appearance="tint" color={AUTHORSHIP[reviewState].color}>
+            {AUTHORSHIP[reviewState].label}
+          </Badge>
         </div>
       </div>
     </header>

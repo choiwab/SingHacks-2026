@@ -155,3 +155,39 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     }
   }
 });
+
+test("the shell fits the viewport and scrolls its own panes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 800 });
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Who needs you this week" }),
+  ).toBeVisible();
+
+  // The shell is 100vh with overflow hidden, so anything taller than the
+  // viewport is unreachable rather than scrollable.
+  const fits = await page.evaluate(() => {
+    const main = document.getElementById("main");
+    return main !== null && main.clientHeight <= window.innerHeight;
+  });
+  expect(fits, "main pane fits the viewport").toBe(true);
+
+  // The last client sits below the fold, so the switcher list must scroll to it
+  // and the RM footer must stay pinned in view.
+  const list = page
+    .getByRole("navigation", { name: "Client switcher" })
+    .getByRole("list");
+  await expect(page.getByText("Priscilla Ong · Asia desk")).toBeInViewport();
+  const last = list.getByRole("listitem").last();
+  await expect(last).not.toBeInViewport();
+  await last.scrollIntoViewIfNeeded();
+  await expect(last).toBeInViewport();
+
+  // The RM checkpoint sits at the end of the longest screen; the main pane has
+  // to reach it.
+  await page.goto("/clients/CL-0003/pre-read");
+  const approve = page.getByRole("button", { name: "Approve pre-read" });
+  await approve.scrollIntoViewIfNeeded();
+  await expect(approve).toBeInViewport();
+});

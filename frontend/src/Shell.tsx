@@ -47,6 +47,10 @@ const useStyles = makeStyles({
     display: "grid",
     gridTemplateAreas: '"rail switcher main"',
     gridTemplateColumns: "auto auto minmax(0, 1fr)",
+    // The single row must be allowed to shrink below its content, otherwise the
+    // tall client list stretches the row past 100vh and the shell clips the
+    // bottom of both panes instead of letting them scroll.
+    gridTemplateRows: "minmax(0, 1fr)",
     height: "100vh",
     overflowY: "hidden",
     backgroundColor: tokens.colorNeutralBackground3,
@@ -109,6 +113,9 @@ const useStyles = makeStyles({
     listStyleType: "none",
     ...shorthands.margin(0),
     ...shorthands.padding(0),
+    // A flex item defaults to min-height:auto, which would size the list to all
+    // 20 clients and defeat its own scrollbar.
+    minHeight: 0,
     overflowY: "auto",
     [NARROW]: {
       flexDirection: "row",

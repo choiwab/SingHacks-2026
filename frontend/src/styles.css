@@ -212,32 +212,6 @@ h2 {
   background: var(--canvas);
 }
 
-.review-state {
-  width: max-content;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid var(--rule);
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.review-state.is-approved {
-  border-color: var(--success);
-  color: var(--success);
-}
-
-.review-state.is-edited {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-
-.review-state.is-rejected {
-  border-color: var(--signal-dark);
-  color: var(--signal-dark);
-}
-
 .pre-read-ledger {
   border-bottom: 2px solid var(--ink);
 }
