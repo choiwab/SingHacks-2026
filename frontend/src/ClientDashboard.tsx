@@ -1237,9 +1237,9 @@ function queryTerms(query: string): string[] {
           )
           // Accept spaces before percent signs without losing the unit.
           .replace(/(\p{N})\s+%/gu, "$1%")
-          // Keep ISO dates and financial amounts intact.
+          // Keep note references, ISO dates, and financial amounts intact.
           .match(
-            /\d{4}-\d{2}-\d{2}|[+−-]?(?:\p{N}{1,3}(?:,\p{N}{3})+|\p{N}+)(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
+            /[Nn]-\d+|\d{4}-\d{2}-\d{2}|[+−-]?(?:\p{N}{1,3}(?:,\p{N}{3})+|\p{N}+)(?:\.\p{N}+)?(?:%|[\p{L}\p{N}]*)|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
           ) ?? []
       )
         .filter(
@@ -1264,7 +1264,7 @@ function matchScore(text: string, terms: string[]): number {
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
   const literal = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  if (/^\d{4}-\d{2}-\d{2}$/.test(term))
+  if (/^(?:n-\d+|\d{4}-\d{2}-\d{2})$/.test(term))
     return `(?<![\\p{L}\\p{N}-])${literal}(?![\\p{L}\\p{N}-])`;
   if (/^[+-]?\p{N}/u.test(term)) {
     const grouped = literal.replace(/\p{N}+/u, (integer) =>
@@ -1340,13 +1340,13 @@ export function MemoryPanel({
       String(a.record.note_date).localeCompare(String(b.record.note_date)),
     );
   const noteText = (note: (typeof notes)[number]) =>
-    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")}`;
+    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")} ${String(note.record.note_id ?? "")}`;
 
   const matchedNotes = retrieve(notes, terms, noteText);
   const matchedBeliefs = retrieve(
     preRead.beliefs,
     terms,
-    (belief) => belief.text,
+    (belief) => `${belief.text} ${belief.note_id}`,
   );
 
   return (
@@ -1385,7 +1385,9 @@ export function MemoryPanel({
                 <Body1>
                   “<Highlight text={belief.text} terms={terms} />”
                 </Body1>
-                <Caption1>Note {belief.note_id}</Caption1>
+                <Caption1>
+                  Note <Highlight text={belief.note_id} terms={terms} />
+                </Caption1>
                 <div className={styles.action}>
                   <WhyButton
                     citations={belief.citations}
@@ -1412,6 +1414,15 @@ export function MemoryPanel({
           matchedNotes.map((note) => (
             <div className={styles.note} key={note.id}>
               <Caption1>
+                {note.record.note_id && (
+                  <>
+                    <Highlight
+                      text={String(note.record.note_id)}
+                      terms={terms}
+                    />
+                    {" · "}
+                  </>
+                )}
                 <Highlight text={String(note.record.note_date)} terms={terms} />{" "}
                 ·{" "}
                 <Highlight

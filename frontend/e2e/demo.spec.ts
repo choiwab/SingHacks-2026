@@ -1,6 +1,67 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory retrieves complete note references at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Memory" });
+    const search = panel.getByRole("searchbox");
+    const notes = panel.getByRole("region", { name: "RM notes", exact: true });
+    const beliefs = panel.getByRole("region", { name: "Extracted beliefs" });
+    for (const query of ["N-005", "n-005"]) {
+      await search.fill(query);
+      await expect(panel.getByRole("status")).toHaveText(
+        "1 of 2 notes and 1 of 1 belief mention n-005.",
+      );
+      await expect(notes).toContainText("2026-02-16");
+      await expect(notes).not.toContainText("2026-05-29");
+      await expect(notes.locator("mark")).toHaveText("N-005");
+      await expect(beliefs.locator("mark")).toHaveText("N-005");
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    for (const region of [notes, beliefs]) {
+      const why = region.getByRole("button", { name: "Why?", exact: true });
+      await why.click();
+      const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+      await expect(drawer).toContainText("N-005");
+      await expect(drawer).toContainText(
+        "First meeting following the transfer in.",
+      );
+      await page.keyboard.press("Escape");
+      await expect(why).toBeFocused();
+    }
+    // Reject partial references and notes belonging to another client.
+    for (const query of ["N-00", "N-0050", "N-024"]) {
+      await search.fill(query);
+      await expect(panel.getByRole("status")).toHaveText(
+        `0 of 2 notes and 0 of 1 belief mention ${query.toLowerCase()}.`,
+      );
+      await expect(panel.locator("mark")).toHaveCount(0);
+    }
+    await search.fill("N-006");
+    await expect(panel.getByRole("status")).toHaveText(
+      "1 of 2 notes and 0 of 1 belief mention n-006.",
+    );
+    await expect(notes.locator("mark")).toHaveText("N-006");
+    await expect(notes).toContainText("2026-05-29");
+    await panel.getByRole("button", { name: "Clear note search" }).click();
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("");
+    await expect(
+      notes.getByRole("button", { name: "Why?", exact: true }),
+    ).toHaveCount(2);
+    await expect(panel.locator("mark")).toHaveCount(0);
+    expect(
+      await panel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`saved opening references wrap in the evidence drawer at ${width}px`, async ({
     page,
   }) => {
