@@ -1570,7 +1570,7 @@ for (const width of [1280, 390]) {
     });
     const search = searchRegion.getByRole("searchbox");
     const notes = page.getByRole("region", { name: "RM notes", exact: true });
-    for (const query of ["9.4m", "4m", "13.4m", "3.45m", "34m"]) {
+    for (const query of ["9.4m", "4m", "13.4m", "3.45m", "34m", "3", "4"]) {
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toContainText(
         `0 of 2 notes and 0 of 1 belief mention ${query}.`,
@@ -1604,6 +1604,63 @@ for (const width of [1280, 390]) {
       .click();
     await expect(search).toHaveValue("");
     await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+  test(`single-digit Memory searches filter and highlight notes at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0018/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of ["9%", "0", "15", "5.5"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "0 of 1 note and 0 of 1 belief mention",
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+    }
+    for (const query of ["5", "5%", "What did she say about 5%?"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toHaveText(
+        "1 of 1 note and 0 of 1 belief mention 5.",
+      );
+      await expect(notes.locator("mark")).toHaveText("5");
+      await expect(notes).toContainText(
+        "She originally sized it as a 5% hedge.",
+      );
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    const why = notes.getByRole("button", { name: "Why?" });
+    await why.click();
+    const drawer = page.getByRole("dialog", { name: "Why?" });
+    await expect(drawer).toContainText("N-024");
+    await expect(drawer).toContainText(
+      "She originally sized it as a 5% hedge.",
+    );
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    await expect(notes.locator("mark")).toHaveText("5");
+    await search.focus();
+    await searchRegion
+      .getByRole("button", { name: "Clear note search" })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await expect(searchRegion.getByRole("status")).toHaveText(
+      "Searching 1 note and 1 extracted belief for this client.",
+    );
+    await expect(notes.locator("mark")).toHaveCount(0);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

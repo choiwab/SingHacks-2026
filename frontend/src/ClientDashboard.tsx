@@ -1240,7 +1240,7 @@ function queryTerms(query: string): string[] {
       )
         .filter(
           (word) =>
-            word.length > 1 &&
+            (word.length > 1 || /^\p{N}$/u.test(word)) &&
             // Preserve the region abbreviation, but still ignore conversational "us".
             (word === "US" || !STOPWORDS.has(word.toLowerCase())),
         )
