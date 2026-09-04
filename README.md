@@ -198,10 +198,12 @@ of the data in 30 seconds.
 
 ### Run the Monday Brief demo
 
-The demo is a three-screen Monday workflow for Priscilla Ong.
-Its two highlighted features are an Explainable Priority Calendar and an Evidence-backed Scenario Rehearsal.
-The pre-read is the approval checkpoint between them.
-The calendar ranks all 20 clients across calls and booked meetings, while the rehearsal re-shocks the selected portfolio under two precomputed Strait scenarios.
+The demo is a Fluent UI RM dashboard for Priscilla Ong, following the [Member 1 dashboard and UX brief](docs/PRD_TEAMS_RM_INTELLIGENCE.md).
+The home screen shows a top-five priority queue and a compact upcoming-meetings calendar.
+The persistent client switcher searches all 20 clients by name or ID.
+Each selected client has a profile, three leading insights, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
+The meeting brief leads from the client's statements and portfolio facts to an RM review checkpoint.
+An optional scenario rehearsal shows two precomputed Strait scenario ranges with their snapshot context and uncertainty.
 The Python projection module runs once during application startup and saves a diagnostic snapshot to `data/generated/app_data.json`.
 The React interface loads that versioned projection through one `GET /api/monday-brief` request.
 Approve, Edit, or Reject is the only live write and is stored in the local SQLite review ledger.
@@ -215,7 +217,25 @@ pnpm dev
 ```
 
 Open `http://127.0.0.1:5173`.
-For the shortest demo, open Margarethe Voss-Brenner, inspect a **Why?** source trail, edit the German opening, approve it, then open Abdullah Al-Mansoori and toggle the Strait scenario.
+
+For a short dashboard walkthrough:
+
+1. Search for `CL-0003` in the client switcher and select Margarethe Voss-Brenner, or select her meeting in the calendar.
+2. Inspect the three leading insights, then find **You said / Data says** in **Overview** to compare her stated aversion to risk with 71.5% equity against a 30% limit.
+3. Open that comparison's **Why?** action to inspect the claim, calculation inputs, and exact source rows; press Escape to return to the same action.
+4. Review the **Two-minute summary**, **Three discussion topics**, and **Open commitments**, including the EUR 3.4m inheritance-tax cash need.
+5. Open **Data** for grouped facts, or **Memory** and search `"safe and boring"` for the exact recorded phrase with highlighted matches and note evidence.
+6. Select **Review meeting brief** to reach the **RM checkpoint**, choose **Edit**, revise the opening, and choose **Save edit** or **Cancel edit**.
+7. Choose **Approve pre-read** to record approval and show **Approved by the RM**; use **Reject** to return a brief to **Needs review**.
+8. Optionally select Abdullah Al-Mansoori and open **Scenario rehearsal** to compare the Strait ranges and their evidence.
+
+Saved wording and review status survive navigation between clients and screens in the current page session.
+The calendar labels saved edits and approvals **Ready**, while the authorship badge distinguishes **Edited by the RM** from **Approved by the RM**.
+Reloading the page resets these visible states because the UI does not yet restore saved reviews from the SQLite ledger; it does not delete the recorded decisions.
+
+The controlled incremental-update demonstration in the PRD still requires Member 4's API and versioned view model.
+**Open commitments** currently contains cited planned cash needs, not the private-fund commitments in `commitments.csv`.
+The language label reflects the client's reporting preference; some clients have English fallback openings, while Margarethe's opening is German.
 
 Run the automated checks with:
 
@@ -235,11 +255,16 @@ pnpm test:e2e
 
 ### Demo architecture
 
-The Python projection module owns source loading, validation, ranking, narration, scenarios, and evidence assembly behind one interface. FastAPI builds the projection during its application lifespan and exposes it through `GET /api/monday-brief`. Pydantic models define the response, and committed TypeScript types are generated from the OpenAPI document.
+The Python projection module owns source loading, validation, ranking, narration, scenarios, and evidence assembly behind one interface.
+FastAPI builds the projection during its application lifespan and exposes it through `GET /api/monday-brief`.
+Pydantic models define the response, and committed TypeScript types are generated from the OpenAPI document.
 
-React 19, TypeScript, Vite, and React Router render the Monday list, client pre-read, and scenario rehearsal. The root route loads the complete projection once and shares it with client routes, so scenario toggles do not require another request. Review decisions use `POST /api/reviews` and a local SQLite ledger; the generated JSON projection is diagnostic output only.
+React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and scenario rehearsal inside a shared Fluent UI shell.
+The root route loads the complete projection once and shares it with client routes, so client switching, dashboard tabs, and scenario toggles do not require another projection request.
+Review decisions use `POST /api/reviews` and a local SQLite ledger; the generated JSON projection is diagnostic output only.
 
-Create an optimized frontend build with `pnpm build`. Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
+Create an optimized frontend build with `pnpm build`.
+Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
 
 ### Where to start
 
