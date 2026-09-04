@@ -239,6 +239,61 @@ describe("Monday Brief", () => {
     ).toBeVisible();
   });
 
+  it("retrieves and highlights short financial terms without substring matches", async () => {
+    const projection = structuredClone(projectionFixture);
+    projection.evidence["note:1"].record.note =
+      "Discuss UK tax, FX hedging and US tuition in Q2.";
+    projection.evidence["note:2"].record.note =
+      "Asked about a ukulele, Q20 and USD expenses.";
+    projection.pre_reads["CL-0003"].beliefs[0].text = "Discuss FX in Q2.";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(new Response(JSON.stringify(projection)))),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    await user.click(await screen.findByRole("tab", { name: "Memory" }));
+    const search = screen.getByRole("searchbox", {
+      name: "Search this client's RM notes",
+    });
+    const notes = screen.getByRole("region", { name: "RM notes" });
+    for (const term of ["UK", "fx", "Q2"]) {
+      await user.clear(search);
+      await user.type(search, term);
+      expect(
+        within(notes).getAllByRole("button", { name: "Why?" }),
+      ).toHaveLength(1);
+      expect(notes.querySelector("mark")?.textContent?.toLowerCase()).toBe(
+        term.toLowerCase(),
+      );
+      expect(notes).not.toHaveTextContent("ukulele");
+    }
+    // A region abbreviation remains searchable; lowercase "us" is question glue.
+    await user.clear(search);
+    await user.type(search, "What did she say to us about FX?");
+    expect(screen.getByRole("status")).toHaveTextContent("mention fx.");
+    expect(within(notes).getAllByRole("button", { name: "Why?" })).toHaveLength(
+      1,
+    );
+    expect(
+      screen
+        .getByRole("region", { name: "Extracted beliefs" })
+        .querySelector("mark"),
+    ).toHaveTextContent("FX");
+    await user.clear(search);
+    await user.type(search, "US");
+    expect(screen.getByRole("status")).toHaveTextContent("mention us.");
+    expect(within(notes).getAllByRole("button", { name: "Why?" })).toHaveLength(
+      1,
+    );
+    expect(notes).toHaveTextContent("US tuition");
+    expect(notes.querySelector("mark")).toHaveTextContent("US");
+  });
+
   it("opens the meeting brief with the PRD 5.5 summary, agenda and commitments", async () => {
     vi.stubGlobal(
       "fetch",

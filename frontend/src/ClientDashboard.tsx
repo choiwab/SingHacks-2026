@@ -1137,17 +1137,29 @@ function queryTerms(query: string): string[] {
   return [
     ...new Set(
       query
-        .toLowerCase()
         .split(/[^\p{L}\p{N}]+/u)
-        .filter((word) => word.length > 2 && !STOPWORDS.has(word)),
+        .filter(
+          (word) =>
+            word.length > 1 &&
+            // Preserve the region abbreviation, but still ignore conversational "us".
+            (word === "US" || !STOPWORDS.has(word.toLowerCase())),
+        )
+        .map((word) => word.toLowerCase()),
     ),
   ];
 }
 
 /** How many distinct query terms the text contains. */
 function matchScore(text: string, terms: string[]): number {
-  const haystack = text.toLowerCase();
-  return terms.filter((term) => haystack.includes(term)).length;
+  return terms.filter((term) => new RegExp(termPattern(term), "iu").test(text))
+    .length;
+}
+
+/** Short terms such as UK, Q2 and FX must not match inside unrelated words. */
+function termPattern(term: string): string {
+  return term.length === 2
+    ? `(?<![\\p{L}\\p{N}])${term}(?![\\p{L}\\p{N}])`
+    : term;
 }
 
 /**
@@ -1158,7 +1170,9 @@ function matchScore(text: string, terms: string[]): number {
 function Highlight({ text, terms }: { text: string; terms: string[] }) {
   const styles = useStyles();
   if (terms.length === 0) return <>{text}</>;
-  const parts = text.split(new RegExp(`(${terms.join("|")})`, "giu"));
+  const parts = text.split(
+    new RegExp(`(${terms.map(termPattern).join("|")})`, "giu"),
+  );
   return (
     <>
       {parts.map((part, index) =>

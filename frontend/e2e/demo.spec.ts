@@ -1,6 +1,46 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`short Memory queries filter notes at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0007/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    await search.fill("UK");
+    await expect(searchRegion.getByRole("status")).toContainText(
+      "1 of 2 notes",
+    );
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(1);
+    await expect(notes.locator("mark")).toHaveText("UK");
+    await expect(notes).toContainText("tax questions remain unresolved");
+    await expect(notes).not.toContainText("additional gold purchase");
+    await notes.getByRole("button", { name: "Why?" }).click();
+    await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+      "N-011",
+    );
+    await page.keyboard.press("Escape");
+    await expect(notes.getByRole("button", { name: "Why?" })).toBeFocused();
+    await expect(search).toHaveValue("UK");
+    await search.fill("FX");
+    await expect(notes).toContainText("No note mentions fx. Try another word.");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+    await searchRegion
+      .getByRole("button", { name: "clear", exact: true })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`incomplete evidence is disclosed at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.route("**/api/monday-brief", async (route) => {
