@@ -123,3 +123,16 @@ def test_required_holdings_quantity_and_integer_profile_values_fail_validation()
     clients.loc[0, "age"] = "34.5"
     _, diagnostics = coerce_source_table("clients", clients)
     assert any(d.field == "age" and d.code == "invalid_integer" for d in diagnostics)
+
+
+def test_unknown_client_note_warning_is_global_and_preserves_unknown_identity():
+    from app.pipeline.stages.validate import validate_sources
+
+    sources = ingest_sources(DATA, as_of=AS_OF)
+    sources.notes[0]["client_id"] = "CL-UNKNOWN"
+    finding = next(
+        item for item in validate_sources(sources).findings if item.code == "NOTE_UNKNOWN_CLIENT"
+    )
+    assert finding.client_id is None
+    assert "CL-UNKNOWN" in finding.message
+    assert finding.evidence_ids == ["rm_notes:N-001"]

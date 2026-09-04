@@ -17,6 +17,7 @@ from app.pipeline.loaders import ArtifactStore
 from app.pipeline.publish import point_latest, read_latest
 from app.pipeline.runner import DEFAULT_AS_OF, DEFAULT_SOURCE_DIR, run_pipeline
 from app.pipeline.schemas import ReviewRequest, RunManifest
+from app.pipeline.verification_state import verification_passed
 from app.store import ReviewLedger
 
 
@@ -117,7 +118,14 @@ class PipelineRuntime:
             )
             if report.processing_mode == "no_material_change" and previous_brief:
                 body = deepcopy(previous_brief.body)
-                verification = {**previous_brief.verification_report, "brief_version": 1}
+                verification = verify_brief(
+                    self.store,
+                    client_id,
+                    manifest.run_id,
+                    body,
+                    verifier=self.agents.verifier if self.agents else None,
+                    brief_version=1,
+                )
             else:
                 output = execute_client(self.store, client_id, manifest.run_id, agents=self.agents)
                 body = {key: value for key, value in output.items() if key != "verification_report"}
@@ -160,7 +168,7 @@ class PipelineRuntime:
                     self.store,
                     request.client_id,
                     latest.run_id,
-                    brief,
+                    body,
                     verifier=self.agents.verifier if self.agents else None,
                 )
                 report["brief_version"] = version
@@ -172,7 +180,7 @@ class PipelineRuntime:
                     origin="rm_edited",
                     brief_version=version,
                 )
-            elif request.action == "Approve" and not report.get("passed"):
+            elif request.action == "Approve" and not verification_passed(report):
                 raise ValueError("Meeting Brief has not passed verification")
             recorded = request.model_copy(update={"brief_version": version})
             review = self.ledger.append(

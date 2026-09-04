@@ -232,9 +232,8 @@ def validate_sources(sources: IngestedSources) -> DataQualityReport:
             if note.get("client_id") not in clients:
                 warn(
                     "NOTE_UNKNOWN_CLIENT",
-                    "RM note references an unknown client.",
+                    f"RM note references unknown client {note.get('client_id')!r}.",
                     [f"rm_notes:{identifier}"],
-                    note,
                 )
         events = tables["event_log"]
         for _, row in events[events.duplicated(keep=False)].iterrows():

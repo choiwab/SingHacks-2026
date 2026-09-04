@@ -97,3 +97,31 @@ def test_full_evidence_registry_is_pinned_to_requested_run(tmp_path, monkeypatch
     evidence = load_evidence_map(run_id=SEED)
     assert evidence.run_id == SEED
     assert evidence.entries["rm_notes:N-005"].record["note"] == SEED
+
+
+def test_reverification_preserves_stored_connector_and_memory_context(tmp_path):
+    publish_fixture(tmp_path)
+    connected = [{"record_id": "mail:1", "connector": "mail", "text": "Client wants a call."}]
+    memory = {"communication": {"text": "Prefers calls.", "record_ids": ["mail:1"]}}
+    envelope = {
+        "meeting_brief": {"sections": {"summary": {"text": "Call the client."}}},
+        "connected_context": connected,
+        "memory_card": memory,
+        "insights": [{"text": "Discuss preferences."}],
+        "context_issues": ["Cached mail"],
+    }
+
+    def verifier(state):
+        assert state["run_id"] == SEED
+        assert state["connected_context"] == connected
+        assert state["memory_card"] == memory
+        assert state["ranked_insights"] == envelope["insights"]
+        assert "Cached mail" in state["context_issues"]
+        return {"verification_report": {"passed": True}}
+
+    assert (
+        verify_brief(
+            ArtifactStore(tmp_path), CLIENT, SEED, envelope, verifier=verifier, brief_version=2
+        )["brief_version"]
+        == 2
+    )

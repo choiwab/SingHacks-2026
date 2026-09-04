@@ -7,6 +7,7 @@ is injected, its result is disclosed as incomplete and never grants review readi
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, NotRequired
 
@@ -99,7 +100,14 @@ def verify_brief(
 ) -> dict[str, Any]:
     """Synchronously reverify a complete brief or generation envelope after an edit."""
     state = _state(store, client_id, run_id)
-    state["meeting_brief"] = brief.get("meeting_brief", brief)
+    state["meeting_brief"] = deepcopy(brief.get("meeting_brief", brief))
+    if "meeting_brief" in brief:
+        state["connected_context"] = deepcopy(brief.get("connected_context", []))
+        state["memory_card"] = deepcopy(brief.get("memory_card"))
+        state["ranked_insights"] = deepcopy(brief.get("insights", []))
+        state["context_issues"] = list(
+            dict.fromkeys([*state.get("context_issues", []), *brief.get("context_issues", [])])
+        )
     return {**_verify(state, verifier)["verification_report"], "brief_version": brief_version}
 
 
