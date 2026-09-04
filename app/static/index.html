@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f3efe6">
+    <meta
+      name="description"
+      content="Client Future Room turns connected portfolio risk into an evidence-backed RM conversation and action plan."
+    >
+    <title>Client Future Room | Lau Chi Ming</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@85..100,400..700&family=Newsreader:opsz,wght@6..72,400..600&display=swap"
+      rel="stylesheet"
+    >
+    <link rel="stylesheet" href="/static/styles.css">
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to client decision</a>
+
+    <header class="topbar">
+      <a class="brand" href="#main-content" aria-label="JB Wealth Intelligence home">
+        <span class="brand-mark" aria-hidden="true">JB</span>
+        <span class="brand-wordmark">Wealth Intelligence</span>
+      </a>
+      <div class="workspace-status">
+        <span class="privacy-status"><span aria-hidden="true"></span> Private workspace</span>
+        <span class="as-of">As of 26 Aug 2026</span>
+        <button class="profile-button" type="button" aria-label="PO, Priscilla Ong profile">PO</button>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="journey-rail" aria-label="Meeting preparation progress">
+        <p class="rail-label">Decision path</p>
+        <ol>
+          <li class="is-current" data-progress="attention"><span>01</span>Attention</li>
+          <li data-progress="stress"><span>02</span>Stress</li>
+          <li data-progress="council"><span>03</span>Council</li>
+          <li data-progress="rehearse"><span>04</span>Rehearse</li>
+          <li data-progress="act"><span>05</span>Act</li>
+          <li data-progress="outcome"><span>06</span>Outcome</li>
+        </ol>
+        <div class="rail-footer">
+          <span class="rail-rule"></span>
+          <p>Decision support</p>
+          <p>RM controlled</p>
+        </div>
+      </aside>
+
+      <main id="main-content">
+        <section class="client-intro" aria-labelledby="client-name">
+          <div class="client-kicker">
+            <span>Client future room</span>
+            <span class="case-id" id="client-id">CL-0014</span>
+          </div>
+          <div class="intro-grid">
+            <div class="intro-copy">
+              <p class="eyebrow">Requires attention</p>
+              <h1 id="client-name">Lau Chi Ming</h1>
+              <p class="client-meta" id="client-meta">Hong Kong · Balanced · High liquidity need</p>
+              <p class="thesis" id="attention-copy">
+                Lau's property exposure, secured borrowing, and redevelopment plan depend on the
+                same market outcome.
+              </p>
+            </div>
+            <div class="client-context" aria-label="Relationship context">
+              <p class="context-label">Relationship manager</p>
+              <p class="context-value" id="rm-name">Priscilla Ong</p>
+              <p class="context-label">Relationship stage</p>
+              <p class="context-value">Serve and deepen</p>
+              <p class="context-label">KYC review</p>
+              <p class="context-value" id="kyc-due">22 Sep 2026</p>
+            </div>
+          </div>
+
+          <dl class="attention-facts">
+            <div>
+              <dt>Property-linked</dt>
+              <dd><strong id="property-weight">49.0%</strong><span>of portfolio</span></dd>
+            </div>
+            <div class="risk-fact">
+              <dt>Facility LTV</dt>
+              <dd><strong id="current-ltv">69.41%</strong><span>70.00% trigger</span></dd>
+            </div>
+            <div>
+              <dt>Redevelopment need</dt>
+              <dd><strong>HKD <span id="cash-need">60.0</span>m</strong><span>by Jun 2027</span></dd>
+            </div>
+          </dl>
+
+          <div class="trigger-zone">
+            <button class="primary-trigger" id="prepare-button" type="button">
+              <span>Prepare Lau's meeting</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <p id="trigger-note">One action prepares the evidence, stress, specialist views, and rehearsal.</p>
+          </div>
+        </section>
+
+        <div id="prepared-content" hidden>
+          <section class="decision-section stress-section reveal" id="stress-section" aria-labelledby="stress-heading">
+            <header class="section-heading">
+              <div>
+                <p class="section-number">01 / Consequence</p>
+                <h2 id="stress-heading">The facility crosses its trigger before the project begins.</h2>
+              </div>
+              <span class="scenario-chip">Hypothetical · not a forecast</span>
+            </header>
+
+            <div class="governance-note">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4.5 6v5.2c0 4.5 3 8.5 7.5 9.8 4.5-1.3 7.5-5.3 7.5-9.8V6L12 3Z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m9 12 2 2 4-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <p id="governance-notice"></p>
+              <button class="text-button" type="button" data-evidence="scenario:moderate-property">Inspect assumptions</button>
+            </div>
+
+            <div class="stress-grid">
+              <article class="ltv-figure" aria-labelledby="ltv-title">
+                <div class="figure-heading">
+                  <div>
+                    <p class="figure-label">Lombard facility · CF-0002</p>
+                    <h3 id="ltv-title">Loan-to-value trajectory</h3>
+                  </div>
+                  <button class="evidence-button" type="button" data-evidence="facility:CF-0002">View evidence</button>
+                </div>
+                <div class="ltv-callout">
+                  <span>Current</span>
+                  <strong id="ltv-current-large">69.41%</strong>
+                  <span class="movement" aria-hidden="true">→</span>
+                  <span>Under stress</span>
+                  <strong class="breach-value" id="ltv-stressed-large">73.94%</strong>
+                </div>
+                <svg
+                  class="ltv-chart"
+                  id="ltv-chart"
+                  viewBox="0 0 720 280"
+                  role="img"
+                  aria-labelledby="ltv-chart-title ltv-chart-desc"
+                >
+                  <title id="ltv-chart-title">Lau's loan-to-value history and stress scenario</title>
+                  <desc id="ltv-chart-desc">Loan-to-value rises from 53.93 percent in December 2025 to 69.41 percent today, then reaches 73.94 percent under the hypothetical scenario, above the 70 percent trigger.</desc>
+                </svg>
+                <div class="chart-legend" aria-label="Chart legend">
+                  <span><i class="legend-history"></i>Observed</span>
+                  <span><i class="legend-scenario"></i>Scenario</span>
+                  <span><i class="legend-trigger"></i>Trigger</span>
+                </div>
+              </article>
+
+              <aside class="impact-ledger" aria-labelledby="impact-title">
+                <p class="figure-label">What changes</p>
+                <h3 id="impact-title">Funding consequence</h3>
+                <dl>
+                  <div>
+                    <dt>Portfolio value</dt>
+                    <dd><strong id="stressed-portfolio">HKD 188.65m</strong><span id="portfolio-change">-HKD 18.23m</span></dd>
+                  </div>
+                  <div>
+                    <dt>Lending value</dt>
+                    <dd><strong id="stressed-lending">HKD 78.44m</strong><span id="lending-change">-HKD 5.13m</span></dd>
+                  </div>
+                  <div class="impact-critical">
+                    <dt>Estimated cure</dt>
+                    <dd><strong id="estimated-cure">HKD 3.09m</strong><span>to restore 70% LTV</span></dd>
+                  </div>
+                  <div>
+                    <dt>Known portfolio cash</dt>
+                    <dd><strong id="known-cash">HKD 12.00m</strong><span id="cash-coverage">20% of project need</span></dd>
+                  </div>
+                </dl>
+                <p class="impact-explanation">
+                  A moderate portfolio decline creates an immediate funding requirement that may
+                  compete with next year's redevelopment plan.
+                </p>
+              </aside>
+            </div>
+          </section>
+
+          <section class="decision-section exposure-section reveal" aria-labelledby="exposure-heading">
+            <header class="section-heading compact-heading">
+              <div>
+                <p class="section-number">02 / Connection</p>
+                <h2 id="exposure-heading">Four wrappers. One economic bet.</h2>
+              </div>
+              <p class="section-aside">Position size, liquidity, and collateral value reveal the hidden dependency.</p>
+            </header>
+
+            <div class="exposure-layout">
+              <div class="exposure-network" aria-label="Connected Hong Kong property exposures">
+                <div class="root-node">
+                  <span class="node-tag">Source of wealth</span>
+                  <strong>Hong Kong<br>property development</strong>
+                  <small>Operating wealth</small>
+                </div>
+                <div class="network-trunk" aria-hidden="true"></div>
+                <div class="network-nodes" id="network-nodes"></div>
+              </div>
+              <div class="goal-tension">
+                <p class="figure-label">The tension</p>
+                <div class="goal-scale">
+                  <div>
+                    <span>Facility drawn</span>
+                    <strong>HKD 58m</strong>
+                  </div>
+                  <i aria-hidden="true"></i>
+                  <div>
+                    <span>Project need</span>
+                    <strong>HKD 60m</strong>
+                  </div>
+                </div>
+                <p>
+                  Both claims may call on the same finite liquidity. External HKD liquidity is not
+                  present in the supplied records.
+                </p>
+                <button class="text-button" type="button" data-evidence="data-gap:external-liquidity">Open data gap</button>
+              </div>
+            </div>
+
+            <div class="holdings-wrap">
+              <div class="table-heading">
+                <h3>Position evidence</h3>
+                <span id="holdings-count">8 current holdings</span>
+              </div>
+              <div class="table-scroll">
+                <table class="holdings-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">Position</th>
+                      <th scope="col">Theme</th>
+                      <th scope="col">Value</th>
+                      <th scope="col">Weight</th>
+                      <th scope="col">Liquidity</th>
+                      <th scope="col">Advance</th>
+                      <th scope="col">Stressed</th>
+                    </tr>
+                  </thead>
+                  <tbody id="holdings-body"></tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section class="decision-section council-section reveal" aria-labelledby="council-heading">
+            <header class="section-heading compact-heading">
+              <div>
+                <p class="section-number">03 / Specialist council</p>
+                <h2 id="council-heading">The disagreement is the decision.</h2>
+              </div>
+              <div class="council-status"><span aria-hidden="true"></span>5 specialists · shared evidence</div>
+            </header>
+
+            <div class="agreement-line">
+              <span>Common ground</span>
+              <p>Protect the redevelopment plan before the market or facility removes Lau's choices.</p>
+            </div>
+
+            <div class="table-scroll">
+              <table class="council-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Perspective</th>
+                    <th scope="col">Position</th>
+                    <th scope="col">Primary concern</th>
+                    <th scope="col">Action to consider</th>
+                    <th scope="col">Evidence</th>
+                  </tr>
+                </thead>
+                <tbody id="council-body"></tbody>
+              </table>
+            </div>
+
+            <div class="decision-paths" aria-label="Response paths">
+              <article>
+                <span>A</span>
+                <h3>Protect collateral now</h3>
+                <p>Restore a meaningful facility buffer using confirmed external liquidity or debt reduction.</p>
+                <small>Tradeoff: less capital may remain for redevelopment.</small>
+              </article>
+              <article class="recommended-path">
+                <span>B · Balanced path</span>
+                <h3>Reduce exposure in stages</h3>
+                <p>Preserve part of Lau's view while sequencing a facility buffer and project reserve.</p>
+                <small>Tradeoff: sales may precede the recovery Lau expects.</small>
+              </article>
+              <article>
+                <span>C</span>
+                <h3>Retain with safeguards</h3>
+                <p>Keep the positions temporarily with external liquidity, thresholds, and a decision date.</p>
+                <small>Tradeoff: concentration and collateral risk remain.</small>
+              </article>
+            </div>
+          </section>
+
+          <section class="decision-section rehearsal-section reveal" aria-labelledby="rehearsal-heading">
+            <header class="section-heading compact-heading">
+              <div>
+                <p class="section-number">04 / Decision rehearsal</p>
+                <h2 id="rehearsal-heading">Practice the moment that determines what happens next.</h2>
+              </div>
+              <span class="rehearsal-tag">2 decisions · no script</span>
+            </header>
+
+            <div class="rehearsal-stage">
+              <div class="rehearsal-prompt">
+                <span class="decision-count">Decision 1 of 2</span>
+                <h3>How do you open the conversation?</h3>
+                <p>Choose the framing you would use with Lau.</p>
+              </div>
+              <div class="choice-list" id="opening-choices">
+                <button type="button" data-opening="trigger">
+                  <span>Lead with the trigger</span>
+                  <small>“Your facility is less than one point from its trigger.”</small>
+                </button>
+                <button type="button" data-opening="project">
+                  <span>Protect the project</span>
+                  <small>“Let us protect the redevelopment funding before the market decides for us.”</small>
+                </button>
+                <button type="button" data-opening="concentration">
+                  <span>Lead with concentration</span>
+                  <small>“Several investments are expressing the same property view.”</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="rehearsal-stage client-response" id="client-response" hidden>
+              <div class="client-voice">
+                <span>Lau's documented position</span>
+                <blockquote id="client-position">“I still believe the Hong Kong property market turns this year.”</blockquote>
+                <button class="evidence-button" type="button" data-evidence="note:N-018">From RM note · 05 Mar</button>
+              </div>
+              <p class="opening-coaching" id="opening-feedback"></p>
+              <div class="rehearsal-prompt second-prompt">
+                <span class="decision-count">Decision 2 of 2</span>
+                <h3>How do you turn resistance into progress?</h3>
+              </div>
+              <div class="choice-list" id="follow-up-choices">
+                <button type="button" data-follow-up="challenge">
+                  <span>Challenge the market view</span>
+                  <small>Argue that the recovery forecast is wrong.</small>
+                </button>
+                <button type="button" data-follow-up="resilience">
+                  <span>Separate conviction from resilience</span>
+                  <small>Preserve the view while testing how much risk the project can tolerate.</small>
+                </button>
+                <button type="button" data-follow-up="sell">
+                  <span>Recommend an immediate sale</span>
+                  <small>Move to a transaction before confirming constraints.</small>
+                </button>
+              </div>
+            </div>
+
+            <div class="coaching-panel" id="coaching-panel" hidden aria-live="polite">
+              <div>
+                <span class="outcome-status" id="outcome-status"></span>
+                <h3 id="outcome-headline"></h3>
+              </div>
+              <div class="coaching-detail">
+                <p id="coaching-copy"></p>
+                <p><span>Ask next</span><strong id="next-question"></strong></p>
+              </div>
+            </div>
+          </section>
+
+          <section class="decision-section action-section reveal" id="action-section" aria-labelledby="action-heading">
+            <header class="section-heading compact-heading">
+              <div>
+                <p class="section-number">05 / Action brief</p>
+                <h2 id="action-heading">Turn the conversation into owned work.</h2>
+              </div>
+              <span class="draft-status">Draft · RM review required</span>
+            </header>
+
+            <div class="brief-grid">
+              <div>
+                <p class="figure-label">Proposed agreement</p>
+                <p class="brief-summary" id="brief-summary"></p>
+                <div class="tasks" id="task-list"></div>
+              </div>
+              <aside class="open-questions">
+                <p class="figure-label">Confirm before advice</p>
+                <ol id="open-questions"></ol>
+                <div class="control-gates">
+                  <span>Suitability</span>
+                  <span>Evidence linked</span>
+                  <span>RM approval</span>
+                </div>
+              </aside>
+            </div>
+
+            <div class="approval-bar">
+              <label class="acknowledgement">
+                <input type="checkbox" id="approval-checkbox">
+                <span>I reviewed the plan and understand that connected actions remain previews.</span>
+              </label>
+              <button class="approve-button" id="approve-button" type="button" disabled>
+                Approve plan and preview actions
+              </button>
+            </div>
+          </section>
+
+          <section class="decision-section outcome-section reveal" id="outcome-section" aria-labelledby="outcome-heading" hidden>
+            <header class="section-heading compact-heading">
+              <div>
+                <p class="section-number">06 / Relationship outcome</p>
+                <h2 id="outcome-heading">One decision, ready across the workflow.</h2>
+              </div>
+              <span class="preview-status">0 external writes</span>
+            </header>
+
+            <div class="outcome-strip" id="outcome-strip"></div>
+
+            <div class="connector-heading">
+              <div>
+                <p class="figure-label">Action Bridge</p>
+                <h3>Exact payloads, visible before execution.</h3>
+              </div>
+              <p>Each destination requires a separate production approval.</p>
+            </div>
+            <div class="connector-list" id="connector-list"></div>
+
+            <div class="administration-receipt">
+              <div class="receipt-mark" aria-hidden="true">✓</div>
+              <div>
+                <span>Administration receipt</span>
+                <strong>4 records prepared · 0 sent · 0 failed</strong>
+                <p>Insight became accountable work without creating a shadow client record.</p>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <dialog class="evidence-dialog" id="evidence-dialog" aria-labelledby="evidence-title">
+      <div class="dialog-topline">
+        <span id="evidence-type">Observed fact</span>
+        <button type="button" id="close-evidence" aria-label="Close evidence">×</button>
+      </div>
+      <h2 id="evidence-title">Evidence</h2>
+      <p id="evidence-detail"></p>
+      <dl>
+        <div><dt>Source</dt><dd id="evidence-source"></dd></div>
+        <div><dt>Record</dt><dd id="evidence-record"></dd></div>
+        <div><dt>As of</dt><dd id="evidence-date"></dd></div>
+        <div id="evidence-formula-row" hidden><dt>Formula</dt><dd id="evidence-formula"></dd></div>
+      </dl>
+      <p class="dialog-footnote">Synthetic challenge data · Confidential handling standard</p>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
