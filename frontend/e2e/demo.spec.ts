@@ -1,6 +1,48 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`memory questions ignore pronouns when retrieving topics at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0001/pre-read");
+    await page.getByRole("tab", { name: "Memory" }).click();
+    const search = page.getByRole("searchbox", {
+      name: "Search this client's RM notes",
+    });
+    const status = page
+      .getByRole("region", { name: "Search the client memory" })
+      .getByRole("status");
+    const notes = page.getByRole("region", { name: "RM notes" });
+    const beliefs = page.getByRole("region", { name: "Extracted beliefs" });
+
+    for (const pronoun of ["he", "she", "they"]) {
+      await search.fill(`What did ${pronoun} say about coal?`);
+      await expect(status).toHaveText(
+        "1 of 2 notes and 0 of 1 belief mention coal.",
+      );
+      await expect(notes).toContainText("2026-04-14");
+      await expect(notes).not.toContainText("2026-01-08");
+      await expect(notes.locator("mark")).toHaveText(["coal"]);
+      await expect(beliefs).toContainText("No recorded belief mentions coal.");
+      await expect(search).toBeFocused();
+    }
+
+    await search.fill("What did he say?");
+    await expect(status).toContainText(
+      "Add a topic such as risk, tax, or cash",
+    );
+    await expect(status).toContainText("Showing all 2 notes");
+    await expect(notes).toContainText("2026-01-08");
+    await expect(notes).toContainText("2026-04-14");
+    await expect(notes.locator("mark")).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`calendar reveals the selected meeting without moving page focus at ${width}px`, async ({
     page,
   }) => {

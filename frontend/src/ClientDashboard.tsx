@@ -1211,7 +1211,7 @@ export function DataPanel({
  */
 const STOPWORDS = new Set(
   `a about all an and any are as ask at be been but by can did do does for from
-   get had has have her him his how i if in into is it its me my not of on or
+   get had has have he her him his how i if in into is it its me my not of on or
    our say said she that the their them then there these they this to told
    under up us was we were what when where which who whom why will with would
    you your`.split(/\s+/),
@@ -1327,7 +1327,7 @@ export function MemoryPanel({
         <Subtitle2 as="h3">Ask the notes</Subtitle2>
         <SearchBox
           className={styles.search}
-          placeholder="What did she say about risk?"
+          placeholder="What did they say about risk?"
           aria-label="Search this client's RM notes"
           value={query}
           onChange={(_, data) => onQueryChange(data.value)}
