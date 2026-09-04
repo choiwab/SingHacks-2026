@@ -1,4 +1,4 @@
-"""Durable SQLite review ledger."""
+"""Durable SQLite review ledger (Member 3 persists run and review state)."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 from uuid import NAMESPACE_URL, uuid4, uuid5
 
-from app.wealth_intelligence.models import ReviewRecord, ReviewRequest
+from app.pipeline.schemas import ReviewRecord, ReviewRequest
 
 
 class ReviewLedger:

@@ -16,7 +16,7 @@ def main() -> None:
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
-        json.dumps(create_app(save_diagnostic=False).openapi(), indent=2) + "\n",
+        json.dumps(create_app().openapi(), indent=2) + "\n",
         encoding="utf-8",
     )
 

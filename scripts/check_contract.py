@@ -20,7 +20,7 @@ def main() -> None:
         document = temporary / "openapi.json"
         generated = temporary / "openapi.ts"
         document.write_text(
-            json.dumps(create_app(save_diagnostic=False).openapi(), indent=2) + "\n",
+            json.dumps(create_app().openapi(), indent=2) + "\n",
             encoding="utf-8",
         )
         subprocess.run(
