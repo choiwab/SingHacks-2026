@@ -147,6 +147,19 @@ export function App() {
   );
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const statusRef = useRef<HTMLElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (attempt === 0) return;
+    // Follow an explicit retry through loading, another failure, or recovery.
+    const target = projection
+      ? document.getElementById("main")
+      : error
+        ? retryRef.current
+        : statusRef.current;
+    target?.focus({ preventScroll: true });
+  }, [attempt, error, projection]);
 
   useEffect(() => {
     let active = true;
@@ -184,6 +197,7 @@ export function App() {
         </MessageBarBody>
         <MessageBarActions>
           <Button
+            ref={retryRef}
             appearance="primary"
             onClick={() => {
               setError("");
@@ -202,7 +216,9 @@ export function App() {
       {projection ? (
         <RoutedApp projection={projection} />
       ) : (
-        <main className="app-status">{status}</main>
+        <main className="app-status" ref={statusRef} tabIndex={-1}>
+          {status}
+        </main>
       )}
     </FluentProvider>
   );
