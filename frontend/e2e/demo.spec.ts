@@ -1566,6 +1566,16 @@ for (const width of [1280, 390]) {
     await expect(main).toBeVisible();
     await expect(main).not.toBeFocused();
     await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    const workspace = page
+      .getByRole("navigation", { name: "Workspace navigation" })
+      .getByRole("tablist", { name: "Workspace views" });
+    await expect(workspace).toHaveAttribute("aria-orientation", "vertical");
+    await expect(
+      workspace.getByRole("tab", { name: "RM dashboard" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      workspace.getByRole("tab", { name: "Pre-read", exact: true }),
+    ).toBeDisabled();
     const switcher = page.getByRole("navigation", { name: "Client switcher" });
     await switcher.getByRole("button", { name: /Margarethe/ }).focus();
     await page.keyboard.press("Enter");
@@ -1593,7 +1603,11 @@ for (const width of [1280, 390]) {
     await expect(main).toBeFocused();
     await expect(main).toHaveJSProperty("scrollTop", 0);
 
-    await page.getByRole("tab", { name: "Scenario rehearsal" }).focus();
+    await workspace.getByRole("tab", { name: "Pre-read", exact: true }).focus();
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      workspace.getByRole("tab", { name: "Scenario rehearsal" }),
+    ).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/scenario$/);
     await expect(page).toHaveTitle(

@@ -304,11 +304,12 @@ export function AppShell({
 
   return (
     <div className={styles.shell}>
-      <div className={styles.rail}>
+      <nav className={styles.rail} aria-label="Workspace navigation">
         <span className={styles.brand} aria-hidden="true">
           WI
         </span>
         <TabList
+          aria-label="Workspace views"
           vertical
           size="large"
           selectedValue={route}
@@ -339,7 +340,7 @@ export function AppShell({
             disabled={!selectedClient}
           />
         </TabList>
-      </div>
+      </nav>
       <ClientSwitcher
         ranking={projection.ranking}
         selectedClient={selectedClient}
