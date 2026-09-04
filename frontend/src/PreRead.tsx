@@ -504,13 +504,18 @@ export function PreRead({
                 icon={<DismissRegular />}
                 aria-label="Dismiss the review error"
                 onClick={() => {
-                  const retryButton = {
-                    Approve: approveButton,
-                    Edit: editButton,
-                    Reject: rejectButton,
-                  }[reviewError.action];
+                  // An unfinished edit disables the earlier review decision.
+                  // Return to the draft instead of focusing an unavailable action.
+                  const retryTarget =
+                    editing && reviewError.action !== "Edit"
+                      ? editField
+                      : {
+                          Approve: approveButton,
+                          Edit: editButton,
+                          Reject: rejectButton,
+                        }[reviewError.action];
                   flushSync(() => setReviewError(null));
-                  retryButton.current?.focus();
+                  retryTarget.current?.focus();
                 }}
               />
             }

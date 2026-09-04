@@ -1,6 +1,60 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`dismissing an earlier review failure returns to an unfinished edit at ${width}px`, async ({
+    page,
+  }) => {
+    const submitted: { action: string; text: string }[] = [];
+    await page.route("**/api/reviews", async (route) => {
+      submitted.push(route.request().postDataJSON());
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ detail: "Review ledger unavailable" }),
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const opening = page.getByRole("region", { name: "Suggested opening" });
+    const original = await opening.innerText();
+    for (const label of ["Approve pre-read", "Reject"]) {
+      const decision = page.getByRole("button", { name: label, exact: true });
+      await decision.click();
+      const alert = page.getByRole("alert");
+      await expect(alert).toContainText("Review ledger unavailable");
+      await page.getByRole("button", { name: "Edit", exact: true }).click();
+      const editor = page.getByLabel("Edit the opening line");
+      await editor.fill("Keep my unfinished opening");
+      await expect(decision).toBeDisabled();
+      const requestCount = submitted.length;
+      const dismiss = alert.getByRole("button", {
+        name: "Dismiss the review error",
+      });
+      await dismiss.focus();
+      await dismiss.press("Enter");
+      await expect(alert).toHaveCount(0);
+      await expect(editor).toBeFocused();
+      await expect(editor).toBeInViewport();
+      await expect(editor).toHaveValue("Keep my unfinished opening");
+      await editor.press("End");
+      await page.keyboard.type(" updated");
+      await expect(editor).toHaveValue("Keep my unfinished opening updated");
+      expect(submitted).toHaveLength(requestCount);
+      expect(await opening.innerText()).toBe(original);
+      await page.getByRole("button", { name: "Cancel edit" }).click();
+      await expect(decision).toBeEnabled();
+    }
+    expect(submitted.map((request) => request.action)).toEqual([
+      "Approve",
+      "Reject",
+    ]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`scenario changes announce their result without moving focus at ${width}px`, async ({
     page,
   }) => {
