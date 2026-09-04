@@ -1,6 +1,64 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`the switcher reveals the selected client after meeting navigation at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    const clients = page.getByRole("navigation", { name: "Client switcher" });
+    const selected = clients.locator('button[aria-current="true"]');
+    const expectSelectionInView = async () => {
+      await expect
+        .poll(() =>
+          selected.evaluate((button) => {
+            const row = button.getBoundingClientRect();
+            const list = button.closest("ul")!.getBoundingClientRect();
+            return (
+              row.top >= list.top - 1 &&
+              row.bottom <= list.bottom + 1 &&
+              row.left >= list.left - 1 &&
+              row.right <= list.right + 1
+            );
+          }),
+        )
+        .toBe(true);
+    };
+    await page
+      .getByRole("navigation", { name: "This week's meetings" })
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    await expect(selected).toContainText("Abdullah Al-Mansoori");
+    await expectSelectionInView();
+    await expect(page.getByRole("main")).toBeFocused();
+
+    const search = clients.getByRole("searchbox");
+    await search.fill("Margarethe");
+    await expect(selected).toHaveCount(0);
+    await clients.getByRole("button", { name: "clear", exact: true }).click();
+    await expectSelectionInView();
+    await expect(search).toBeFocused();
+
+    await page
+      .getByRole("navigation", { name: "This week's meetings" })
+      .getByRole("button", { name: /Margarethe Voss-Brenner/ })
+      .click();
+    await expect(selected).toContainText("Margarethe Voss-Brenner");
+    await expectSelectionInView();
+    await expect(page.getByRole("main")).toBeFocused();
+    await page.goBack();
+    await expect(selected).toContainText("Abdullah Al-Mansoori");
+    await expectSelectionInView();
+    await page.reload();
+    await expect(selected).toContainText("Abdullah Al-Mansoori");
+    await expectSelectionInView();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`reopening the editor uses a save completed after navigation at ${width}px`, async ({
     page,
   }) => {

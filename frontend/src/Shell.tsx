@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Badge,
   Body1Strong,
@@ -200,6 +200,7 @@ function ClientSwitcher({
   const styles = useStyles();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const selectedButton = useRef<HTMLButtonElement>(null);
 
   const matches = useMemo(() => {
     const normalizeName = (name: string) =>
@@ -213,6 +214,14 @@ function ClientSwitcher({
       normalizeName(client.name).includes(needle),
     );
   }, [ranking, query]);
+
+  useEffect(() => {
+    selectedButton.current?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
+  }, [selectedClient, matches]);
 
   return (
     <nav className={styles.switcher} aria-label="Client switcher">
@@ -237,6 +246,7 @@ function ClientSwitcher({
           return (
             <li key={client.client_id}>
               <button
+                ref={selected ? selectedButton : undefined}
                 type="button"
                 aria-current={selected ? "true" : undefined}
                 className={`${styles.clientButton} ${selected ? styles.clientSelected : ""}`}
