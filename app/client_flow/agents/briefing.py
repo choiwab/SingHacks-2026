@@ -8,7 +8,7 @@ from app.client_flow.state import ClientFlowState
 
 
 def rm_briefing_agent(state: ClientFlowState) -> dict[str, Any]:
-    """Member 3 sample: publish the cited draft as a MeetingBrief handoff."""
+    """Member 4 sample: publish the cited draft as a MeetingBrief handoff."""
     draft = state.get("draft_brief")
     if not draft:
         return {

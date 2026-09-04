@@ -11,6 +11,7 @@
 | Primary demo client | Margarethe Voss-Brenner, `CL-0003` |
 | Core deliverable | Explainable client-data-to-insight pipeline demonstrated through one meeting workflow |
 | Team size | Four people |
+| Team model | Three node-flow owners and one dedicated frontend owner |
 
 ## 1. Product statement
 
@@ -229,9 +230,10 @@ The drawer shows evidence and tool results, not private chain-of-thought.
 
 ### Design decision
 
-Use three broad agents instead of many narrow graph nodes. Each agent owns a meaningful stage and
-can call several constrained tools. Deterministic tools perform calculations; agents select,
-connect, and explain the results.
+Use three broad agents plus a small deterministic governance stage. Three team members each own one
+agent node and its tools; the fourth member owns the React/Fluent UI frontend. Deterministic tools
+perform calculations; agents select, connect, and explain the results. The RM Briefing owner also
+owns the lightweight Evidence Gate and human-review control nodes that govern briefing output.
 
 The graph adds value through explicit state, inspectable intermediate artifacts, conditional
 routing, and the human review interrupt. It should not become a complex multi-agent simulation.
@@ -244,9 +246,9 @@ The diagram is committed as a rendered SVG so it appears in Markdown viewers tha
 Mermaid. Its editable source is
 [`rm-intelligence-node-architecture.dot`](assets/rm-intelligence-node-architecture.dot).
 
-Solid arrows show runtime data or control flow. Dotted arrows show constrained tool access. Source
-records and deterministic facts remain immutable after their owning layer emits them; later nodes
-may reference them but cannot rewrite them.
+Solid arrows show the main runtime path and exception branches. The dashed arrow returns an RM edit
+to the Evidence Gate. Source records and deterministic facts remain immutable after their owning
+stage emits them; later stages may reference them but cannot rewrite them.
 
 ### 6.1 Runtime execution graph
 
@@ -259,7 +261,7 @@ flowchart TD
     D -->|Yes| F{Processing mode}
     F -->|No material change| G[Reuse last verified insight<br/>Refresh timestamp only]
     F -->|First seen or changed| H[Wealth Intelligence Agent<br/>Member 3]
-    H --> I[RM Briefing Agent<br/>Member 3]
+    H --> I[RM Briefing Agent<br/>Member 4]
     I --> J[Evidence Gate<br/>Member 4]
     J -->|Fail| E
     J -->|Pass| K[RM review interrupt<br/>Approve, edit, or reject]
@@ -310,13 +312,14 @@ client.
 
 ### 6.3 Wealth Intelligence Agent
 
-**Owner:** Member 3. Member 3 may call Member 2's calculation tools but may not modify or duplicate
-their formulas inside the agent.
+**Owner:** Member 3. The agent calls Member 3's deterministic calculation tools; formulas never
+live inside prompts or free-form model output.
 
 **Responsibility:** Turn client context into verified facts, discrepancies, and ranked insight
 candidates.
 
-**Inputs:** `ClientContext` plus Member 2's immutable calculation tools and fact/evidence schemas.
+**Inputs:** Member 2's immutable `ClientContext` plus Member 3's calculation tools and fact/evidence
+schemas.
 
 **Tools:**
 
@@ -333,8 +336,7 @@ candidates.
 
 **Outputs:**
 
-- `InsightBundle` referencing the immutable `FactBundle` and evidence IDs returned by Member 2's
-  tools.
+- `InsightBundle` referencing the immutable `FactBundle` and evidence IDs returned by its tools.
 - Extracted memory items and candidate discrepancies.
 - No more than three ranked insights with deterministic score components.
 - Explicit assumptions and confidence.
@@ -344,7 +346,7 @@ outputs from deterministic tools.
 
 ### 6.4 RM Briefing Agent
 
-**Owner:** Member 3.
+**Owner:** Member 4.
 
 **Responsibility:** Convert the selected insights into a concise, client-specific meeting brief.
 
@@ -440,13 +442,13 @@ without exposing hidden chain-of-thought.
 ```mermaid
 flowchart LR
     A[Source rows and RM notes] --> B[Context Agent<br/>Member 2]
-    B -->|ClientContext| C[Deterministic calculation tools<br/>Member 2]
+    B -->|ClientContext| C[Deterministic calculation tools<br/>Member 3]
     C -->|FactBundle + EvidenceMap| D[Wealth Intelligence Agent<br/>Member 3]
-    D -->|InsightBundle| E[RM Briefing Agent<br/>Member 3]
+    D -->|InsightBundle| E[RM Briefing Agent<br/>Member 4]
     E -->|MeetingBrief| F[Evidence Gate<br/>Member 4]
     F -->|VerificationReport + VerifiedBrief| G[RM decision]
     G -->|ReviewRecord| H[DemoViewModel<br/>Member 4]
-    H --> I[Dashboard rendering<br/>Member 1]
+    H --> I[React + Fluent UI dashboard<br/>Member 1]
 ```
 
 Every arrow is a typed handoff. The receiving member may read the artifact but cannot silently
@@ -457,11 +459,11 @@ Each stage produces an artifact the UI can inspect and one member owns:
 | Artifact | Single owner | Inspectable content | Consumers |
 | --- | --- | --- | --- |
 | `ClientContext` | Member 2 | Source coverage, changed records, as-of scope, and cited raw RM notes | Members 3 and 4 |
-| `FactBundle` and `EvidenceMap` | Member 2 | Calculations, discrepancies, inputs, and exact evidence IDs | Members 3 and 4 |
+| `FactBundle` and `EvidenceMap` | Member 3 | Calculations, discrepancies, inputs, and exact evidence IDs | Member 4 |
 | `InsightBundle` | Member 3 | Selected insights, ranking components, fact IDs, and uncertainty | Member 4 |
-| `MeetingBrief` | Member 3 | Claim-level cited summary, questions, and meeting topics | Member 4 |
-| `VerificationReport` and reviewed versions | Member 4 | Pass/fail checks, reasons, and RM decision | Member 1 |
-| `DemoViewModel` | Member 4 | Only verified dashboard-ready data and allowed UI actions | Member 1 |
+| `MeetingBrief` | Member 4 | Claim-level cited summary, questions, and meeting topics | Evidence Gate and dashboard |
+| `VerificationReport` and reviewed versions | Member 4 | Pass/fail checks, reasons, and RM decision | Dashboard |
+| `DemoViewModel` | Member 4 | Only verified dashboard-ready data and allowed UI actions | Dashboard |
 | Visible UI state | Member 1 | Selection, open tab/drawer, loading state, and form input | Browser only |
 
 Explainability means showing provenance, calculations, assumptions, confidence, and review status.
@@ -487,8 +489,9 @@ flowchart TD
 ```
 
 Member 2 owns source comparison and the resulting change description. Member 4 owns the graph edge
-chosen from that result. Member 3 does not decide whether data changed; it regenerates the insight
-content requested by the selected route.
+chosen from that result. Members 3 and 4 regenerate only the calculation, insight, and briefing
+content required by that route. Member 1 renders the resulting state but does not choose a pipeline
+route.
 
 | Mode | Trigger | Pipeline behavior | UI behavior |
 | --- | --- | --- | --- |
@@ -538,162 +541,164 @@ proxy `/api` requests to FastAPI during implementation.
 
 ## 10. Four-person team plan
 
-The four roles are organized around one vertical demo. Members 2, 3, and 4 all focus on distinct
-parts of the data-to-insight pipeline; Member 1 makes those artifacts understandable in the UI.
+Three members own the node flow and one member owns the frontend. Each pipeline member owns one
+agent node, that node's tools, and its typed output. The frontend member consumes the final
+`DemoViewModel` and owns the complete RM dashboard experience.
 
-| Member | Owns | Final handoff |
+The Evidence Gate, human-review interrupt, and terminal routes are small deterministic controls,
+not additional agents. Member 4 owns them alongside the RM Briefing Agent because they validate and
+govern briefing output. Member 4 also owns the graph topology and minimal API contract; Member 1
+owns the browser-side integration against that contract.
+
+| Member | Primary stage | Owns | Final handoff |
 | --- | --- | --- |
-| Member 1 — Dashboard and UX | Rendering and browser-only interaction state | Renders the verified `DemoViewModel` and emits user actions to Member 4's API |
-| Member 2 — Context and calculation tools | Source data, Context Agent, deterministic facts, and evidence | Produces immutable `ClientContext`, `FactBundle`, and `EvidenceMap` artifacts |
-| Member 3 — Insight and briefing agents | Wealth Intelligence Agent and RM Briefing Agent | Produces cited `InsightBundle` and `MeetingBrief` artifacts for Member 4 |
-| Member 4 — Graph, explainability, and HITL | Graph topology, routing, verification, review state, minimal API, and integration | Produces verified versions, `DemoViewModel`, and end-to-end behavior |
+| Member 1 | React/Fluent UI frontend | RM dashboard, client switcher, compact calendar, evidence drawer, review interactions, and browser state | Polished dashboard consuming the frozen API and `DemoViewModel` |
+| Member 2 | Context Agent | Read-only source tools, validation, as-of scope, and change classification | `ClientContext`, source versions, changed sources, and processing mode |
+| Member 3 | Wealth Intelligence Agent | Deterministic financial tools, fact construction, discrepancy detection, and ranking | `FactBundle`, `EvidenceMap`, and up to three ranked insights |
+| Member 4 | RM Briefing Agent and flow governance | Cited briefing, Evidence Gate, HLI, graph routing/state, minimal API, and final view-model adapter | Cited `MeetingBrief`, `VerificationReport`, `ReviewRecord`, and verified `DemoViewModel` |
 
-### Member 1 — Dashboard and UX
+### Member 1 — React and Fluent UI frontend
 
-**Primary objective:** Deliver the simple, comprehensive RM experience.
-
-**Owns:**
-
-- Dashboard shell and Teams-inspired visual styling.
-- React application structure, TypeScript view models, and client-side API hooks.
-- Root `FluentProvider`, Fluent theme selection, and shared design tokens.
-- Fluent UI components for navigation, cards, tabs, buttons, badges, drawers/dialogs, forms,
-  loading states, and accessible feedback.
-- Client switcher.
-- Compact upcoming-meetings calendar.
-- Client header and summary.
-- Top insight/discrepancy cards.
-- Overview, Insights, Data, and Memory tabs.
-- Evidence drawer.
-- Approve, edit, reject, update, loading, and error states.
-- Responsive behavior and demo polish.
-
-**Does not own:** financial calculations, graph routing, citation validation, or persistence.
-
-**Primary file boundary:** proposed `frontend/src/`, `frontend/package.json`, Vite configuration,
-and frontend component tests. FastAPI serves the generated `frontend/dist/`, which is build output
-and not edited manually.
-
-**Definition of done:** The complete demo can be understood by following the interface without a
-verbal explanation of where to click.
-
-### Member 2 — Data and calculation tools
-
-**Primary objective:** Make the selected client's facts correct and defensible.
+**Primary objective:** Make the data-to-insight flow intuitive for an RM during the demo.
 
 **Owns:**
 
-- Loaders and joins for the selected client.
-- As-of filtering and source references.
-- First-seen and updated context comparison.
-- Transaction-aware change calculation.
-- Mandate gap.
-- Household and structured-product look-through concentration.
-- Liquidity versus the inheritance-tax cash need.
-- Optional event or scenario calculation.
-- Typed `ClientContext`, `Fact`, and `EvidenceRef` outputs.
-- Unit tests for every displayed number.
-- The Context Agent node implementation and its tool calls.
+- React and TypeScript application structure using Fluent UI React v9.
+- Teams-inspired navigation rail, client switcher, client header, and compact meeting calendar.
+- Summary, insight, data, and memory views.
+- Evidence drawer with source, calculation, confidence, and review-status displays.
+- Approve, edit, reject, demo-update, and reset interactions.
+- Loading, empty, stale, needs-confirmation, and error states.
+- Browser accessibility, responsive layout, and UI tests against a frozen `DemoViewModel` fixture.
 
-**Does not own:** insight selection, prose generation, graph routing, UI components, or review
-actions.
+**Does not own:** CSV parsing, fact calculations, insight ranking, meeting-brief generation,
+evidence decisions, graph state, or API behavior. The frontend displays pipeline statuses and
+errors; it does not repair them.
 
-**Primary file boundary:** proposed `app/context.py`, `app/analytics.py`, shared fact/evidence
-models, and `tests/test_facts.py`.
+**Primary file boundary:** `frontend/src/`, frontend assets, and frontend component/interaction
+tests.
 
-**Definition of done:** Every number shown in the demo resolves to a repeatable calculation and
-exact source rows.
+**Definition of done:** An RM can select Margarethe, understand the top insights, inspect their
+evidence, review the meeting brief, and trigger the controlled update from one coherent dashboard.
 
-### Member 3 — Insight and briefing agents
+### Member 2 — Context Agent and source tools
 
-**Primary objective:** Turn the verified facts into a small number of useful RM insights.
+**Primary objective:** Give downstream nodes the smallest valid, current client context.
 
 **Owns:**
 
-- Wealth Intelligence Agent node implementation.
-- RM Briefing Agent node implementation.
-- Tool-use instructions and structured-output schemas for those two agents.
-- Memory extraction from RM notes.
-- Discrepancy matching between client statements and facts.
-- Candidate selection, deduplication, and deterministic ranking.
-- Meeting-summary and question templates.
-- Optional model prompts and structured outputs.
+- Client/profile, portfolio, holding, transaction, mandate, cash-need, facility, event, and RM-note
+  loaders.
+- Client-level joins and as-of filtering.
+- Source hashes and changed-source detection.
+- First-seen, incremental-update, and no-material-change classification.
+- Missing, stale, duplicate, orphaned, or conflicting source diagnostics.
+- `ClientContext` and its source-coverage tests.
+
+**Does not own:** financial formulas, insight ranking, meeting prose, verification, graph topology,
+API behavior, or UI rendering.
+
+**Primary file boundary:** `app/client_flow/agents/context.py`,
+`app/client_flow/tools/sources.py`, and context/source tests.
+
+**Definition of done:** The Context Agent emits a serializable, cited `ClientContext` and the
+correct processing mode for first-seen, changed, unchanged, and invalid inputs.
+
+### Member 3 — Wealth Intelligence Agent and calculation tools
+
+**Primary objective:** Turn Member 2's context into correct, defensible facts and priorities.
+
+**Owns:**
+
+- Transaction-aware portfolio change and performance attribution.
+- Mandate, household concentration, structured-product look-through, liquidity, collateral, FX,
+  and optional scenario calculations.
+- Fact and evidence construction with stable identifiers.
+- Client-statement-versus-data discrepancy detection.
+- Candidate deduplication and deterministic ranking.
+- No more than three cited insight candidates.
+- Unit tests for every number shown in the demo.
+
+**Does not own:** raw-source loading policy, meeting prose, Evidence Gate decisions, LangGraph
+routing, review actions, API behavior, or frontend behavior.
+
+**Primary file boundary:** `app/client_flow/agents/wealth.py`, calculation modules under
+`app/client_flow/tools/`, and fact/insight tests. `tools/projection.py` is the current sample adapter
+and can be replaced incrementally.
+
+**Definition of done:** Every ranked insight points to immutable facts and exact source evidence,
+and every displayed number is repeatable outside the agent.
+
+### Member 4 — RM Briefing Agent, verification, and orchestration
+
+**Primary objective:** Convert Member 3's ranked insights into a cited meeting brief and ensure only
+verified, RM-reviewed content reaches the frontend.
+
+**Owns:**
+
+- Cited client-memory retrieval and belief/preference extraction.
+- Two-minute summary, talking-point, question, follow-up, and uncertainty templates.
+- `You said / Data says` composition.
+- Optional reporting-language opening.
 - Claim-to-evidence links before verification.
-- Golden expected output for Margarethe.
+- Golden expected `MeetingBrief` for Margarethe.
+- Shared `ClientFlowState`, LangGraph topology, and conditional routes.
+- Evidence Gate checks for facts, citations, events, dates, uncertainty, and suitability wording.
+- Human review interrupt and approve/edit/reject resume behavior.
+- `finalize`, `reuse_verified`, and `needs_confirmation` control paths.
+- In-memory hackathon checkpoints and review persistence.
+- Minimal FastAPI endpoints and graph-to-`DemoViewModel` adapter.
+- Graph, verification, API-contract, and end-to-end pipeline tests.
 
-**Does not own:** the Context Agent, underlying financial formulas, LangGraph topology or routing,
-evidence-gate decisions, frontend rendering, or API/storage infrastructure.
+**Does not own:** raw CSV access, financial calculations, insight scores, React components, browser
+layout, or browser-local interaction state. RM edits remain RM-authored content and are never
+silently rewritten by this stage.
 
-**Primary file boundary:** proposed `app/insight_agents.py`, prompt/templates, and
-`tests/test_insights.py`.
+**Primary file boundary:** `app/client_flow/agents/briefing.py`, `app/client_flow/state.py`,
+`app/client_flow/graph.py`, `app/client_flow/nodes/`, the minimal API/adapter in `app/main.py`,
+briefing templates or prompts, and graph/API tests.
 
-**Definition of done:** One graph invocation produces no more than three relevant, cited insights
-and a concise meeting brief from Member 2's facts.
-
-### Member 4 — Graph, explainability, HITL, and integration
-
-**Primary objective:** Make the pipeline inspectable, reviewable, and reliable from end to end.
-
-**Owns:**
-
-- Evidence Gate implementation.
-- Claim/number/citation resolution.
-- LangGraph state, graph construction, reducers, and conditional edges.
-- First-seen, incremental-update, no-material-change, verification-failure, edit, approve, and
-  reject routing.
-- Human review pause and approve/edit/reject resume behavior.
-- Version comparison between the initial and updated brief.
-- Minimal FastAPI wiring and generated JSON/review-log storage.
-- `GET /api/app`, `POST /api/demo/update`, and `POST /api/reviews`.
-- End-to-end tests and deterministic fallback artifacts.
-- Demo seed/reset command and final integration.
-
-**Does not own:** new product screens, source comparison logic, financial formulas, memory
-extraction, insight selection, or primary narrative prompts.
-
-**Primary file boundary:** proposed `app/graph.py`, `app/verification.py`, `app/main.py`, generated
-artifacts/review log, `tests/test_graph.py`, and `tests/test_api.py`.
-
-**Definition of done:** The demo can run from a clean start, show the initial insight, apply one
-update, explain every claim, pause for RM review, resume correctly, and recover through a
-deterministic fallback if a model call fails.
+**Definition of done:** The node produces a concise, fully cited `MeetingBrief`; the graph handles
+every planned route, pauses and resumes safely for RM review, and exposes only allowed output states
+through the API.
 
 ### Ownership handoff graph
 
 ```mermaid
 flowchart LR
-    M2[Member 2<br/>Context + facts + evidence] -->|Immutable domain artifacts| M3[Member 3<br/>Insights + meeting brief]
-    M2 -->|EvidenceMap for validation| M4[Member 4<br/>Graph + verification + HITL + API]
-    M3 -->|Cited draft artifacts| M4
-    M4 -->|Verified DemoViewModel| M1[Member 1<br/>Dashboard + browser interaction]
+    M2[Member 2<br/>Context Agent + source tools] -->|ClientContext + processing mode| M3[Member 3<br/>Wealth Intelligence + calculators]
+    M3 -->|Facts + evidence + ranked insights| M4[Member 4<br/>Briefing + evidence + HLI + graph/API]
+    M4 -->|Verified DemoViewModel| M1[Member 1<br/>React + Fluent UI dashboard]
     M1 -->|Review or demo-update action| M4
+    M4 -->|Run selected context route| M2
 ```
 
 ### Frozen handoff contracts
 
 The team freezes these five contracts before parallel work:
 
-1. `ClientContext` — Member 2 to Members 3 and 4.
-2. `FactBundle` and `EvidenceMap` — Member 2 to Members 3 and 4.
-3. `InsightBundle` and `MeetingBrief` — Member 3 to Member 4 only.
-4. `VerificationReport` and `DemoViewModel` — Member 4 to Member 1.
-5. Review and demo-update actions — Member 1 sends; Member 4 defines and processes.
+1. `ClientContext` and processing mode — Member 2 to Members 3 and 4.
+2. `FactBundle`, `EvidenceMap`, and `InsightBundle` — Member 3 to Member 4.
+3. `MeetingBrief`, `VerificationReport`, and `ReviewRecord` — owned by Member 4.
+4. `DemoViewModel` and API action schemas — Member 4 to Member 1.
+5. Review and demo-update actions — Member 1 renders and sends; Member 4 defines and processes.
 
 No member should reimplement another member's calculations or state transformations inside their
 own layer.
 
 ### No-overlap rules
 
-- Member 1 never calculates, ranks, verifies, or repairs pipeline data in React or TypeScript.
-- Member 2 never selects final insights or writes meeting prose.
-- Member 2 owns calculation-tool interfaces and formulas; Member 3 may only invoke tools from that
-  published registry.
-- Member 3 treats Member 2's facts as immutable and never reads pandas/CSV sources directly.
-- Member 4 routes and verifies artifacts but never changes fact formulas or rewrites prompts.
-- Only Member 4 compiles the LangGraph and persists run/review state.
-- Only Member 1 owns the visible layout and browser-selection behavior.
-- Tests follow the same boundary: UI tests belong to Member 1, fact tests to Member 2, golden
-  insight tests to Member 3, and graph/API/end-to-end tests to Member 4.
+- Member 1 never calculates, ranks, generates, verifies, or repairs pipeline data in React or
+  TypeScript.
+- Member 2 alone reads raw source files and decides the processing mode; it never calculates final
+  financial facts, ranks insights, or writes meeting prose.
+- Member 3 owns calculation interfaces, formulas, discrepancies, and ranking; it consumes the
+  immutable `ClientContext` and never reimplements source loading or writes the meeting brief.
+- Member 4 treats Member 3's facts and scores as immutable. It owns briefing, verification, graph
+  state, API behavior, and review persistence, but not React components or browser layout.
+- Only Member 4 compiles the LangGraph; only Member 1 owns visible UI state and browser behavior.
+- Tests follow the same boundary: UI tests belong to Member 1, context/source tests to Member 2,
+  fact/insight tests to Member 3, and briefing/graph/API tests to Member 4.
 
 ## 11. Two-day execution plan
 
@@ -708,11 +713,12 @@ own layer.
 ### Day 1 afternoon — Build in parallel
 
 - Member 1 builds the dashboard from a frozen `DemoViewModel`.
-- Member 2 builds and tests client context and calculation tools.
-- Member 3 builds the Wealth Intelligence and RM Briefing node functions with fixture facts, then
-  tests them against Member 2's frozen output contracts.
-- Member 4 compiles the LangGraph, connects its routes, and builds verification, review state, and
-  minimal API fixtures.
+- Member 2 builds the Context Agent, read-only source tools, change detection, and a frozen
+  `ClientContext` fixture.
+- Member 3 builds the Wealth Intelligence Agent and deterministic calculators against Member 2's
+  frozen `ClientContext` contract.
+- Member 4 builds the RM Briefing Agent against frozen insight fixtures, then connects the
+  LangGraph, Evidence Gate, HLI state, and minimal API.
 
 ### End of Day 1 — Vertical integration
 
@@ -726,7 +732,7 @@ own layer.
 - Connect all three insights and the meeting brief.
 - Connect the compact calendar and client switcher.
 - Member 2 completes first-seen and incremental change detection; Member 4 connects the resulting
-  graph routes.
+  graph routes and Member 1 renders their visible states.
 - Connect the Evidence Gate and human-review pause.
 - Confirm the updated brief supersedes the initial version.
 

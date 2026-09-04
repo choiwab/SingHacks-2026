@@ -10,7 +10,7 @@ client_flow/
 ├── agents/
 │   ├── context.py           Member 2: context and change classification
 │   ├── wealth.py            Member 3: fact-to-insight sample agent
-│   └── briefing.py          Member 3: insight-to-brief sample agent
+│   └── briefing.py          Member 4: insight-to-brief sample agent
 ├── tools/
 │   ├── sources.py           Member 2: read-only source tools
 │   ├── projection.py        temporary adapter to the existing pipeline
@@ -21,6 +21,7 @@ client_flow/
 ```
 
 The sample projection adapter calls the existing deterministic builder and narrows its output to
-one client. Replace that adapter with individual calculation tools only when Members 2 and 3 split
-the production implementation. `InMemorySaver` is sufficient for the hackathon; durable graph
-checkpoints and API wiring remain intentionally outside this skeleton.
+one client. Member 3 replaces that adapter with individual calculation tools only if the demo needs
+it. `InMemorySaver` is sufficient for the hackathon; durable graph checkpoints remain outside this
+skeleton. Member 4 owns the graph and thin API adapter; Member 1 owns the React/Fluent UI dashboard
+that consumes it.

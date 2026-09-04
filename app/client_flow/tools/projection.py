@@ -25,7 +25,7 @@ def build_client_artifacts(
 ) -> ClientArtifacts:
     """Build sample selected-client artifacts with the repository's current pipeline."""
     # The current builder computes the full book. Replace this adapter with narrower
-    # Member 2 tools only if demo latency becomes a problem.
+    # Member 3 tools only if demo latency becomes a problem.
     projection = build_monday_brief(source_dir, as_of=as_of)
     facts = [fact.model_dump(mode="json") for fact in projection.facts[client_id]]
     priority = next(item for item in projection.ranking if item.client_id == client_id)

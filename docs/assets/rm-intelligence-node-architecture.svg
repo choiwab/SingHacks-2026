@@ -36,7 +36,7 @@
 <title>intelligence</title>
 <path fill="#f3e8ff" stroke="#8764b8" d="M361.66,-533.54C361.66,-533.54 106.88,-533.54 106.88,-533.54 100.88,-533.54 94.87,-527.54 94.87,-521.54 94.87,-521.54 94.87,-475.7 94.87,-475.7 94.87,-469.7 100.87,-463.7 106.87,-463.7 106.87,-463.7 361.66,-463.7 361.66,-463.7 367.66,-463.7 373.66,-469.7 373.66,-475.7 373.66,-475.7 373.66,-521.54 373.66,-521.54 373.66,-527.54 367.66,-533.54 361.66,-533.54"/>
 <text text-anchor="middle" x="234.27" y="-515.17" font-family="Arial" font-size="11.00" fill="#242424">2 &#160;Wealth Intelligence Agent — Member 3</text>
-<text text-anchor="middle" x="234.27" y="-501.67" font-family="Arial" font-size="11.00" fill="#242424">use Member 2&#39;s deterministic calculators</text>
+<text text-anchor="middle" x="234.27" y="-501.67" font-family="Arial" font-size="11.00" fill="#242424">run deterministic calculators</text>
 <text text-anchor="middle" x="234.27" y="-488.17" font-family="Arial" font-size="11.00" fill="#242424">find discrepancies • rank insights</text>
 <text text-anchor="middle" x="234.27" y="-474.67" font-family="Arial" font-size="11.00" fill="#242424">output: FactBundle + EvidenceMap + RankedInsights</text>
 </g>
@@ -79,7 +79,7 @@
 <g id="node4" class="node">
 <title>briefing</title>
 <path fill="#f3e8ff" stroke="#8764b8" d="M336.16,-380.86C336.16,-380.86 132.38,-380.86 132.38,-380.86 126.38,-380.86 120.37,-374.86 120.37,-368.86 120.37,-368.86 120.37,-323.02 120.37,-323.02 120.37,-317.02 126.37,-311.02 132.38,-311.02 132.38,-311.02 336.16,-311.02 336.16,-311.02 342.16,-311.02 348.16,-317.02 348.16,-323.02 348.16,-323.02 348.16,-368.86 348.16,-368.86 348.16,-374.86 342.16,-380.86 336.16,-380.86"/>
-<text text-anchor="middle" x="234.27" y="-362.49" font-family="Arial" font-size="11.00" fill="#242424">3 &#160;RM Briefing Agent — Member 3</text>
+<text text-anchor="middle" x="234.27" y="-362.49" font-family="Arial" font-size="11.00" fill="#242424">3 &#160;RM Briefing Agent — Member 4</text>
 <text text-anchor="middle" x="234.27" y="-348.99" font-family="Arial" font-size="11.00" fill="#242424">connect facts to cited client memory</text>
 <text text-anchor="middle" x="234.27" y="-335.49" font-family="Arial" font-size="11.00" fill="#242424">create summary • talking points • questions</text>
 <text text-anchor="middle" x="234.27" y="-321.99" font-family="Arial" font-size="11.00" fill="#242424">output: MeetingBrief</text>
