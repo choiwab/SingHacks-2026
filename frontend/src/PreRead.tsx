@@ -404,6 +404,10 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Open commitments">
+              <Caption1>
+                Planned cash needs cited in this brief. Private-fund commitments
+                are not included.
+              </Caption1>
               <OpenCommitments
                 facts={facts}
                 evidence={projection.evidence}

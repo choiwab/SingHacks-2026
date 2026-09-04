@@ -1123,7 +1123,9 @@ export function OpenCommitments({
 
   if (commitments.length === 0)
     return (
-      <Body1 className={styles.empty}>No planned cash needs recorded.</Body1>
+      <Body1 className={styles.empty}>
+        No planned cash needs included in this brief.
+      </Body1>
     );
 
   return (

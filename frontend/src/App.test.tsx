@@ -443,6 +443,9 @@ describe("Monday Brief", () => {
     const commitments = screen.getByRole("region", {
       name: "Open commitments",
     });
+    expect(commitments).toHaveTextContent(
+      "Planned cash needs cited in this brief. Private-fund commitments are not included.",
+    );
     expect(
       within(commitments).getByText("German inheritance tax instalment"),
     ).toBeVisible();

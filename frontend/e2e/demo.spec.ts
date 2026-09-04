@@ -910,6 +910,9 @@ for (const width of [1280, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
     const commitments = page.getByRole("region", { name: "Open commitments" });
+    await expect(commitments).toContainText(
+      "Planned cash needs cited in this brief. Private-fund commitments are not included.",
+    );
     const description = "German inheritance tax instalment";
     const timing = "Due 2026-10-01 to 2026-12-31 · Confirmed";
     await expect(commitments).toContainText(description);
