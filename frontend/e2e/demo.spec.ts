@@ -1611,10 +1611,29 @@ for (const width of [1280, 390]) {
     ).toBe(true);
   });
 
-  test(`single-digit Memory searches filter and highlight notes at ${width}px`, async ({
+  test(`numeric Memory searches preserve percentage units at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0011/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const ageSearch = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    await ageSearch.getByRole("searchbox").fill("78%");
+    await expect(ageSearch.getByRole("status")).toHaveText(
+      "0 of 1 note and 0 of 1 belief mention 78%.",
+    );
+    const ageNotes = page.getByRole("region", {
+      name: "RM notes",
+      exact: true,
+    });
+    await expect(ageNotes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+    await ageSearch.getByRole("searchbox").fill("78");
+    await expect(ageNotes.locator("mark")).toHaveText("78");
+    await expect(ageNotes).toContainText(
+      "Client is 78 and in declining health.",
+    );
     await page.goto("/clients/CL-0018/pre-read");
     await page.getByRole("tab", { name: "Memory", exact: true }).click();
     const searchRegion = page.getByRole("region", {
@@ -1622,7 +1641,7 @@ for (const width of [1280, 390]) {
     });
     const search = searchRegion.getByRole("searchbox");
     const notes = page.getByRole("region", { name: "RM notes", exact: true });
-    for (const query of ["9%", "0", "15", "5.5"]) {
+    for (const query of ["9%", "0", "15", "5.5", "5.5%", "15%"]) {
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toContainText(
         "0 of 1 note and 0 of 1 belief mention",
@@ -1630,11 +1649,12 @@ for (const width of [1280, 390]) {
       await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
     }
     for (const query of ["5", "5%", "What did she say about 5%?"]) {
+      const term = query === "5" ? "5" : "5%";
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toHaveText(
-        "1 of 1 note and 0 of 1 belief mention 5.",
+        `1 of 1 note and 0 of 1 belief mention ${term}.`,
       );
-      await expect(notes.locator("mark")).toHaveText("5");
+      await expect(notes.locator("mark")).toHaveText(term);
       await expect(notes).toContainText(
         "She originally sized it as a 5% hedge.",
       );
@@ -1650,7 +1670,7 @@ for (const width of [1280, 390]) {
     );
     await page.keyboard.press("Escape");
     await expect(why).toBeFocused();
-    await expect(notes.locator("mark")).toHaveText("5");
+    await expect(notes.locator("mark")).toHaveText("5%");
     await search.focus();
     await searchRegion
       .getByRole("button", { name: "Clear note search" })

@@ -1235,8 +1235,10 @@ function queryTerms(query: string): string[] {
             /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
             (_, country: string) => `U${country.toUpperCase()}`,
           )
-          // Amounts such as 3.4m are one search term, not 3 and 4m.
-          .match(/[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu) ?? []
+          // Keep percentages and decimal amounts intact, including their units.
+          .match(
+            /\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
+          ) ?? []
       )
         .filter(
           (word) =>
