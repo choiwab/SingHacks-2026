@@ -7,7 +7,6 @@ from pydantic import Field, JsonValue
 
 from app.pipeline.schemas import (
     ChangeReport,
-    ClientProfile,
     ContractModel,
     DataQualityFinding,
     Evidence,
@@ -25,8 +24,23 @@ class DataTab(ContractModel):
     collateral: list[Fact] = Field(default_factory=list)
 
 
+class ClientHeader(ContractModel):
+    """Qualitative profile fields; financial numbers are presented as Facts."""
+
+    client_id: str
+    client_name: str
+    rm_id: str
+    rm_name: str
+    rm_desk: str
+    base_currency: str
+    risk_profile: str
+    life_stage: str
+    reporting_language: str
+    booking_centre: str
+
+
 class ClientView(ContractModel):
-    header: ClientProfile
+    header: ClientHeader
     insights: list[dict[str, JsonValue]] = Field(default_factory=list, max_length=3)
     meeting_brief: dict[str, JsonValue] | None = None
     brief_version: int | None = None

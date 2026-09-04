@@ -7,12 +7,11 @@ Those records are returned unchanged; this layer never invents meeting dates.
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from app.pipeline.api_schemas import ClientView, DataTab, DemoViewModel
+from app.pipeline.api_schemas import ClientHeader, ClientView, DataTab, DemoViewModel
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.schemas import ChangeReport, Fact
 from app.store import ReviewLedger
@@ -127,6 +126,19 @@ def _references(value: Any) -> set[str]:
 
 
 def _stale(source_dir: Path, source_hashes: dict[str, str], overlay_hashes: dict[str, str]) -> bool:
+    if overlay_hashes:
+        overlay = source_dir / "fixtures/update"
+        current_files = (
+            {
+                path.name
+                for path in overlay.iterdir()
+                if path.is_file() and path.suffix in {".csv", ".json"}
+            }
+            if overlay.is_dir()
+            else set()
+        )
+        if current_files != set(overlay_hashes):
+            return True
     for base, expected in (
         (source_dir, source_hashes),
         (source_dir / "fixtures/update", overlay_hashes),
@@ -194,11 +206,17 @@ def build_view_model(
                     calendar.append(item)
                     calendar_seen.add(key)
         clients[client_id] = ClientView(
-            header=bundle.profile,
-            insights=_insights(body.get("insights", []), changes),
-            meeting_brief=brief,
+            header=ClientHeader.model_validate(
+                {
+                    key: value
+                    for key, value in bundle.profile.model_dump().items()
+                    if key in ClientHeader.model_fields
+                }
+            ),
+            insights=[] if failed else _insights(body.get("insights", []), changes),
+            meeting_brief=None if failed else brief,
             brief_version=persisted.brief_version if persisted else None,
-            memory_card=body.get("memory_card"),
+            memory_card=None if failed else body.get("memory_card"),
             data_tab=_data_tab(facts.facts),
             memory_tab=[*connected, *(note.model_dump(mode="json") for note in bundle.rm_notes)],
             change_report=changes,
@@ -224,7 +242,7 @@ def build_view_model(
     result = DemoViewModel(
         as_of=manifest.as_of,
         run_id=manifest.run_id,
-        refreshed_at=datetime.now(UTC),
+        refreshed_at=manifest.created_at,
         data_health=health,
         clients=clients,
         calendar=calendar,

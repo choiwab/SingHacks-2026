@@ -66,10 +66,13 @@ def test_projection_is_read_only_and_uses_current_persisted_version(tmp_path):
     )
     before = {path: path.read_bytes() for path in root.rglob("*.json")}
     model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model == build_view_model(ArtifactStore(root), ledger, source)
     assert model.data_health == "Current"  # Warning findings never alter health.
     assert model.clients[CLIENT].brief_status == "Ready"
     assert model.clients[CLIENT].brief_version == second.brief_version
-    assert model.clients[CLIENT].meeting_brief["sections"]["opening"]["text"] == "Updated"
+    assert model.clients[CLIENT].meeting_brief == {
+        "sections": {"opening": {"text": "Updated"}},
+    }
     assert model.clients[CLIENT].memory_card == {"summary": "Existing memory"}
     assert model.calendar == []
     assert "selected" not in model.model_dump()
@@ -238,3 +241,56 @@ def test_rm_notes_are_retained_and_referenced_evidence_is_included(tmp_path):
     model = build_view_model(ArtifactStore(root), ledger, source)
     assert model.clients[CLIENT].memory_tab == [note]
     assert list(model.evidence) == [note["evidence_id"]]
+
+
+def test_overlay_added_modified_and_removed_files_mark_applied_run_stale(tmp_path):
+    root, run, source, ledger = setup_projection(tmp_path)
+    overlay = source / "fixtures/update"
+    write(overlay / "rm_notes.json", [])
+    rewrite(run / "manifest.json", overlay_hashes={"rm_notes.json": sha256(b"[]").hexdigest()})
+    store = ArtifactStore(root)
+    assert build_view_model(store, ledger, source).data_health == "Current"
+    write(overlay / "planned_cash_needs.csv", {})
+    assert build_view_model(store, ledger, source).data_health == "Stale"
+    (overlay / "planned_cash_needs.csv").unlink()
+    write(overlay / "rm_notes.json", [{}])
+    assert build_view_model(store, ledger, source).data_health == "Stale"
+    (overlay / "rm_notes.json").unlink()
+    assert build_view_model(store, ledger, source).data_health == "Stale"
+
+
+def test_failed_verification_suppresses_generated_claims_but_retains_editable_draft(tmp_path):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    draft = {
+        "meeting_brief": {"sections": {"opening": {"text": "UNVERIFIED_BRIEF_CLAIM"}}},
+        "insights": [{"text": "UNVERIFIED_INSIGHT_CLAIM"}],
+        "memory_card": {"summary": "UNVERIFIED_MEMORY_CLAIM"},
+    }
+    record = store_brief(
+        ledger, body=draft, verification={"passed": False, "errors": ["Failed gate"]}
+    )
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    client = model.clients[CLIENT]
+    assert client.meeting_brief is None
+    assert client.insights == []
+    assert client.memory_card is None
+    assert client.brief_version == record.brief_version
+    assert client.brief_status == "Needs review"
+    assert client.verification == {"passed": False, "errors": ["Failed gate"]}
+    assert "UNVERIFIED_" not in model.model_dump_json()
+    stored = ledger.get_brief(CLIENT, SEED)
+    assert stored is not None
+    assert stored.body == draft
+
+
+def test_header_only_exposes_qualitative_profile_fields(tmp_path):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    header = model.clients[CLIENT].header.model_dump()
+    assert header["client_id"] == CLIENT
+    assert header["client_name"] == "Example"
+    assert header["risk_profile"] == "Conservative"
+    assert not {"age", "total_aum_usd", "risk_tolerance_score", "investment_horizon_years"} & set(
+        header
+    )
+    assert all(isinstance(value, str) for value in header.values())

@@ -87,7 +87,9 @@ def test_scoped_history_retained_when_returning_to_seed(tmp_path):
     add_run(ledger, "update", is_seed=False)
     seed_brief = add_brief(ledger)
     update_brief = add_brief(ledger, "update")
-    assert ledger.seed_run().run_id == "seed"
+    seed = ledger.seed_run()
+    assert seed is not None
+    assert seed.run_id == "seed"
     assert ledger.list_briefs("seed") == [seed_brief]
     assert ledger.list_briefs("update") == [update_brief]
     assert len(ledger.list_runs()) == 2

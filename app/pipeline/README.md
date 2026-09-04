@@ -105,3 +105,19 @@ Existing SQLite review rows migrate additively and retain their original content
 review import is removed. The application must filter reviews to the active run after reset.
 Section edits and synchronous re-verification belong to the API and verifier; the ledger stores
 the resulting body and verification report without generating or verifying prose itself.
+
+## Read-only application view
+
+The view model uses the manifest's persisted `created_at` for `refreshed_at`, so repeated reads
+of the same run do not change timestamps. Health checks compare base source hashes and, for an
+applied overlay, its file membership and hashes under `source_dir/fixtures/update`.
+
+Calendar extraction recognizes connected records whose `type` or `kind` is `calendar` or
+`meeting`. Those records are returned unchanged. Other connected records remain in the memory
+tab, and no meeting is synthesized.
+
+A failed verification gate suppresses generated meeting-brief, insight, and Memory Card content
+from the application payload. The view retains deterministic Facts, the brief version,
+verification reasons, and `Needs review` when a stored draft exists. The draft remains in the
+ledger for the edit endpoint and synchronous re-verification. This implements the PRD requirement
+that unverified claims do not reach the RM while preserving review history.
