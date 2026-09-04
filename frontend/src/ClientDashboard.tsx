@@ -161,6 +161,12 @@ const useStyles = makeStyles({
   action: {
     alignSelf: "flex-start",
   },
+  // Cards in a row stretch to the tallest; pushing the action down keeps the
+  // three "Why?" links on one baseline instead of following ragged copy.
+  cardAction: {
+    alignSelf: "flex-start",
+    marginBlockStart: "auto",
+  },
   empty: {
     color: tokens.colorNeutralForeground3,
   },
@@ -312,6 +318,41 @@ function stake(fact: ProjectionFact, currency?: string): string {
     case "profile": {
       const n = fact.numbers;
       return `${n.life_stage}, resident in ${n.residence}, booked in ${n.booking_centre}.`;
+    }
+  }
+}
+
+/**
+ * The question this fact puts to the client (PRD 5.4, 5.5). The narrator emits
+ * one opening question for the whole brief, so a per-insight prompt is derived
+ * from the same calculation inputs the card already displays - it asks for the
+ * client's intent, which is the one thing no deterministic tool can supply.
+ */
+function askAbout(fact: ProjectionFact): string {
+  switch (fact.kind) {
+    case "mandate_gap": {
+      const n = fact.numbers;
+      return `Do you want ${n.asset_class} brought back inside the ${n.limit_pct}% ${n.boundary}, or should we revisit the mandate itself?`;
+    }
+    case "deadline": {
+      const n = fact.numbers;
+      return `Which holdings should we raise the ${formatMoney(n.amount, n.currency)} from, and when do you need it settled?`;
+    }
+    case "facility": {
+      const n = fact.numbers;
+      return `How much headroom do you want above the ${n.trigger_pct}% margin-call trigger if markets fall further?`;
+    }
+    case "concentration": {
+      const n = fact.numbers;
+      return `Are you comfortable with ${n.weight_pct}% of the portfolio sitting in connected positions?`;
+    }
+    case "change": {
+      const n = fact.numbers;
+      return `Was the ${formatMoney(Math.abs(n.delta), n.currency)} move in ${n.instrument} intentional?`;
+    }
+    case "profile": {
+      const n = fact.numbers;
+      return `Has anything changed about ${n.life_stage.toLowerCase()} since we last spoke?`;
     }
   }
 }
@@ -510,11 +551,13 @@ function InsightCard({
   clientId,
   state,
   matters,
+  uncertainty,
 }: {
   fact: ProjectionFact;
   clientId: string;
   state: "Changed" | "Unchanged";
   matters: string;
+  uncertainty?: string;
 }) {
   const styles = useStyles();
   const severity = SEVERITY[fact.kind];
@@ -535,8 +578,15 @@ function InsightCard({
       <Body1 as="p" className={styles.summary}>
         {matters}
       </Body1>
+      <div className={styles.note}>
+        <Caption1 className={styles.term}>Ask</Caption1>
+        <Body1 as="p" className={styles.summary}>
+          {askAbout(fact)}
+        </Body1>
+      </div>
       <Caption1>Confidence: {fact.confidence}</Caption1>
-      <div className={styles.action}>
+      {uncertainty ? <Caption1>To confirm: {uncertainty}</Caption1> : null}
+      <div className={styles.cardAction}>
         <WhyButton citations={[fact.id]} clientId={clientId} />
       </div>
     </article>
@@ -568,7 +618,13 @@ function useInsightContext(preRead: ClientPreRead, facts: ProjectionFact[]) {
       : ("Unchanged" as const);
   const matters = (fact: ProjectionFact) =>
     whyItMatters(fact, supporting, currency);
-  return { state, matters };
+  // PRD 5.4 wants uncertainty on the card, and the brief's single uncertainty
+  // names the facts it applies to, so it is only shown on those.
+  const uncertainty = (fact: ProjectionFact) =>
+    preRead.uncertainty.citations.includes(fact.id)
+      ? preRead.uncertainty.text
+      : undefined;
+  return { state, matters, uncertainty };
 }
 
 /**
@@ -584,7 +640,7 @@ export function TopInsights({
   facts: ProjectionFact[];
 }) {
   const styles = useStyles();
-  const { state, matters } = useInsightContext(preRead, facts);
+  const { state, matters, uncertainty } = useInsightContext(preRead, facts);
   const insights = rankedInsights(facts).slice(0, 3);
 
   return (
@@ -609,6 +665,7 @@ export function TopInsights({
               clientId={preRead.client_id}
               state={state(fact)}
               matters={matters(fact)}
+              uncertainty={uncertainty(fact)}
             />
           ))}
         </div>
@@ -632,7 +689,7 @@ export function InsightsPanel({
   authorship: Authorship;
 }) {
   const styles = useStyles();
-  const { state, matters } = useInsightContext(preRead, facts);
+  const { state, matters, uncertainty } = useInsightContext(preRead, facts);
   const rest = rankedInsights(facts).slice(3);
 
   return (
@@ -655,6 +712,7 @@ export function InsightsPanel({
                 clientId={preRead.client_id}
                 state={state(fact)}
                 matters={matters(fact)}
+                uncertainty={uncertainty(fact)}
               />
             ))}
           </div>
@@ -722,8 +780,8 @@ export function TwoMinuteSummary({
       : "";
   sentences.push({
     text: ranked?.meeting
-      ? `You meet ${preRead.name} on ${ranked.meeting}.${reason}`
-      : `No meeting is booked with ${preRead.name} this week.${reason}`,
+      ? `The meeting is ${ranked.meeting}.${reason}`
+      : `No meeting is booked this week.${reason}`,
     citations: ranked?.citations ?? [],
   });
   sentences.push({
@@ -796,6 +854,12 @@ export function DiscussionTopics({
           <Body1 as="p" className={styles.summary}>
             {stake(fact, currency)}
           </Body1>
+          <div className={styles.note}>
+            <Caption1 className={styles.term}>Ask</Caption1>
+            <Body1 as="p" className={styles.summary}>
+              {askAbout(fact)}
+            </Body1>
+          </div>
           <div className={styles.headerActions}>
             <WhyButton citations={[fact.id]} clientId={clientId} />
           </div>

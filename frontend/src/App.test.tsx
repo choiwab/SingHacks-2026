@@ -129,6 +129,22 @@ describe("Monday Brief", () => {
     expect(
       within(top).getByText(/€3,400,000 falls due in 36 days/),
     ).toBeVisible();
+    // Each card also carries the question to put to the client and, when the
+    // brief's uncertainty names that fact, what to confirm (PRD 5.4).
+    expect(
+      within(top).getByText(
+        "Do you want Equity brought back inside the 30% maximum, or should we revisit the mandate itself?",
+      ),
+    ).toBeVisible();
+    expect(
+      within(top).getByText(
+        "Which holdings should we raise the \u20ac3,400,000 from, and when do you need it settled?",
+      ),
+    ).toBeVisible();
+    // The uncertainty cites the gap fact only, so it rides that card alone.
+    expect(
+      within(top).getAllByText("To confirm: Confirm intent before advising."),
+    ).toHaveLength(1);
 
     await user.click(screen.getByRole("tab", { name: "Insights" }));
     expect(
@@ -172,11 +188,7 @@ describe("Monday Brief", () => {
         /Recently widowed, resident in Singapore, booked in Singapore/,
       ),
     ).toBeVisible();
-    expect(
-      within(summary).getByText(
-        /You meet Margarethe Voss-Brenner on Mon 10:30/,
-      ),
-    ).toBeVisible();
+    expect(within(summary).getByText(/The meeting is Mon 10:30/)).toBeVisible();
     expect(within(summary).getByText(/1 position moved/)).toBeVisible();
 
     // The agenda is severity-ranked, so the mandate gap leads the deadline.
@@ -195,6 +207,12 @@ describe("Monday Brief", () => {
     ).toBeVisible();
     expect(
       within(topics).getByText(/Liquid assets cover 528% of it\./),
+    ).toBeVisible();
+    // PRD 5.5 asks for suggested questions, not just one opening line.
+    expect(
+      within(topics).getByText(
+        "Do you want Equity brought back inside the 30% maximum, or should we revisit the mandate itself?",
+      ),
     ).toBeVisible();
 
     const commitments = screen.getByRole("region", {

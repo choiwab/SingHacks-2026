@@ -34,17 +34,24 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   const top = page.getByRole("region", { name: "Top insights" });
   await expect(top.getByRole("article")).toHaveCount(3);
   await expect(top).toContainText("Equity is 71.5% against a 30% maximum.");
+  // Each card carries the question to put to the client (PRD 5.4).
+  await expect(top).toContainText(
+    "Do you want Equity brought back inside the 30% maximum",
+  );
 
   // The Insights tab carries the insights the top three pushed below the fold.
   await page.getByRole("tab", { name: "Insights" }).click();
   const alsoActive = page.getByRole("region", { name: "Also active" });
   await expect(alsoActive.getByRole("article")).toHaveCount(3);
+  // The brief's uncertainty names the three snapshot deltas, so it rides those
+  // cards rather than the whole dashboard.
+  await expect(alsoActive.getByText(/^To confirm: /)).toHaveCount(3);
   await expect(top.getByRole("article")).toHaveCount(3);
   await page.getByRole("tab", { name: "Overview" }).click();
 
   // The meeting brief opens on PRD 5.5's summary, agenda and commitments.
   const summary = page.getByRole("region", { name: "Two-minute summary" });
-  await expect(summary).toContainText("You meet Margarethe Voss-Brenner");
+  await expect(summary).toContainText("The meeting is Mon");
   await expect(
     page
       .getByRole("region", { name: "Three discussion topics" })
@@ -108,9 +115,9 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   ).toBeVisible();
 
   await page.goto("/clients/CL-0019/scenario");
-  await expect(
-    page.locator("#main").getByText("Precomputed · Abdullah Al-Mansoori"),
-  ).toBeVisible();
+  await expect(page.locator("#main .scenario-heading .eyebrow")).toHaveText(
+    "Abdullah Al-Mansoori",
+  );
   await page.getByRole("button", { name: "Strait escalates" }).click();
   await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
   await page.getByRole("button", { name: "Strait reopens" }).click();
