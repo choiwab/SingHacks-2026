@@ -208,6 +208,9 @@ const useStyles = makeStyles({
     maxWidth: "26rem",
     width: "100%",
   },
+  memory: {
+    overflowWrap: "anywhere",
+  },
   mark: {
     backgroundColor: tokens.colorBrandBackground2,
     color: tokens.colorBrandForeground2,
@@ -1322,7 +1325,7 @@ export function MemoryPanel({
   );
 
   return (
-    <div className={styles.panel}>
+    <div className={mergeClasses(styles.panel, styles.memory)}>
       <section className={styles.group} aria-label="Search the client memory">
         <Subtitle2 as="h3">Ask the notes</Subtitle2>
         <SearchBox

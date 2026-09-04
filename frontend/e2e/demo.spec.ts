@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`Memory wraps long search feedback at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const panel = page.getByRole("tabpanel", { name: "Memory", exact: true });
+    const search = panel.getByRole("searchbox");
+    const query = "unmatched".repeat(30);
+    await search.fill(query);
+    await expect(panel.getByRole("status")).toHaveText(
+      `0 of 2 notes and 0 of 1 belief mention ${query}.`,
+    );
+    await expect(
+      panel.getByRole("region", { name: "Extracted beliefs" }),
+    ).toContainText(`No recorded belief mentions ${query}.`);
+    await expect(panel.getByRole("region", { name: "RM notes" })).toContainText(
+      `No note mentions ${query}. Try another word.`,
+    );
+    await expect(search).toBeFocused();
+    for (const region of [
+      "Search the client memory",
+      "Extracted beliefs",
+      "RM notes",
+    ]) {
+      expect(
+        await panel
+          .getByRole("region", { name: region })
+          .evaluate((element) => element.scrollWidth <= element.clientWidth),
+      ).toBe(true);
+    }
+    expect(
+      await page
+        .getByRole("main")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    await panel.getByRole("button", { name: "Clear note search" }).click();
+    await expect(search).toHaveValue("");
+    await expect(search).toBeFocused();
+    await expect(panel.getByRole("status")).toHaveText(
+      "Searching 2 notes and 1 extracted belief for this client.",
+    );
+    await expect(panel.getByRole("region", { name: "RM notes" })).toContainText(
+      "2026-05-29",
+    );
+  });
+
   test(`memory questions ignore pronouns when retrieving topics at ${width}px`, async ({
     page,
   }) => {
