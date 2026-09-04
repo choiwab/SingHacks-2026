@@ -1333,6 +1333,32 @@ for (const width of [1280, 390]) {
       await expect(search).toBeFocused();
     }
     for (const query of [
+      "Nguyễn",
+      "NGUYỄN".normalize("NFD"),
+      "Trần Nguyễn",
+      "CL-0006 Nguyễn",
+    ]) {
+      await search.fill(query);
+      await expect(switcher.getByRole("status")).toHaveText(
+        "1 of 20 clients shown",
+      );
+      await expect(switcher.getByRole("listitem")).toHaveCount(1);
+      await expect(
+        switcher.getByRole("button", { name: /Nguyen Thi Bao Tran/ }),
+      ).toBeVisible();
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    await switcher.getByRole("button", { name: /Nguyen Thi Bao Tran/ }).click();
+    await expect(
+      page.getByRole("heading", { name: "Nguyen Thi Bao Tran", exact: true }),
+    ).toBeVisible();
+    await expect(
+      switcher.getByRole("button", { name: /Nguyen Thi Bao Tran/ }),
+    ).toHaveAttribute("aria-current", "true");
+    for (const query of [
+      "Nguyễn CL-0003",
+      "Nguyễn Abdullah",
       "Margarethe Abdullah",
       "Margarethe CL-0019",
       "CL-9999",

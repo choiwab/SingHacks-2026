@@ -208,6 +208,8 @@ function ClientSwitcher({
     const normalizeSearch = (value: string) =>
       value
         .toLowerCase()
+        .normalize("NFD")
+        .replace(/(\p{Script=Latin})\p{M}+/gu, "$1")
         .replace(/[\p{Pd}\s]+/gu, " ")
         .trim();
     const needle = normalizeSearch(query);
