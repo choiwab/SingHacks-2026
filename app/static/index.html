@@ -3,125 +3,142 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#f6f1e8">
+    <meta name="theme-color" content="#f4f3f1">
     <meta
       name="description"
-      content="Monday Brief turns portfolio facts into ranked, cited client pre-reads."
+      content="Wealth Intelligence turns portfolio facts into ranked, cited client pre-reads."
     >
-    <title>Monday Brief | Wealth Intelligence</title>
+    <title>Monday list | Wealth Intelligence</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;600&display=swap"
-      rel="stylesheet"
-    >
     <link rel="stylesheet" href="/static/styles.css">
     <script src="/static/app.js" defer></script>
   </head>
   <body>
-    <a class="skip-link" href="#main">Skip to brief</a>
+    <a class="skip-link" href="#main">Skip to main content</a>
 
     <header class="topbar">
-      <button class="brand" type="button" data-screen="list" aria-label="JB Monday Brief home">
-        <span aria-hidden="true">JB</span>
-        <strong>Monday Brief</strong>
-      </button>
-      <div class="top-context">
-        <span>31 Aug 2026</span>
-        <span class="secure">Private workspace</span>
-        <span class="avatar" aria-label="Priscilla Ong">PO</span>
-      </div>
+      <button class="brand" type="button" data-screen="list">Wealth Intelligence</button>
+      <nav class="product-nav" aria-label="Three screen workflow">
+        <button type="button" data-screen="list" aria-current="page">Monday list</button>
+        <button type="button" data-screen="pre-read" disabled>Pre-read</button>
+        <button type="button" data-screen="scenario" disabled>Scenario</button>
+      </nav>
+      <p class="rm-context">Priscilla Ong · Asia desk · Data as of Wed 26 Aug 2026</p>
     </header>
-
-    <nav class="flow-nav" aria-label="Three screen workflow">
-      <ol>
-        <li><button type="button" data-screen="list" aria-current="step"><span>01</span> Monday list</button></li>
-        <li><button type="button" data-screen="pre-read" disabled><span>02</span> Pre-read</button></li>
-        <li><button type="button" data-screen="scenario" disabled><span>03</span> Scenario</button></li>
-      </ol>
-      <p>Every line cites the row it came from.</p>
-    </nav>
 
     <main id="main">
       <section class="screen list-screen" id="list-screen" aria-labelledby="list-title">
-        <header class="page-heading">
+        <header class="calendar-hero">
           <div>
-            <p class="eyebrow">Monday · 08:00</p>
-            <h1 id="list-title">Call these clients first</h1>
+            <p class="eyebrow accent">31 Aug - 4 Sep 2026</p>
+            <h1 id="list-title">Calls to make. Meetings to prepare.</h1>
           </div>
-          <p class="book-count"><strong>20</strong> clients ranked overnight</p>
+          <details class="order-explainer">
+            <summary>Why this order?</summary>
+            <div class="formula-body">
+              <p><strong>Gap size × deadline closeness × consequence.</strong></p>
+              <p id="formula-example"></p>
+              <p>The narrator sees cited facts, never raw CSVs.</p>
+            </div>
+          </details>
         </header>
 
-        <details class="formula">
-          <summary>How the order is set</summary>
-          <div>
-            <p><strong>Priority = gap size × deadline closeness × consequence.</strong></p>
-            <p>The fact engine reads holdings, mandates, facilities, cash needs, and RM notes.</p>
-            <p>The narrator sees fact IDs and note IDs, never raw CSVs.</p>
-            <p id="formula-example"></p>
+        <div class="feature-intro">
+          <p><span>Feature 01</span> Explainable Priority Calendar</p>
+          <div class="urgency-legend" aria-label="Urgency legend">
+            <span><i class="legend-fill"></i> Act now</span>
+            <span><i class="legend-outline"></i> Prepare next</span>
+            <span><i class="legend-watch"></i> Watch</span>
           </div>
-        </details>
-
-        <div class="list-labels" aria-hidden="true">
-          <span>Priority</span>
-          <span>Client and reason</span>
-          <span>Meeting</span>
-          <span>Score</span>
         </div>
-        <div class="client-list" id="client-list" aria-live="polite"></div>
+
+        <div class="calendar-workspace">
+          <aside class="call-rail" aria-labelledby="call-title">
+            <header>
+              <p class="eyebrow">No meeting booked</p>
+              <h2 id="call-title">Call this week</h2>
+              <p><span id="call-count">0</span> clients ranked</p>
+            </header>
+            <div class="call-list" id="call-list" aria-live="polite"></div>
+          </aside>
+
+          <section class="week-board" aria-labelledby="meeting-title">
+            <header class="week-board-heading">
+              <div>
+                <p class="eyebrow">Booked meetings</p>
+                <h2 id="meeting-title">Prepare before the call</h2>
+              </div>
+              <p><span id="meeting-count">0</span> meetings</p>
+            </header>
+            <div class="meeting-grid" id="meeting-grid" aria-live="polite"></div>
+          </section>
+        </div>
       </section>
 
       <section class="screen pre-read-screen" id="pre-read-screen" aria-labelledby="client-name" hidden>
-        <button class="back-link" type="button" data-screen="list">← Monday list</button>
+        <div class="screen-kicker">
+          <button class="back-link" type="button" data-screen="list">← Monday list</button>
+          <p>Selected priority <strong id="client-priority"></strong></p>
+        </div>
+
         <header class="client-heading">
           <div>
-            <p class="eyebrow">Pre-read · <span id="client-id"></span></p>
+            <p class="eyebrow accent">Decision pre-read · <span id="client-id"></span></p>
             <h1 id="client-name"></h1>
           </div>
           <div class="review-state" id="review-state">Unreviewed</div>
         </header>
 
-        <div class="pre-read-grid">
+        <div class="pre-read-ledger">
           <section class="brief-block changed-block" aria-labelledby="changed-title">
-            <p class="section-number">01</p>
-            <h2 id="changed-title">What changed</h2>
-            <ul class="cited-list" id="changed-list"></ul>
+            <div class="block-heading">
+              <p>01</p>
+              <h2 id="changed-title">What changed</h2>
+            </div>
+            <ul class="cited-list change-list" id="changed-list"></ul>
           </section>
 
           <section class="brief-block gap-block" aria-labelledby="gap-title">
-            <p class="section-number">02</p>
-            <h2 id="gap-title">You said / Data says</h2>
+            <div class="block-heading">
+              <p>02</p>
+              <h2 id="gap-title">You said / Data says</h2>
+            </div>
             <div class="gap-pair">
               <div>
                 <span>You said</span>
                 <p id="belief-text"></p>
               </div>
-              <div>
+              <div class="data-says">
                 <span>Data says</span>
                 <p id="data-text"></p>
+                <button class="why-link inverse" id="gap-why" type="button">Why?</button>
               </div>
             </div>
-            <button class="why-link" id="gap-why" type="button">Why?</button>
           </section>
 
           <section class="brief-block rules-block" aria-labelledby="rules-title">
-            <p class="section-number">03</p>
-            <h2 id="rules-title">Rules & money</h2>
-            <ul class="cited-list" id="rules-list"></ul>
+            <div class="block-heading">
+              <p>03</p>
+              <h2 id="rules-title">Rules & money</h2>
+            </div>
+            <ul class="cited-list rule-list" id="rules-list"></ul>
           </section>
 
           <section class="brief-block opening-block" aria-labelledby="opening-title">
-            <p class="section-number">04</p>
-            <h2 id="opening-title">Suggested opening</h2>
+            <div class="block-heading">
+              <p>04</p>
+              <h2 id="opening-title">Suggested opening</h2>
+            </div>
             <p class="language" id="opening-language"></p>
             <blockquote id="opening-text"></blockquote>
-            <button class="why-link" id="opening-why" type="button">Why?</button>
+            <button class="why-link inverse" id="opening-why" type="button">Why?</button>
           </section>
 
           <section class="brief-block unsure-block" aria-labelledby="unsure-title">
-            <p class="section-number">05</p>
-            <h2 id="unsure-title">Not sure yet</h2>
+            <div class="block-heading">
+              <p>05</p>
+              <h2 id="unsure-title">What we are not sure about</h2>
+            </div>
             <p id="uncertainty-text"></p>
             <button class="why-link" id="uncertainty-why" type="button">Why?</button>
           </section>
@@ -129,8 +146,8 @@
 
         <section class="workflow-strip" aria-labelledby="workflow-title">
           <div>
-            <p class="eyebrow">Where you left off</p>
-            <h2 id="workflow-title">One client thread</h2>
+            <p class="eyebrow">CRM · Gmail · Teams · Map · Notes</p>
+            <h2 id="workflow-title">Where you left off</h2>
           </div>
           <div class="workflow-items" id="workflow-items"></div>
         </section>
@@ -141,22 +158,32 @@
         </div>
 
         <footer class="review-bar">
-          <p>Nothing is logged until you approve, edit, or reject.</p>
-          <div>
+          <div class="review-copy">
+            <strong>RM checkpoint</strong>
+            <span>Only this decision is written to the review log.</span>
+          </div>
+          <div class="review-actions">
             <button class="reject-button" type="button" data-review="Reject">Reject</button>
             <button class="edit-button" type="button" data-review="Edit">Edit</button>
             <button class="approve-button" type="button" data-review="Approve">Approve pre-read</button>
           </div>
         </footer>
-        <p class="review-receipt" id="review-receipt" role="status" hidden></p>
+        <div class="next-step">
+          <p class="review-receipt" id="review-receipt" role="status" hidden></p>
+          <button class="scenario-link" type="button" data-screen="scenario">Rehearse a Strait scenario →</button>
+        </div>
       </section>
 
       <section class="screen scenario-screen" id="scenario-screen" aria-labelledby="scenario-title" hidden>
-        <button class="back-link" type="button" data-screen="pre-read">← Pre-read</button>
+        <div class="screen-kicker">
+          <button class="back-link" type="button" data-screen="pre-read">← Pre-read</button>
+          <p><span>Feature 02</span> Evidence-backed Scenario Rehearsal</p>
+        </div>
+
         <header class="scenario-heading">
           <div>
-            <p class="eyebrow">Precomputed scenario · <span id="scenario-client"></span></p>
-            <h1 id="scenario-title">If the Strait changes course</h1>
+            <p class="eyebrow accent">Precomputed · <span id="scenario-client"></span></p>
+            <h1 id="scenario-title">Rehearse the Strait conversation.</h1>
           </div>
           <div class="scenario-toggle" role="group" aria-label="Scenario">
             <button type="button" data-scenario="reopens" aria-pressed="true">Strait reopens</button>
@@ -164,28 +191,36 @@
           </div>
         </header>
 
-        <div class="scenario-result">
-          <div>
+        <section class="scenario-result" aria-labelledby="scenario-name">
+          <div class="range-copy">
             <p class="scenario-label" id="scenario-name"></p>
             <p class="range-value" id="scenario-range"></p>
             <p class="range-percent" id="scenario-percent"></p>
+            <button class="why-link" id="scenario-why" type="button">Why this range?</button>
           </div>
-          <div class="range-plot" aria-label="Estimated portfolio change range">
-            <span class="zero-line"></span>
-            <span class="range-line" id="range-line"></span>
+          <div class="range-visual">
+            <div class="range-axis" aria-label="Estimated portfolio change range from negative twenty to positive twenty percent">
+              <span class="axis-start">−20%</span>
+              <span class="axis-zero">0</span>
+              <span class="axis-end">+20%</span>
+              <i class="zero-line"></i>
+              <i class="range-line" id="range-line"></i>
+            </div>
+            <p>Estimated range · Not a forecast</p>
           </div>
-          <p class="not-forecast">Estimated range · Not a forecast</p>
-        </div>
+        </section>
 
         <section class="scenario-detail" aria-labelledby="scenario-detail-title">
-          <h2 id="scenario-detail-title">What changes</h2>
-          <ul class="cited-list" id="scenario-bullets"></ul>
+          <div class="block-heading">
+            <p>Talk through</p>
+            <h2 id="scenario-detail-title">What changes</h2>
+          </div>
+          <ul class="cited-list scenario-bullets" id="scenario-bullets"></ul>
         </section>
-        <button class="evidence-summary" id="scenario-why" type="button">Why this range?</button>
       </section>
     </main>
 
-    <button class="drawer-scrim" id="drawer-scrim" type="button" aria-label="Close evidence" hidden></button>
+    <button class="drawer-scrim" id="drawer-scrim" type="button" aria-label="Close source trail" hidden></button>
     <aside
       class="evidence-drawer"
       id="evidence-drawer"
@@ -195,12 +230,12 @@
     >
       <header>
         <div>
-          <p class="eyebrow">Source trail</p>
+          <p class="eyebrow accent">Exact source rows</p>
           <h2 id="evidence-title">Why?</h2>
         </div>
-        <button class="close-drawer" id="close-drawer" type="button" aria-label="Close evidence">×</button>
+        <button class="close-drawer" id="close-drawer" type="button" aria-label="Close source trail">×</button>
       </header>
-      <p class="drawer-rule">Every row below comes straight from the source tables.</p>
+      <p class="drawer-rule">Cited facts, holdings, events, market inputs, and note rows appear below.</p>
       <div id="evidence-content"></div>
     </aside>
 

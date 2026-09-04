@@ -198,7 +198,9 @@ of the data in 30 seconds.
 ### Run the Monday Brief demo
 
 The demo is a three-screen Monday workflow for Priscilla Ong.
-It ranks all 20 clients, opens a cited pre-read, and re-shocks the selected portfolio under two precomputed Strait scenarios.
+Its two highlighted features are an Explainable Priority Calendar and an Evidence-backed Scenario Rehearsal.
+The pre-read is the approval checkpoint between them.
+The calendar ranks all 20 clients across calls and booked meetings, while the rehearsal re-shocks the selected portfolio under two precomputed Strait scenarios.
 The fact pipeline runs once at startup and saves its output to `data/generated/app_data.json`.
 Approve, Edit, or Reject is the only live write and is stored in `data/generated/review_log.json`.
 No API key or external service is required.

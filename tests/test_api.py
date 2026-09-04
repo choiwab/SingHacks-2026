@@ -21,7 +21,7 @@ def test_home_health_and_app_data_are_available() -> None:
     data = send("GET", "/api/app")
 
     assert home.status_code == 200
-    assert "Call these clients first" in home.text
+    assert "Calls to make. Meetings to prepare." in home.text
     assert health.json() == {"status": "ok", "as_of": "2026-08-26"}
     assert data.status_code == 200
     assert len(data.json()["ranking"]) == 20

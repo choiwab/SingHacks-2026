@@ -14,6 +14,13 @@ She opens the product on Monday morning before preparing for client conversation
 
 A judge should understand the complete value loop in under three minutes.
 
+Two features carry the demo.
+
+1. **Explainable Priority Calendar** turns risk, deadlines, and consequences into a Monday call and meeting plan.
+2. **Evidence-backed Scenario Rehearsal** lets Priscilla practise two Strait outcomes with instant, cited ranges.
+
+The pre-read is the necessary approval checkpoint between those features, not a separate product surface.
+
 The recommended path is:
 
 1. Open the Monday list and see Margarethe Voss-Brenner ranked first.
@@ -51,6 +58,14 @@ Who needs Priscilla first?
 - Upcoming meeting when connected calendar preview data exists.
 - Priority score.
 - A **Why this order?** disclosure.
+
+### Priority Calendar layout
+
+The Monday list uses one fixed week view with no display-mode switcher.
+Clients without a booked meeting appear in the ranked **Call this week** rail.
+Clients with a booked meeting appear under the relevant weekday and retain their global rank.
+Solid vermilion means act now, a vermilion outline means prepare next, and a charcoal outline means watch.
+Together the call rail and meeting board contain exactly 20 clients.
 
 ### Ranking model
 
@@ -197,7 +212,7 @@ No language model performs arithmetic or scoring.
 The narrator receives only facts, beliefs, and gaps.
 It does not receive raw CSV rows.
 Every output line carries a fact ID or note citation.
-The demo narrator is deterministic and runs before the web experience begins.
+The demo narrator is deterministic and runs before the app starts.
 
 ### Station 5: Review log
 
@@ -219,14 +234,14 @@ Review decisions use POST /api/reviews.
 
 ## Acceptance criteria
 
-- The Monday list contains exactly 20 clients.
+- The Priority Calendar contains exactly 20 clients across the call rail and meeting board.
 - Margarethe is ranked first with explainable score components.
 - Her pre-read shows 71.5% equity against a 30% maximum.
 - Her belief cites N-005.
 - Her opening is in German.
 - Abdullah's two scenario states update instantly without a network call.
 - Scenario outputs are ranges.
-- Every narrated change, rule, and opening has at least one citation.
+- Every narrated change, rule, opening, uncertainty, and workflow status has at least one citation.
 - Evidence links resolve to source records.
 - Review actions persist with an RM identity and timestamp.
 - No chat interface appears anywhere.

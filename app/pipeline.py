@@ -833,11 +833,18 @@ def _workflow(
             key=lambda item: item["note_date"],
             default=None,
         )
+        latest_citation = f"rm_notes:{latest['note_id']}"
+        profile_citation = f"clients:{client_id}"
         result[client_id] = [
-            {"system": "CRM", "status": f"{latest['channel']} logged {latest['note_date']}"},
+            {
+                "system": "CRM",
+                "status": f"{latest['channel']} logged {latest['note_date']}",
+                "citations": [latest_citation],
+            },
             {
                 "system": "Gmail",
                 "status": f"Last email {email['note_date']}" if email else "No thread linked",
+                "citations": [f"rm_notes:{email['note_id']}" if email else profile_citation],
             },
             {
                 "system": "Teams",
@@ -846,14 +853,20 @@ def _workflow(
                     if meeting
                     else "No meeting linked"
                 ),
+                "citations": [f"rm_notes:{meeting['note_id']}" if meeting else profile_citation],
             },
             {
                 "system": "Map",
                 "status": (
                     f"{client['country_of_residence']} client; {client['booking_centre']} booking"
                 ),
+                "citations": [profile_citation],
             },
-            {"system": "Notes", "status": latest["note"]},
+            {
+                "system": "Notes",
+                "status": latest["note"],
+                "citations": [latest_citation],
+            },
         ]
     return result
 

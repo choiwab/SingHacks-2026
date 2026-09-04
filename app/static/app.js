@@ -1,6 +1,14 @@
 const $ = (selector, scope = document) => scope.querySelector(selector);
 const $$ = (selector, scope = document) => [...scope.querySelectorAll(selector)];
 
+const WEEK = [
+  { key: "Mon", label: "Mon", date: "31 Aug" },
+  { key: "Tue", label: "Tue", date: "1 Sep" },
+  { key: "Wed", label: "Wed", date: "2 Sep" },
+  { key: "Thu", label: "Thu", date: "3 Sep" },
+  { key: "Fri", label: "Fri", date: "4 Sep" },
+];
+
 const state = {
   data: null,
   clientId: null,
@@ -16,7 +24,7 @@ async function request(path, options = {}) {
   });
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.detail || "The server did not answer.");
+    throw new Error(payload.detail || "The server did not answer. Try again.");
   }
   return response.json();
 }
@@ -42,36 +50,78 @@ function showToast(message) {
   }, 3200);
 }
 
+function priorityMeta(client, index) {
+  const meta = element("span", "priority-meta");
+  meta.append(
+    element("span", "priority-rank", `#${index + 1}`),
+    element("span", null, client.score.toFixed(0)),
+  );
+  return meta;
+}
+
+function renderCallRow(client, index) {
+  const row = element("button", `call-row urgency-${client.urgency}`);
+  row.type = "button";
+  row.dataset.client = client.client_id;
+
+  const copy = element("span", "client-copy");
+  copy.append(
+    element("strong", "client-name", client.name),
+    element("span", "client-reason", client.reason),
+  );
+  row.append(priorityMeta(client, index), copy, element("span", "row-action", "Open →"));
+  return row;
+}
+
+function renderMeetingCard(client, index) {
+  const card = element("button", `meeting-card urgency-${client.urgency}`);
+  card.type = "button";
+  card.dataset.client = client.client_id;
+  const time = client.meeting.split(" ").slice(1).join(" ");
+
+  const top = element("span", "meeting-meta");
+  top.append(element("span", null, `#${index + 1} · ${client.score}`), element("span", null, time));
+  card.append(
+    top,
+    element("strong", "meeting-client", client.name),
+    element("span", "meeting-reason", client.reason),
+    element("span", "meeting-action", "Open pre-read →"),
+  );
+  return card;
+}
+
 function renderList() {
-  const list = $("#client-list");
-  list.replaceChildren();
-  state.data.ranking.forEach((client, index) => {
-    const row = element("button", `client-row urgency-${client.urgency}`);
-    row.type = "button";
-    row.dataset.client = client.client_id;
+  const callList = $("#call-list");
+  const meetingGrid = $("#meeting-grid");
+  const calls = state.data.ranking.filter((client) => !client.meeting);
+  const meetings = state.data.ranking.filter((client) => client.meeting);
+  const ranks = new Map(state.data.ranking.map((client, index) => [client.client_id, index]));
 
-    const rank = element("span", "rank");
-    rank.append(element("span", "urgency-dot"), document.createTextNode(String(index + 1).padStart(2, "0")));
+  callList.replaceChildren(...calls.map((client) => renderCallRow(client, ranks.get(client.client_id))));
+  $("#call-count").textContent = calls.length;
+  $("#meeting-count").textContent = meetings.length;
 
-    const summary = element("span");
-    summary.append(element("span", "client-name", client.name));
-    summary.append(element("span", "client-reason", client.reason));
+  const days = WEEK.map((day) => {
+    const column = element("section", "day-column");
+    const heading = element("header", "day-heading");
+    heading.append(element("span", null, day.label), element("strong", null, day.date));
+    column.append(heading);
 
-    const meeting = element("span", "meeting");
-    if (client.meeting) {
-      meeting.append(element("strong", null, client.meeting));
-      meeting.append(document.createTextNode(client.meeting_source));
+    const dayMeetings = meetings.filter((client) => client.meeting.startsWith(day.key));
+    column.classList.toggle("is-empty", dayMeetings.length === 0);
+    if (dayMeetings.length) {
+      dayMeetings.forEach((client) => column.append(renderMeetingCard(client, ranks.get(client.client_id))));
     } else {
-      meeting.textContent = "No meeting";
+      column.append(element("p", "open-day", "Open for preparation"));
     }
-
-    row.append(rank, summary, meeting, element("span", "priority-score", client.score));
-    list.append(row);
+    return column;
   });
+  meetingGrid.replaceChildren(...days);
+
   const first = state.data.ranking[0];
   const parts = first.components;
   $("#formula-example").textContent =
-    `${first.name}: ${parts.gap} × ${parts.deadline} × ${parts.consequence} → ${first.score}`;
+    `${first.name}: ${parts.gap} × ${parts.deadline} × ${parts.consequence} = ${first.score}.`;
 }
 
 function renderCitedList(items, target) {
@@ -92,15 +142,27 @@ function renderWorkflow(items) {
   const container = $("#workflow-items");
   container.replaceChildren();
   items.forEach((item) => {
-    const block = element("div", "workflow-item");
-    block.append(element("strong", null, item.system), element("span", null, item.status));
+    const block = element("article", "workflow-item");
+    const copy = element("div");
+    copy.append(element("strong", null, item.system), element("span", null, item.status));
+    block.append(copy);
+    if (item.citations?.length) {
+      const why = element("button", "why-link", "Why?");
+      why.type = "button";
+      setCitations(why, item.citations);
+      block.append(why);
+    }
     container.append(block);
   });
 }
 
 function selectClient(clientId) {
   state.clientId = clientId;
+  state.scenario = "reopens";
   state.editing = false;
+  $$('[data-scenario]').forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.scenario === "reopens"));
+  });
   $$('[data-screen="pre-read"], [data-screen="scenario"]').forEach((button) => {
     button.disabled = false;
   });
@@ -110,8 +172,11 @@ function selectClient(clientId) {
 
 function renderPreRead() {
   const preRead = state.data.pre_reads[state.clientId];
+  const rank = state.data.ranking.findIndex((client) => client.client_id === state.clientId);
+  const rankedClient = state.data.ranking[rank];
   $("#client-id").textContent = preRead.client_id;
   $("#client-name").textContent = preRead.name;
+  $("#client-priority").textContent = `#${rank + 1} · score ${rankedClient.score}`;
   $("#review-state").textContent = "Unreviewed";
   $("#review-state").className = "review-state";
   renderCitedList(preRead.what_changed, "#changed-list");
@@ -136,18 +201,25 @@ function showScreen(name) {
   $$(".screen").forEach((screen) => {
     screen.hidden = screen.id !== `${name}-screen`;
   });
-  $$(".flow-nav button").forEach((button) => {
+  $$(".product-nav button").forEach((button) => {
     const active = button.dataset.screen === name;
-    if (active) button.setAttribute("aria-current", "step");
+    if (active) button.setAttribute("aria-current", "page");
     else button.removeAttribute("aria-current");
   });
+  const titles = { list: "Monday list", "pre-read": "Pre-read", scenario: "Scenario rehearsal" };
+  document.title = `${titles[name]} | Wealth Intelligence`;
   if (name === "scenario") renderScenario();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 
 function money(value, currency) {
   const sign = value >= 0 ? "+" : "−";
   return `${sign}${currency} ${Math.abs(value / 1_000_000).toFixed(1)}m`;
+}
+
+function percent(value) {
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${Math.abs(value).toFixed(1)}%`;
 }
 
 function renderScenario() {
@@ -159,9 +231,8 @@ function renderScenario() {
     scenario.high_delta,
     scenario.currency,
   )}`;
-  $("#scenario-percent").textContent = `${scenario.low_pct.toFixed(1)}% to ${scenario.high_pct.toFixed(
-    1,
-  )}% of today's portfolio`;
+  $("#scenario-percent").textContent =
+    `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of today's portfolio`;
   renderCitedList(scenario.bullets, "#scenario-bullets");
   setCitations($("#scenario-why"), scenario.citations);
 
@@ -171,11 +242,15 @@ function renderScenario() {
   const line = $("#range-line");
   line.style.left = `${left}%`;
   line.style.width = `${Math.max(right - left, 1.5)}%`;
+
+  const result = $(".scenario-result");
+  result.classList.toggle("is-positive", scenario.low_pct >= 0);
+  result.classList.toggle("is-negative", scenario.high_pct <= 0);
 }
 
 function setScenario(name) {
   state.scenario = name;
-  $$("[data-scenario]").forEach((button) => {
+  $$('[data-scenario]').forEach((button) => {
     button.setAttribute("aria-pressed", String(button.dataset.scenario === name));
   });
   renderScenario();
@@ -206,13 +281,14 @@ function expandCitations(citations) {
 function renderEvidenceRecord(item) {
   if (item.type === "fact") {
     const block = element("article", "evidence-record fact-record");
-    block.append(element("h3", null, "Computed fact"));
-    block.append(element("p", null, item.value.what));
+    block.append(element("p", "record-type", "Computed fact"));
+    block.append(element("h3", null, item.value.what));
     block.append(element("p", "evidence-source", `Confidence: ${item.value.confidence}`));
     return block;
   }
   const record = item.value;
   const block = element("article", "evidence-record");
+  block.append(element("p", "record-type", record.kind || "Source row"));
   block.append(element("h3", null, record.title));
   block.append(element("p", "evidence-source", record.source));
   const details = element("dl");
@@ -226,12 +302,11 @@ function renderEvidenceRecord(item) {
 
 function openEvidence(citations, trigger) {
   state.lastFocus = trigger;
-  const content = $("#evidence-content");
   const records = expandCitations(citations);
-  content.replaceChildren(
+  $("#evidence-content").replaceChildren(
     ...(records.length
       ? records.map(renderEvidenceRecord)
-      : [element("p", null, "Nothing in the source tables backs this one.")]),
+      : [element("p", null, "No source row is attached to this line.")]),
   );
   $("#drawer-scrim").hidden = false;
   const drawer = $("#evidence-drawer");
@@ -252,6 +327,10 @@ function closeEvidence() {
 
 async function saveReview(action) {
   const edited = $("#edited-opening").value.trim();
+  const buttons = $$("[data-review]");
+  buttons.forEach((button) => {
+    button.disabled = true;
+  });
   try {
     const payload = await request("/api/reviews", {
       method: "POST",
@@ -267,8 +346,8 @@ async function saveReview(action) {
       $('[data-review="Edit"]').textContent = "Edit";
       state.editing = false;
     }
-    const reviewState = $("#review-state");
     const labels = { Approve: "Approved", Edit: "Edited", Reject: "Rejected" };
+    const reviewState = $("#review-state");
     reviewState.textContent = labels[action];
     reviewState.className = `review-state is-${labels[action].toLowerCase()}`;
     const receipt = $("#review-receipt");
@@ -278,9 +357,13 @@ async function saveReview(action) {
     });
     receipt.textContent = `Review log · ${labels[action]} · ${time} · ${payload.review.rm}`;
     receipt.hidden = false;
-    showToast(`${payload.review.action} recorded for ${state.data.pre_reads[state.clientId].name}.`);
+    showToast(`${labels[action]} for ${state.data.pre_reads[state.clientId].name}.`);
   } catch (error) {
     showToast(error.message);
+  } finally {
+    buttons.forEach((button) => {
+      button.disabled = false;
+    });
   }
 }
 

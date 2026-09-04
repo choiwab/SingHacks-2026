@@ -58,3 +58,15 @@ def test_evidence_resolves_to_source_rows() -> None:
     resolved = [data["evidence"][citation] for citation in mandate["source_rows"]]
     assert any(record["source"] == "data/mandates.csv" for record in resolved)
     assert any(record["source"] == "data/holdings.csv" for record in resolved)
+
+
+def test_workflow_context_is_cited() -> None:
+    data = build_app_data()
+
+    for pre_read in data["pre_reads"].values():
+        assert all(item["citations"] for item in pre_read["workflow"])
+        assert all(
+            citation in data["evidence"]
+            for item in pre_read["workflow"]
+            for citation in item["citations"]
+        )
