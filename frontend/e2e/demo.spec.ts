@@ -1,6 +1,52 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`client navigation moves keyboard focus into the new screen at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    const main = page.getByRole("main");
+    await expect(main).toBeVisible();
+    await expect(main).not.toBeFocused();
+    const switcher = page.getByRole("navigation", { name: "Client switcher" });
+    await switcher.getByRole("button", { name: /Margarethe/ }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/CL-0003\/pre-read$/);
+    await expect(main).toBeFocused();
+    await expect(main).toHaveCSS("outline-style", "solid");
+    await page.keyboard.press("Tab");
+    await expect(
+      main.getByRole("button", { name: /RM dashboard/ }),
+    ).toBeFocused();
+
+    // The meeting that triggered navigation unmounts with its old client.
+    const meetings = page.getByRole("navigation", {
+      name: "This week's meetings",
+    });
+    await meetings.getByRole("button", { name: /Abdullah/ }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/CL-0019\/pre-read$/);
+    await expect(main).toBeFocused();
+    await expect(main).toHaveJSProperty("scrollTop", 0);
+
+    await page.getByRole("tab", { name: "Scenario rehearsal" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/CL-0019\/scenario$/);
+    await expect(main).toBeFocused();
+    await page.goBack();
+    await expect(page).toHaveURL(/CL-0019\/pre-read$/);
+    await expect(main).toBeFocused();
+    await main.getByRole("button", { name: /RM dashboard/ }).press("Enter");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(main).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > innerWidth,
+      ),
+    ).toBe(false);
+  });
+
   test(`dashboard tabs lead keyboard users into their named panel at ${width}px`, async ({
     page,
   }) => {

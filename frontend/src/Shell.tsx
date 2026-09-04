@@ -166,7 +166,12 @@ const useStyles = makeStyles({
     containerType: "inline-size",
     containerName: "main",
     backgroundColor: tokens.colorNeutralBackground1,
-    ":focus-visible": { outlineStyle: "none" },
+    ":focus-visible": {
+      outlineStyle: "solid",
+      outlineWidth: "2px",
+      outlineColor: tokens.colorStrokeFocus2,
+      outlineOffset: "-2px",
+    },
   },
   empty: {
     paddingBlock: tokens.spacingVerticalM,

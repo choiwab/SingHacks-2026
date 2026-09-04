@@ -8,7 +8,7 @@ import {
   Spinner,
   teamsLightTheme,
 } from "@fluentui/react-components";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Navigate,
   Route,
@@ -28,6 +28,7 @@ import { Scenario } from "./Scenario";
 
 function useRoute(projection: MondayBriefProjection) {
   const { pathname } = useLocation();
+  const previousPath = useRef(pathname);
   const route = pathname.endsWith("/scenario")
     ? "scenario"
     : pathname.endsWith("/pre-read")
@@ -44,7 +45,11 @@ function useRoute(projection: MondayBriefProjection) {
       scenario: "Scenario rehearsal",
     };
     document.title = `${titles[route]} | Wealth Intelligence`;
-    document.getElementById("main")?.scrollTo({ top: 0, behavior: "auto" });
+    const main = document.getElementById("main");
+    main?.scrollTo({ top: 0, behavior: "auto" });
+    // Enter the new screen after navigation without stealing focus on load.
+    if (previousPath.current !== pathname) main?.focus({ preventScroll: true });
+    previousPath.current = pathname;
   }, [pathname, route]);
 
   return { route, selectedClient } as const;
