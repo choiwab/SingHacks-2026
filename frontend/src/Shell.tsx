@@ -174,6 +174,8 @@ const useStyles = makeStyles({
     },
   },
   empty: {
+    minWidth: 0,
+    overflowWrap: "anywhere",
     paddingBlock: tokens.spacingVerticalM,
     color: tokens.colorNeutralForeground3,
   },

@@ -1245,6 +1245,7 @@ for (const width of [1280, 390]) {
       "Margarethe Abdullah",
       "Margarethe CL-0019",
       "CL-9999",
+      "abcdefghijklmnopqrstuvwxyz".repeat(3),
     ]) {
       await search.fill(query);
       await expect(switcher.getByRole("status")).toHaveText(
@@ -1254,6 +1255,15 @@ for (const width of [1280, 390]) {
         `No match for “${query}”.`,
       );
       await expect(search).toBeFocused();
+      expect(
+        await switcher.getByRole("list").evaluate((list) => {
+          const message = list.querySelector("li")!;
+          return (
+            list.scrollWidth <= list.clientWidth &&
+            message.scrollWidth <= message.clientWidth
+          );
+        }),
+      ).toBe(true);
     }
     await search.fill("CL-0003");
     await switcher
