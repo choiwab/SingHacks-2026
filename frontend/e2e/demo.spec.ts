@@ -1,6 +1,51 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`client profile sources are reachable from every tab at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const why = page.getByRole("button", { name: "Why this profile?" });
+    const drawer = page.getByRole("dialog", { name: "Why?" });
+    for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await why.focus();
+      await page.keyboard.press("Enter");
+      await expect(drawer).toContainText(
+        "Margarethe Voss-Brenner has a Conservative profile.",
+      );
+      await expect(drawer).toContainText(
+        "data/clients.csv · row clients:CL-0003",
+      );
+      await expect(drawer).toContainText("risk tolerance score");
+      await expect(drawer).not.toContainText("data/holdings.csv");
+      await page.keyboard.press("Escape");
+      await expect(why).toBeFocused();
+      await expect(page.getByRole("tabpanel", { name: tab })).toBeVisible();
+    }
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Alistair Pemberton-Hale/ })
+      .click();
+    await why.click();
+    await expect(drawer).toContainText("Alistair Pemberton-Hale");
+    await expect(drawer).toContainText(
+      "data/clients.csv · row clients:CL-0007",
+    );
+    await expect(drawer).not.toContainText("CL-0003");
+    expect(
+      await drawer.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`within-limit mandates do not displace active topics at ${width}px`, async ({
     page,
   }) => {

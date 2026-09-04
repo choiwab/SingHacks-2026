@@ -650,6 +650,13 @@ export function DashboardHeader({
             </li>
           ))}
         </ul>
+        {profile && (
+          <div className={styles.action}>
+            <WhyButton citations={[profile.id]} clientId={preRead.client_id}>
+              Why this profile?
+            </WhyButton>
+          </div>
+        )}
       </div>
       <div className={styles.headerSide}>
         <Body1Strong>
