@@ -1,21 +1,16 @@
+import { FluentProvider, teamsLightTheme } from "@fluentui/react-components";
 import { useEffect, useMemo, useState } from "react";
-import {
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
-  useNavigate,
-} from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
 import { getMondayBrief } from "./api";
+import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
 import type { MondayBriefProjection } from "./contracts";
 import { MondayList } from "./MondayList";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";
 
-function Header({ projection }: { projection: MondayBriefProjection }) {
-  const navigate = useNavigate();
+function useRoute(projection: MondayBriefProjection) {
   const { pathname } = useLocation();
   const route = pathname.endsWith("/scenario")
     ? "scenario"
@@ -33,58 +28,25 @@ function Header({ projection }: { projection: MondayBriefProjection }) {
       scenario: "Scenario rehearsal",
     };
     document.title = `${titles[route]} | Wealth Intelligence`;
-    window.scrollTo({ top: 0, behavior: "auto" });
+    document.getElementById("main")?.scrollTo({ top: 0, behavior: "auto" });
   }, [pathname, route]);
 
-  return (
-    <header className="topbar">
-      <button className="brand" type="button" onClick={() => navigate("/")}>
-        Wealth Intelligence
-      </button>
-      <nav className="product-nav" aria-label="Three screen workflow">
-        <button
-          type="button"
-          aria-current={route === "list" ? "page" : undefined}
-          onClick={() => navigate("/")}
-        >
-          Monday list
-        </button>
-        <button
-          type="button"
-          disabled={!selectedClient}
-          aria-current={route === "pre-read" ? "page" : undefined}
-          onClick={() =>
-            selectedClient && navigate(`/clients/${selectedClient}/pre-read`)
-          }
-        >
-          Pre-read
-        </button>
-        <button
-          type="button"
-          disabled={!selectedClient}
-          aria-current={route === "scenario" ? "page" : undefined}
-          onClick={() =>
-            selectedClient && navigate(`/clients/${selectedClient}/scenario`)
-          }
-        >
-          Scenario
-        </button>
-      </nav>
-      <p className="rm-context">
-        Priscilla Ong · Asia desk · Data as of Wed 26 Aug 2026
-      </p>
-    </header>
-  );
+  return { route, selectedClient } as const;
 }
 
 function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
+  const { route, selectedClient } = useRoute(projection);
+
   return (
     <EvidenceProvider projection={projection}>
       <a className="skip-link" href="#main">
         Skip to main content
       </a>
-      <Header projection={projection} />
-      <main id="main">
+      <AppShell
+        projection={projection}
+        selectedClient={selectedClient}
+        route={route}
+      >
         <Routes>
           <Route path="/" element={<MondayList projection={projection} />} />
           <Route
@@ -108,7 +70,7 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
             }
           />
         </Routes>
-      </main>
+      </AppShell>
     </EvidenceProvider>
   );
 }
@@ -157,6 +119,13 @@ export function App() {
     );
   }, [error]);
 
-  if (!projection) return <main className="app-status">{status}</main>;
-  return <RoutedApp projection={projection} />;
+  return (
+    <FluentProvider theme={teamsLightTheme} className="fluent-root">
+      {projection ? (
+        <RoutedApp projection={projection} />
+      ) : (
+        <main className="app-status">{status}</main>
+      )}
+    </FluentProvider>
+  );
 }

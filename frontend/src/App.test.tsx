@@ -35,8 +35,11 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
+    const switcher = await screen.findByRole("navigation", {
+      name: "Client switcher",
+    });
     await user.click(
-      await screen.findByRole("button", { name: /Margarethe Voss-Brenner/ }),
+      within(switcher).getByRole("button", { name: /Margarethe Voss-Brenner/ }),
     );
     expect(
       await screen.findByRole("heading", { name: "Margarethe Voss-Brenner" }),
@@ -50,6 +53,40 @@ describe("Monday Brief", () => {
       }),
     ).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters the client switcher and marks the selected client", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(projectionResponse())),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    const switcher = await screen.findByRole("navigation", {
+      name: "Client switcher",
+    });
+    expect(
+      within(switcher).getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+    ).toHaveAttribute("aria-current", "true");
+    expect(
+      within(switcher).getByRole("button", { name: /Abdullah Al-Mansoori/ }),
+    ).toBeVisible();
+
+    await user.type(
+      within(switcher).getByRole("searchbox", { name: "Search clients" }),
+      "margar",
+    );
+    expect(
+      within(switcher).queryByRole("button", { name: /Abdullah Al-Mansoori/ }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(switcher).getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+    ).toBeVisible();
   });
 
   it("expands evidence and restores focus to the Why button", async () => {

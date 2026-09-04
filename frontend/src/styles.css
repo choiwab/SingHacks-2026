@@ -92,65 +92,6 @@ textarea:focus-visible {
   transform: translateY(0);
 }
 
-.topbar {
-  display: flex;
-  min-height: 4.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-  padding: 0.75rem 1rem 0;
-  border-bottom: 2px solid var(--rule);
-  background: var(--canvas);
-  gap: 0.5rem 1rem;
-}
-
-.brand {
-  min-height: 2.75rem;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  font-size: 1.3rem;
-  font-weight: 800;
-  letter-spacing: -0.045em;
-  white-space: nowrap;
-}
-
-.product-nav {
-  display: flex;
-  order: 3;
-  width: 100%;
-  overflow-x: auto;
-  gap: 1.25rem;
-}
-
-.product-nav button {
-  min-height: 2.75rem;
-  padding: 0;
-  border: 0;
-  border-bottom: 3px solid transparent;
-  background: none;
-  cursor: pointer;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.product-nav button[aria-current="page"] {
-  border-bottom-color: var(--signal);
-  color: var(--signal);
-}
-
-.product-nav button:disabled {
-  cursor: not-allowed;
-  opacity: 0.35;
-}
-
-.rm-context {
-  margin: 0 0 0 auto;
-  color: var(--muted);
-  font-size: 0.75rem;
-  white-space: nowrap;
-}
-
 .screen {
   width: min(100%, var(--page));
   min-height: calc(100vh - 4.5rem);
@@ -439,8 +380,13 @@ h2 {
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.85rem;
+  column-gap: 0.5rem;
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;
+}
+
+.meeting-meta > span {
+  white-space: nowrap;
 }
 
 .meeting-client {
@@ -1043,7 +989,6 @@ blockquote {
     color: var(--surface);
   }
 
-  .product-nav button:not(:disabled):hover,
   .back-link:hover,
   .why-link:hover,
   .scenario-link:hover {
@@ -1059,28 +1004,7 @@ blockquote {
   }
 }
 
-@media (min-width: 48rem) {
-  .topbar {
-    padding: 0 1.5rem;
-  }
-
-  .brand {
-    font-size: 1.55rem;
-  }
-
-  .product-nav {
-    order: initial;
-    width: auto;
-    margin-left: auto;
-  }
-
-  .rm-context {
-    width: 100%;
-    padding: 0.5rem 0;
-    border-top: 1px solid var(--rule);
-    text-align: right;
-  }
-
+@container main (min-width: 48rem) {
   .screen {
     padding: 3rem 1.5rem 6rem;
   }
@@ -1193,24 +1117,7 @@ blockquote {
   }
 }
 
-@media (min-width: 64rem) {
-  .topbar {
-    min-height: 4.75rem;
-    flex-wrap: nowrap;
-    gap: 1.75rem;
-  }
-
-  .product-nav {
-    gap: 2rem;
-  }
-
-  .rm-context {
-    width: auto;
-    padding: 0 0 0 1.5rem;
-    border-top: 0;
-    border-left: 1px solid var(--rule);
-  }
-
+@container main (min-width: 64rem) {
   .screen {
     padding: 3rem 2rem 6rem;
   }
@@ -1298,7 +1205,6 @@ blockquote {
 }
 
 @media (pointer: coarse) {
-  .product-nav button,
   .why-link,
   .back-link,
   .scenario-link {
@@ -1313,4 +1219,10 @@ blockquote {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Fluent shell owns the full viewport; page styles render inside its main slot. */
+.fluent-root {
+  min-height: 100vh;
+  background: transparent;
 }

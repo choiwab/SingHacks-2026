@@ -2,7 +2,10 @@ import { expect, test } from "@playwright/test";
 
 test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: /Margarethe Voss-Brenner/ }).click();
+  const switcher = page.getByRole("navigation", { name: "Client switcher" });
+  await switcher
+    .getByRole("button", { name: /Margarethe Voss-Brenner/ })
+    .click();
   await page.getByRole("button", { name: "Why?" }).first().click();
   await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
     "data/holdings.csv",
@@ -22,7 +25,9 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await expect(page.getByRole("status").last()).toContainText("Approved");
 
   await page.goto("/clients/CL-0019/scenario");
-  await expect(page.getByText("Abdullah Al-Mansoori")).toBeVisible();
+  await expect(
+    page.locator("#main").getByText("Precomputed · Abdullah Al-Mansoori"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Strait escalates" }).click();
   await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
   await page.getByRole("button", { name: "Strait reopens" }).click();
