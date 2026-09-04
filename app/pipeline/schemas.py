@@ -26,10 +26,15 @@ class Evidence(ContractModel):
 class ReviewRequest(ContractModel):
     client_id: Annotated[str, Field(pattern=r"^CL-\d{4}$")]
     action: Literal["Approve", "Edit", "Reject"]
+    run_id: str | None = None
+    brief_version: Annotated[int | None, Field(ge=1)] = None
+    section: str | None = None
+    reason: str | None = None
     text: Annotated[str, Field(max_length=1200)] = ""
 
 
 class ReviewRecord(ReviewRequest):
+    verification_report_id: str | None = None
     review_id: str
     rm: str
     timestamp: datetime
@@ -145,6 +150,7 @@ class RunManifest(Artifact):
     overridden_keys: dict[str, list[str]] = Field(default_factory=dict)
     client_ids: list[str]
     finding_counts: dict[str, int] = Field(default_factory=dict)
+    context_issues: list[str] = Field(default_factory=list)
     created_at: datetime
 
 

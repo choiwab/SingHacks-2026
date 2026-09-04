@@ -1,0 +1,327 @@
+{
+  "as_of": "2026-08-26",
+  "client_id": "CL-0003",
+  "facts": [
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 0.5,
+      "currency": "EUR",
+      "evidence_ids": [
+        "event_log:2026-07-29:84745b7a2a697078",
+        "holdings:2025-12-31:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+      ],
+      "formula_id": "legacy.change-1.delta",
+      "id": "CL-0003:fact:change-1:delta",
+      "inputs": {
+        "currency": "EUR",
+        "delta": -532400.0,
+        "instrument": "Global Luxury and Consumer Brands Fund"
+      },
+      "kind": "change-1.delta",
+      "unit": "number",
+      "value": -532400.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 0.5,
+      "currency": "EUR",
+      "evidence_ids": [
+        "event_log:2026-06-05:a31a98cfa1524e3e",
+        "holdings:2025-12-31:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003"
+      ],
+      "formula_id": "legacy.change-2.delta",
+      "id": "CL-0003:fact:change-2:delta",
+      "inputs": {
+        "currency": "EUR",
+        "delta": 400588.61,
+        "instrument": "US Technology Leaders Fund"
+      },
+      "kind": "change-2.delta",
+      "unit": "number",
+      "value": 400588.61
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 0.5,
+      "currency": "EUR",
+      "evidence_ids": [
+        "event_log:2026-06-19:7f37072cbaf751cc",
+        "holdings:2025-12-31:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209"
+      ],
+      "formula_id": "legacy.change-3.delta",
+      "id": "CL-0003:fact:change-3:delta",
+      "inputs": {
+        "currency": "EUR",
+        "delta": -138000.0,
+        "instrument": "EUR Investment Grade Bond Fund"
+      },
+      "kind": "change-3.delta",
+      "unit": "number",
+      "value": -138000.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": null,
+      "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+      ],
+      "formula_id": "legacy.concentration.value",
+      "id": "CL-0003:fact:concentration:value",
+      "inputs": {
+        "value": 5293200.0,
+        "weight_pct": 26.1
+      },
+      "kind": "concentration.value",
+      "unit": "number",
+      "value": 5293200.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": null,
+      "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+      ],
+      "formula_id": "legacy.concentration.weight_pct",
+      "id": "CL-0003:fact:concentration:weight_pct",
+      "inputs": {
+        "value": 5293200.0,
+        "weight_pct": 26.1
+      },
+      "kind": "concentration.weight_pct",
+      "unit": "percent",
+      "value": 26.1
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "planned_cash_needs:CN-004"
+      ],
+      "formula_id": "legacy.deadline.amount",
+      "id": "CL-0003:fact:deadline:amount",
+      "inputs": {
+        "amount": 3400000.0,
+        "amount_in_portfolio_currency": 3400000.0,
+        "coverage_pct": 527.5,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "days": 36,
+        "description": "German inheritance tax instalment",
+        "portfolio_currency": "EUR"
+      },
+      "kind": "deadline.amount",
+      "unit": "number",
+      "value": 3400000.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "planned_cash_needs:CN-004"
+      ],
+      "formula_id": "legacy.deadline.amount_in_portfolio_currency",
+      "id": "CL-0003:fact:deadline:amount_in_portfolio_currency",
+      "inputs": {
+        "amount": 3400000.0,
+        "amount_in_portfolio_currency": 3400000.0,
+        "coverage_pct": 527.5,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "days": 36,
+        "description": "German inheritance tax instalment",
+        "portfolio_currency": "EUR"
+      },
+      "kind": "deadline.amount_in_portfolio_currency",
+      "unit": "number",
+      "value": 3400000.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "planned_cash_needs:CN-004"
+      ],
+      "formula_id": "legacy.deadline.coverage_pct",
+      "id": "CL-0003:fact:deadline:coverage_pct",
+      "inputs": {
+        "amount": 3400000.0,
+        "amount_in_portfolio_currency": 3400000.0,
+        "coverage_pct": 527.5,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "days": 36,
+        "description": "German inheritance tax instalment",
+        "portfolio_currency": "EUR"
+      },
+      "kind": "deadline.coverage_pct",
+      "unit": "percent",
+      "value": 527.5
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "planned_cash_needs:CN-004"
+      ],
+      "formula_id": "legacy.deadline.daily_liquid",
+      "id": "CL-0003:fact:deadline:daily_liquid",
+      "inputs": {
+        "amount": 3400000.0,
+        "amount_in_portfolio_currency": 3400000.0,
+        "coverage_pct": 527.5,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "days": 36,
+        "description": "German inheritance tax instalment",
+        "portfolio_currency": "EUR"
+      },
+      "kind": "deadline.daily_liquid",
+      "unit": "number",
+      "value": 17934556.47
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "planned_cash_needs:CN-004"
+      ],
+      "formula_id": "legacy.deadline.days",
+      "id": "CL-0003:fact:deadline:days",
+      "inputs": {
+        "amount": 3400000.0,
+        "amount_in_portfolio_currency": 3400000.0,
+        "coverage_pct": 527.5,
+        "currency": "EUR",
+        "daily_liquid": 17934556.47,
+        "days": 36,
+        "description": "German inheritance tax instalment",
+        "portfolio_currency": "EUR"
+      },
+      "kind": "deadline.days",
+      "unit": "days",
+      "value": 36.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": null,
+      "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
+        "mandates:CONS:equity"
+      ],
+      "formula_id": "legacy.mandate-gap.actual_pct",
+      "id": "CL-0003:fact:mandate-gap:actual_pct",
+      "inputs": {
+        "actual_pct": 71.5,
+        "asset_class": "Equity",
+        "boundary": "maximum",
+        "gap_pct": 41.5,
+        "limit_pct": 30.0,
+        "scope": "Household look-through; strictest applicable band"
+      },
+      "kind": "mandate-gap.actual_pct",
+      "unit": "percent",
+      "value": 71.5
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": null,
+      "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
+        "mandates:CONS:equity"
+      ],
+      "formula_id": "legacy.mandate-gap.gap_pct",
+      "id": "CL-0003:fact:mandate-gap:gap_pct",
+      "inputs": {
+        "actual_pct": 71.5,
+        "asset_class": "Equity",
+        "boundary": "maximum",
+        "gap_pct": 41.5,
+        "limit_pct": 30.0,
+        "scope": "Household look-through; strictest applicable band"
+      },
+      "kind": "mandate-gap.gap_pct",
+      "unit": "percent",
+      "value": 41.5
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": null,
+      "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
+        "mandates:CONS:equity"
+      ],
+      "formula_id": "legacy.mandate-gap.limit_pct",
+      "id": "CL-0003:fact:mandate-gap:limit_pct",
+      "inputs": {
+        "actual_pct": 71.5,
+        "asset_class": "Equity",
+        "boundary": "maximum",
+        "gap_pct": 41.5,
+        "limit_pct": 30.0,
+        "scope": "Household look-through; strictest applicable band"
+      },
+      "kind": "mandate-gap.limit_pct",
+      "unit": "percent",
+      "value": 30.0
+    },
+    {
+      "as_of": "2026-08-26",
+      "client_id": "CL-0003",
+      "confidence": 1.0,
+      "currency": "EUR",
+      "evidence_ids": [
+        "clients:CL-0003"
+      ],
+      "formula_id": "legacy.profile.risk_tolerance_score",
+      "id": "CL-0003:fact:profile:risk_tolerance_score",
+      "inputs": {
+        "booking_centre": "Singapore",
+        "currency": "EUR",
+        "language": "German",
+        "life_stage": "Recently inherited - transition",
+        "name": "Margarethe Voss-Brenner",
+        "residence": "Singapore",
+        "risk_tolerance_score": 2
+      },
+      "kind": "profile.risk_tolerance_score",
+      "unit": "number",
+      "value": 2.0
+    }
+  ],
+  "run_id": "c71cf6c45287"
+}

@@ -93,7 +93,12 @@ def point_latest(root: Path, run_id: str, *, seed: bool = False) -> dict[str, An
 
 
 def publish_run(
-    root: Path, manifest: RunManifest, artifacts: dict[str, ContractModel], *, seed: bool = False
+    root: Path,
+    manifest: RunManifest,
+    artifacts: dict[str, ContractModel],
+    *,
+    seed: bool = False,
+    activate: bool = True,
 ) -> RunManifest:
     """Stage all JSON first, atomically expose a run, then update latest.json."""
     run_id = validate_run_id(manifest.run_id)
@@ -151,7 +156,8 @@ def publish_run(
             manifest.pipeline_version,
         ):
             raise ValueError("Run identity collision")
-        point_latest(root, run_id, seed=seed)
+        if activate:
+            point_latest(root, run_id, seed=seed)
         return existing
     staging = Path(tempfile.mkdtemp(prefix=".staging-", dir=runs))
     try:
@@ -166,7 +172,8 @@ def publish_run(
     finally:
         if staging.exists():
             shutil.rmtree(staging)
-    point_latest(root, run_id, seed=seed)
+    if activate:
+        point_latest(root, run_id, seed=seed)
     return manifest
 
 
