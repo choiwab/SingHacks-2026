@@ -1620,15 +1620,21 @@ for (const width of [1280, 390]) {
     const ageSearch = page.getByRole("region", {
       name: "Search the client memory",
     });
-    await ageSearch.getByRole("searchbox").fill("78%");
-    await expect(ageSearch.getByRole("status")).toHaveText(
-      "0 of 1 note and 0 of 1 belief mention 78%.",
-    );
     const ageNotes = page.getByRole("region", {
       name: "RM notes",
       exact: true,
     });
-    await expect(ageNotes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+    for (const query of ["78%", "78 %", "78\u00a0%", "78\u202f%"]) {
+      await ageSearch.getByRole("searchbox").fill(query);
+      await expect(ageSearch.getByRole("status")).toHaveText(
+        "0 of 1 note and 0 of 1 belief mention 78%.",
+      );
+      await expect(ageNotes.getByRole("button", { name: "Why?" })).toHaveCount(
+        0,
+      );
+      await expect(ageSearch.getByRole("searchbox")).toHaveValue(query);
+      await expect(ageSearch.getByRole("searchbox")).toBeFocused();
+    }
     await ageSearch.getByRole("searchbox").fill("78");
     await expect(ageNotes.locator("mark")).toHaveText("78");
     await expect(ageNotes).toContainText(
@@ -1641,14 +1647,30 @@ for (const width of [1280, 390]) {
     });
     const search = searchRegion.getByRole("searchbox");
     const notes = page.getByRole("region", { name: "RM notes", exact: true });
-    for (const query of ["9%", "0", "15", "5.5", "5.5%", "15%"]) {
+    for (const query of [
+      "9%",
+      "0",
+      "15",
+      "5.5",
+      "5.5%",
+      "5.5 %",
+      "15%",
+      "15 %",
+    ]) {
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toContainText(
         "0 of 1 note and 0 of 1 belief mention",
       );
       await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
     }
-    for (const query of ["5", "5%", "What did she say about 5%?"]) {
+    for (const query of [
+      "5",
+      "5%",
+      "5 %",
+      "5\u00a0%",
+      "5\u202f%",
+      "What did she say about 5 %?",
+    ]) {
       const term = query === "5" ? "5" : "5%";
       await search.fill(query);
       await expect(searchRegion.getByRole("status")).toHaveText(

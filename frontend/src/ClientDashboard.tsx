@@ -1235,6 +1235,8 @@ function queryTerms(query: string): string[] {
             /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
             (_, country: string) => `U${country.toUpperCase()}`,
           )
+          // Accept spaces before percent signs without losing the unit.
+          .replace(/(\p{N})\s+%/gu, "$1%")
           // Keep percentages and decimal amounts intact, including their units.
           .match(
             /\p{N}+(?:\.\p{N}+)?%|[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu,
