@@ -286,7 +286,7 @@ export function PreRead({
         />
       </div>
 
-      <TopInsights preRead={preRead} facts={facts} />
+      <TopInsights preRead={preRead} facts={facts} authorship={reviewState} />
 
       <TabList
         className="dashboard-tabs"

@@ -720,18 +720,31 @@ function whyItMatters(
 function InsightCard({
   fact,
   clientId,
+  clientName,
+  authorship,
   state,
   matters,
   uncertainty,
 }: {
   fact: ProjectionFact;
   clientId: string;
+  clientName: string;
+  authorship: Authorship;
   state: "Changed" | "Unchanged";
   matters: string;
   uncertainty?: string;
 }) {
   const styles = useStyles();
   const severity = insightSeverity(fact);
+  const question = askAbout(fact);
+  const claim = [
+    `${clientName} · ${FACT_GROUP[fact.kind]} · ${state} · ${fact.what}`,
+    matters,
+    `Ask: ${question}`,
+    uncertainty ? `To confirm: ${uncertainty}` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" ");
   return (
     <article className={styles.card}>
       <div className={styles.cardMeta}>
@@ -753,13 +766,18 @@ function InsightCard({
       <div className={styles.note}>
         <Caption1 className={styles.term}>Ask</Caption1>
         <Body1 as="p" className={styles.summary}>
-          {askAbout(fact)}
+          {question}
         </Body1>
       </div>
       <Caption1>Confidence: {fact.confidence}</Caption1>
       {uncertainty ? <Caption1>To confirm: {uncertainty}</Caption1> : null}
       <div className={styles.cardAction}>
-        <WhyButton citations={[fact.id]} clientId={clientId} />
+        <WhyButton
+          citations={[fact.id]}
+          clientId={clientId}
+          claim={claim}
+          authorship={authorship}
+        />
       </div>
     </article>
   );
@@ -807,9 +825,11 @@ function useInsightContext(preRead: ClientPreRead, facts: ProjectionFact[]) {
 export function TopInsights({
   preRead,
   facts,
+  authorship,
 }: {
   preRead: ClientPreRead;
   facts: ProjectionFact[];
+  authorship: Authorship;
 }) {
   const styles = useStyles();
   const { state, matters, uncertainty } = useInsightContext(preRead, facts);
@@ -835,6 +855,8 @@ export function TopInsights({
               key={fact.id}
               fact={fact}
               clientId={preRead.client_id}
+              clientName={preRead.name}
+              authorship={authorship}
               state={state(fact)}
               matters={matters(fact)}
               uncertainty={uncertainty(fact)}
@@ -882,6 +904,8 @@ export function InsightsPanel({
                 key={fact.id}
                 fact={fact}
                 clientId={preRead.client_id}
+                clientName={preRead.name}
+                authorship={authorship}
                 state={state(fact)}
                 matters={matters(fact)}
                 uncertainty={uncertainty(fact)}

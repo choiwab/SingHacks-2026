@@ -1,6 +1,95 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`insight evidence retains questions, uncertainty, and review at ${width}px`, async ({
+    page,
+  }) => {
+    await page.route("**/api/reviews", async (route) => {
+      await route.fulfill({
+        json: {
+          review: {
+            ...route.request().postDataJSON(),
+            timestamp: "2026-09-05T10:00:00Z",
+            rm: "Priscilla Ong",
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Insights", exact: true }).click();
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    for (const region of ["Top insights", "Also active"]) {
+      const card = page
+        .getByRole("region", { name: region })
+        .getByRole("article")
+        .first();
+      const headline = await card.getByRole("heading").innerText();
+      const paragraphs = await card.locator("p").allTextContents();
+      expect(paragraphs).toHaveLength(2);
+      const caveat =
+        region === "Also active"
+          ? await card.getByText(/^To confirm:/).innerText()
+          : undefined;
+      const why = card.getByRole("button", { name: "Why?", exact: true });
+      await why.focus();
+      await why.press("Enter");
+      const claim = drawer.getByRole("region", { name: "Generated claim" });
+      await expect(claim).toContainText("Margarethe Voss-Brenner");
+      await expect(claim).toContainText(headline);
+      await expect(claim).toContainText(paragraphs[0]);
+      await expect(claim).toContainText(`Ask: ${paragraphs[1]}`);
+      if (caveat) {
+        await expect(claim).toContainText(caveat);
+        await expect(drawer).toContainText("data/event_log.csv");
+        await expect(claim).toContainText("Changed");
+      } else {
+        await expect(claim).not.toContainText("To confirm:");
+        await expect(claim).toContainText("Unchanged");
+      }
+      await expect(drawer).toContainText("Generated · awaiting RM review");
+      await expect(drawer).toContainText("Calculation inputs and result");
+      await expect(drawer).toContainText("data/holdings.csv · row holdings:");
+      await expect(drawer).toContainText("as of 2026-08-26");
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+      await expect(why).toBeFocused();
+    }
+    await page.getByRole("button", { name: "Approve pre-read" }).click();
+    await expect(page.getByRole("status").last()).toContainText("Approved");
+    for (const region of ["Top insights", "Also active"]) {
+      await page
+        .getByRole("region", { name: region })
+        .getByRole("article")
+        .first()
+        .getByRole("button", { name: "Why?", exact: true })
+        .click();
+      await expect(drawer).toContainText("Approved by the RM");
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+    }
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
+      .click();
+    await page
+      .getByRole("region", { name: "Top insights" })
+      .getByRole("article")
+      .first()
+      .getByRole("button", { name: "Why?", exact: true })
+      .click();
+    await expect(
+      drawer.getByRole("region", { name: "Generated claim" }),
+    ).toContainText("Abdullah Al-Mansoori");
+    await expect(drawer).toContainText("Generated · awaiting RM review");
+    await expect(drawer).not.toContainText("Margarethe");
+  });
+
   test(`discussion evidence retains the agenda and review at ${width}px`, async ({
     page,
   }) => {
