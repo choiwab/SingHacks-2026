@@ -79,6 +79,7 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
+    overflowWrap: "anywhere",
     rowGap: tokens.spacingVerticalXS,
     ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
     ...shorthands.borderRadius(tokens.borderRadiusMedium),

@@ -1,6 +1,52 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`saved opening references wrap in the evidence drawer at ${width}px`, async ({
+    page,
+  }) => {
+    await page.route("**/api/reviews", async (route) => {
+      await route.fulfill({
+        json: {
+          review: {
+            ...route.request().postDataJSON(),
+            timestamp: "2026-09-05T10:00:00Z",
+            rm: "Priscilla Ong",
+          },
+        },
+      });
+    });
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("button", { name: "Edit", exact: true }).click();
+    const wording = `Please review reference ${"REFERENCE".repeat(30)}.`;
+    await page.getByLabel("Edit the opening line").fill(wording);
+    await page.getByRole("button", { name: "Save edit" }).click();
+    const opening = page.getByRole("region", { name: "Suggested opening" });
+    await expect(opening).toContainText(wording);
+    const why = opening.getByRole("button", { name: "Why?", exact: true });
+    await why.click();
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    await expect(drawer.getByText(wording, { exact: true })).toBeVisible();
+    await expect(
+      drawer.getByText("Edited by the RM", { exact: true }),
+    ).toBeVisible();
+    const body = drawer.locator(".fui-DrawerBody");
+    expect(
+      await body.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    ).toBe(true);
+    await page.keyboard.press("Escape");
+    await expect(drawer).not.toBeVisible();
+    await expect(why).toBeFocused();
+    expect(
+      await page
+        .getByRole("main")
+        .evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
+    await expect(opening).toContainText(wording);
+  });
+
   test(`Memory wraps long search feedback at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
