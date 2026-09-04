@@ -260,30 +260,6 @@ h2 {
   font-weight: 700;
 }
 
-.scenario-toggle {
-  display: grid;
-  border: 2px solid var(--ink);
-  grid-template-columns: 1fr 1fr;
-}
-
-.scenario-toggle button {
-  min-height: 3.25rem;
-  padding: 0 1rem;
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.scenario-toggle button + button {
-  border-left: 1px solid var(--ink);
-}
-
-.scenario-toggle button[aria-pressed="true"] {
-  background: var(--signal);
-  color: var(--surface);
-}
-
 .scenario-announcement {
   position: absolute;
   width: 1px;

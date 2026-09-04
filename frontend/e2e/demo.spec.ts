@@ -295,6 +295,20 @@ for (const width of [1280, 390]) {
       await toggle.press("Enter");
       await expect(toggle).toBeFocused();
       await expect(toggle).toHaveAttribute("aria-pressed", "true");
+      const selector = page.getByRole("group", {
+        name: "Scenario",
+        exact: true,
+      });
+      await expect(selector.getByRole("button", { pressed: true })).toHaveCount(
+        1,
+      );
+      // Re-selecting the active scenario must never leave the range unselected.
+      await toggle.press("Space");
+      await expect(toggle).toBeFocused();
+      await expect(toggle).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        selector.getByRole("button", { pressed: false }),
+      ).toHaveCount(1);
       const valueRange = await page.locator(".range-value").innerText();
       const percentRange = await page.locator(".range-percent").innerText();
       await expect(announcement).toHaveText(

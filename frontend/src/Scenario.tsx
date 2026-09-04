@@ -1,9 +1,25 @@
-import { Link } from "@fluentui/react-components";
+import {
+  Link,
+  makeStyles,
+  ToggleButton,
+  tokens,
+} from "@fluentui/react-components";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { MondayBriefProjection, ScenarioKey } from "./contracts";
 import { CitedList, WhyButton } from "./shared";
+
+const useStyles = makeStyles({
+  toggle: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: tokens.spacingHorizontalS,
+  },
+  option: {
+    minHeight: "44px",
+  },
+});
 
 function money(value: number, currency: string): string {
   const sign = value >= 0 ? "+" : "−";
@@ -20,6 +36,7 @@ export function Scenario({
 }: {
   projection: MondayBriefProjection;
 }) {
+  const styles = useStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const [scenarioKey, setScenarioKey] = useState<ScenarioKey>("reopens");
@@ -74,21 +91,23 @@ export function Scenario({
           <p className="eyebrow accent">{preRead.name}</p>
           <h1 id="scenario-title">Rehearse the Strait conversation</h1>
         </div>
-        <div className="scenario-toggle" role="group" aria-label="Scenario">
-          <button
-            type="button"
-            aria-pressed={scenarioKey === "reopens"}
+        <div className={styles.toggle} role="group" aria-label="Scenario">
+          <ToggleButton
+            className={styles.option}
+            appearance={scenarioKey === "reopens" ? "primary" : "secondary"}
+            checked={scenarioKey === "reopens"}
             onClick={() => setScenarioKey("reopens")}
           >
             Strait reopens
-          </button>
-          <button
-            type="button"
-            aria-pressed={scenarioKey === "escalates"}
+          </ToggleButton>
+          <ToggleButton
+            className={styles.option}
+            appearance={scenarioKey === "escalates" ? "primary" : "secondary"}
+            checked={scenarioKey === "escalates"}
             onClick={() => setScenarioKey("escalates")}
           >
             Strait escalates
-          </button>
+          </ToggleButton>
         </div>
       </header>
 
