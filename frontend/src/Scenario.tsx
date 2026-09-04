@@ -193,7 +193,8 @@ export function Scenario({
         <div className={styles.visual}>
           <div
             className="range-axis"
-            aria-label="Estimated portfolio change range from negative twenty to positive twenty percent"
+            role="img"
+            aria-label={`${scenario.name}: ${percentRange}. ${disclaimer} Scale: −20% to +20%.`}
           >
             <span className="axis-start">−20%</span>
             <span className="axis-zero">0</span>

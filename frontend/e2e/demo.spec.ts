@@ -311,6 +311,15 @@ for (const width of [1280, 390]) {
       ).toHaveCount(1);
       const valueRange = await page.locator(".range-value").innerText();
       const percentRange = await page.locator(".range-percent").innerText();
+      const chartDescription = `${scenario}: ${percentRange}. Estimated range · not a forecast. Scale: −20% to +20%.`;
+      const chart = page.getByRole("img", {
+        name: chartDescription,
+        exact: true,
+      });
+      await expect(chart).toBeVisible();
+      await expect(chart).toMatchAriaSnapshot(
+        `- ${JSON.stringify(`img "${chartDescription}"`)}`,
+      );
       await expect(announcement).toHaveText(
         `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). Estimated range · not a forecast.`,
       );
