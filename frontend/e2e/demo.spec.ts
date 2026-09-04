@@ -1,5 +1,29 @@
 import { expect, test } from "@playwright/test";
 
+test("the first screen is an RM dashboard, not a calendar", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Who needs you this week" }),
+  ).toBeVisible();
+  const queue = page.getByRole("list", { name: "Priority queue" });
+  await expect(queue.getByRole("listitem")).toHaveCount(5);
+  await queue.getByRole("button").first().click();
+  await expect(
+    page.getByRole("heading", { name: "Margarethe Voss-Brenner" }),
+  ).toBeVisible();
+
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/");
+    const overflows = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(overflows, `home at ${width}px`).toBe(false);
+  }
+});
+
 test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.goto("/");
   const switcher = page.getByRole("navigation", { name: "Client switcher" });

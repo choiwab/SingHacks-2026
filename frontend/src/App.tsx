@@ -22,7 +22,7 @@ import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
 import type { Authorship } from "./evidence";
 import type { MondayBriefProjection } from "./contracts";
-import { MondayList } from "./MondayList";
+import { Home } from "./Home";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";
 
@@ -39,7 +39,7 @@ function useRoute(projection: MondayBriefProjection) {
 
   useEffect(() => {
     const titles = {
-      list: "Monday list",
+      list: "RM dashboard",
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
     };
@@ -81,7 +81,10 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
         route={route}
       >
         <Routes>
-          <Route path="/" element={<MondayList projection={projection} />} />
+          <Route
+            path="/"
+            element={<Home projection={projection} reviews={reviews} />}
+          />
           <Route
             path="/clients/:clientId/pre-read"
             element={
@@ -105,7 +108,7 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
                 to="/"
                 replace
                 state={{
-                  notice: "That page was not found. Showing the Monday list.",
+                  notice: "That page was not found. Showing the RM dashboard.",
                 }}
               />
             }
@@ -147,7 +150,7 @@ export function App() {
       return (
         <Spinner
           role="status"
-          label="Preparing the Monday list…"
+          label="Preparing the RM dashboard…"
           labelPosition="below"
         />
       );

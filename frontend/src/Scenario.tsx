@@ -31,7 +31,7 @@ export function Scenario({
         to="/"
         replace
         state={{
-          notice: `Client ${clientId || "requested"} was not found. Showing the Monday list.`,
+          notice: `Client ${clientId || "requested"} was not found. Showing the RM dashboard.`,
         }}
       />
     );

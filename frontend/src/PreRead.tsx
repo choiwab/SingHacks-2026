@@ -78,7 +78,7 @@ export function PreRead({
         to="/"
         replace
         state={{
-          notice: `Client ${clientId || "requested"} was not found. Showing the Monday list.`,
+          notice: `Client ${clientId || "requested"} was not found. Showing the RM dashboard.`,
         }}
       />
     );
@@ -140,7 +140,7 @@ export function PreRead({
           type="button"
           onClick={() => navigate("/")}
         >
-          ← Monday list
+          ← RM dashboard
         </button>
         <p>
           Selected priority{" "}

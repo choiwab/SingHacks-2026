@@ -288,8 +288,8 @@ export function AppShell({
           <Tab
             value="list"
             icon={<CalendarIcon />}
-            aria-label="Monday list"
-            title="Monday list"
+            aria-label="RM dashboard"
+            title="RM dashboard"
           />
           <Tab
             value="pre-read"

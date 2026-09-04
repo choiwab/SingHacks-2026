@@ -146,280 +146,6 @@ h2 {
   line-height: 1.08;
 }
 
-.calendar-hero {
-  padding-bottom: 2rem;
-  border-bottom: 2px solid var(--rule);
-}
-
-.feature-intro {
-  display: flex;
-  flex-direction: column;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--rule);
-  gap: 0.75rem;
-}
-
-.feature-intro > p {
-  margin: 0;
-  font-weight: 650;
-}
-
-.feature-intro > p span,
-.screen-kicker p span {
-  margin-right: 0.45rem;
-  color: var(--signal);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.urgency-legend {
-  display: flex;
-  flex-wrap: wrap;
-  color: var(--muted);
-  font-size: 0.76rem;
-  gap: 0.75rem 1rem;
-}
-
-.urgency-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.urgency-legend i {
-  display: block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border: 2px solid var(--ink);
-}
-
-.urgency-legend .legend-fill {
-  border-color: var(--signal);
-  background: var(--signal);
-}
-
-.urgency-legend .legend-outline {
-  border-color: var(--signal);
-}
-
-.calendar-workspace {
-  display: grid;
-  border-bottom: 2px solid var(--rule);
-}
-
-.call-rail,
-.week-board {
-  min-width: 0;
-}
-
-.week-board {
-  order: -1;
-}
-
-.call-rail > header,
-.week-board-heading {
-  min-height: 7.25rem;
-  padding: 1.5rem 0;
-  border-bottom: 2px solid var(--rule);
-}
-
-.call-rail > header > p:last-child,
-.week-board-heading > p {
-  margin: 0.5rem 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
-.call-list {
-  display: grid;
-}
-
-.call-row {
-  display: grid;
-  width: 100%;
-  min-height: 7.2rem;
-  align-items: start;
-  padding: 1rem 0.85rem 1rem 1rem;
-  border: 0;
-  border-bottom: 1px solid var(--rule);
-  border-left: 0.3rem solid var(--rule);
-  background: var(--surface);
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background-color 140ms var(--ease-out),
-    transform 140ms var(--ease-out);
-  gap: 0.75rem;
-  grid-template-columns: 3.5rem minmax(0, 1fr) auto;
-}
-
-.call-row.urgency-now {
-  border-left-color: var(--signal);
-}
-
-.call-row.urgency-soon {
-  border-left-color: var(--signal-dark);
-  background: var(--signal-soft);
-}
-
-.call-row:active,
-.meeting-card:active {
-  transform: translateY(1px);
-}
-
-.priority-meta {
-  display: grid;
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  gap: 0.2rem;
-}
-
-.priority-meta .priority-rank {
-  color: var(--ink);
-  font-weight: 800;
-}
-
-.client-copy {
-  display: block;
-  min-width: 0;
-}
-
-.client-name {
-  display: block;
-  font-size: 1rem;
-  line-height: 1.15;
-}
-
-.client-reason {
-  display: block;
-  margin-top: 0.5rem;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
-.row-action {
-  align-self: center;
-  color: var(--signal-dark);
-  font-size: 0.76rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.week-board-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-}
-
-.meeting-grid {
-  display: grid;
-}
-
-.day-column {
-  min-width: 0;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid var(--rule);
-}
-
-.day-column.is-empty {
-  display: none;
-}
-
-.day-heading {
-  display: flex;
-  align-items: baseline;
-  padding: 1rem 0;
-  border-bottom: 1px solid var(--rule);
-  gap: 0.65rem;
-}
-
-.day-heading span {
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.day-heading strong {
-  font-size: 1.3rem;
-}
-
-.meeting-card {
-  display: flex;
-  width: 100%;
-  min-height: 12rem;
-  flex-direction: column;
-  align-items: stretch;
-  margin-top: 1rem;
-  padding: 1rem;
-  border: 2px solid var(--signal);
-  background: transparent;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    background-color 140ms var(--ease-out),
-    transform 140ms var(--ease-out);
-}
-
-.meeting-card.urgency-now {
-  background: var(--signal);
-  color: var(--surface);
-}
-
-.meeting-card.urgency-soon {
-  background: var(--signal-soft);
-}
-
-.meeting-card.urgency-watch {
-  border-color: var(--ink);
-}
-
-.meeting-meta {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.85rem;
-  column-gap: 0.5rem;
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
-}
-
-.meeting-meta > span {
-  white-space: nowrap;
-}
-
-.meeting-client {
-  font-size: 1rem;
-  line-height: 1.15;
-}
-
-.meeting-reason {
-  margin-top: 0.65rem;
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.meeting-action {
-  margin-top: auto;
-  padding-top: 1rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  text-decoration: underline;
-  text-underline-offset: 0.2rem;
-}
-
-.open-day {
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px dashed var(--rule);
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
 .screen-kicker {
   display: flex;
   align-items: center;
@@ -437,6 +163,15 @@ h2 {
 
 .screen-kicker strong {
   color: var(--ink);
+}
+
+.screen-kicker p span {
+  margin-right: 0.45rem;
+  color: var(--signal);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .back-link,
@@ -878,15 +613,6 @@ blockquote {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .call-row:hover {
-    background: var(--soft);
-  }
-
-  .meeting-card:hover {
-    background: var(--signal);
-    color: var(--surface);
-  }
-
   .back-link:hover,
   .why-link:hover,
   .scenario-link:hover {
@@ -897,21 +623,6 @@ blockquote {
 @container main (min-width: 48rem) {
   .screen {
     padding: 3rem 1.5rem 6rem;
-  }
-
-  .feature-intro {
-    align-items: center;
-    flex-direction: row;
-    justify-content: space-between;
-  }
-
-  .meeting-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .day-column {
-    padding: 0 1rem 1rem;
-    border-right: 1px solid var(--rule);
   }
 
   .gap-pair {
@@ -1010,50 +721,6 @@ blockquote {
 @container main (min-width: 64rem) {
   .screen {
     padding: 3rem 2rem 6rem;
-  }
-
-  .calendar-workspace {
-    grid-template-columns: minmax(20rem, 0.72fr) minmax(0, 2.28fr);
-  }
-
-  .week-board {
-    order: initial;
-  }
-
-  .call-rail {
-    border-right: 2px solid var(--rule);
-  }
-
-  .call-rail > header {
-    padding-right: 1.5rem;
-  }
-
-  .call-list {
-    max-height: 48rem;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
-
-  .week-board-heading {
-    padding-right: 1.5rem;
-    padding-left: 1.5rem;
-  }
-
-  .meeting-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-
-  .day-column {
-    min-height: 38rem;
-    border-bottom: 0;
-  }
-
-  .day-column.is-empty {
-    display: block;
-  }
-
-  .day-column:last-child {
-    border-right: 0;
   }
 
   .opening-block {

@@ -245,15 +245,12 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText(/CL-9999 was not found/)).toHaveAttribute(
-      "role",
-      "status",
-    );
     expect(
-      screen.getByRole("heading", {
-        name: "Calls to make. Meetings to prepare.",
-      }),
+      await screen.findByRole("heading", { name: "Who needs you this week" }),
     ).toBeVisible();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /CL-9999 was not found/,
+    );
   });
 
   it("ranks the week's meetings, tracks brief state, and switches client", async () => {
