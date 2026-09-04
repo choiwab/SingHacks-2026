@@ -1,11 +1,28 @@
+import { Tab, TabList } from "@fluentui/react-components";
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { saveReview } from "./api";
+import {
+  DashboardHeader,
+  DataPanel,
+  InsightsPanel,
+  MemoryPanel,
+} from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
 import { CitedList, WhyButton, WorkflowList } from "./shared";
 
 type ReviewState = "Unreviewed" | "Approved" | "Edited" | "Rejected";
+
+/** Lower-dashboard tabs required by PRD 5.6. */
+const TABS = [
+  { value: "overview", label: "Overview" },
+  { value: "insights", label: "Insights" },
+  { value: "data", label: "Data" },
+  { value: "memory", label: "Memory" },
+] as const;
+
+type TabValue = (typeof TABS)[number]["value"];
 
 export function PreRead({ projection }: { projection: MondayBriefProjection }) {
   const { clientId = "" } = useParams();
@@ -19,7 +36,9 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
   const [receipt, setReceipt] = useState("");
   const [toast, setToast] = useState("");
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<TabValue>("overview");
   const editField = useRef<HTMLTextAreaElement>(null);
+  const reviewBar = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!toast) return;
@@ -43,6 +62,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
     (client) => client.client_id === clientId,
   );
   const rankedClient = projection.ranking[rank];
+  const facts = projection.facts[clientId] ?? [];
   const currentOpening =
     reviewState === "Edited" ? editedOpening.trim() : preRead.opening.text;
 
@@ -103,111 +123,144 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
         </p>
       </div>
 
-      <header className="client-heading">
-        <div>
-          <p className="eyebrow accent">
-            Decision pre-read · {preRead.client_id}
-          </p>
-          <h1 id="client-name">{preRead.name}</h1>
-        </div>
-        <div className={`review-state is-${reviewState.toLowerCase()}`}>
-          {reviewState}
-        </div>
-      </header>
-
-      <div className="pre-read-ledger">
-        <section
-          className="brief-block changed-block"
-          aria-labelledby="changed-title"
-        >
-          <div className="block-heading">
-            <p>01</p>
-            <h2 id="changed-title">What changed</h2>
-          </div>
-          <CitedList
-            items={preRead.what_changed}
-            clientId={clientId}
-            className="change-list"
-          />
-        </section>
-
-        <section className="brief-block gap-block" aria-labelledby="gap-title">
-          <div className="block-heading">
-            <p>02</p>
-            <h2 id="gap-title">You said / Data says</h2>
-          </div>
-          <div className="gap-pair">
-            <div>
-              <span>You said</span>
-              <p>“{preRead.gap.belief}”</p>
-            </div>
-            <div className="data-says">
-              <span>Data says</span>
-              <p>{preRead.gap.data}</p>
-              <WhyButton
-                citations={preRead.gap.citations}
-                clientId={clientId}
-                inverse
-              />
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="brief-block rules-block"
-          aria-labelledby="rules-title"
-        >
-          <div className="block-heading">
-            <p>03</p>
-            <h2 id="rules-title">Rules &amp; money</h2>
-          </div>
-          <CitedList
-            items={preRead.rules_money}
-            clientId={clientId}
-            className="rule-list"
-          />
-        </section>
-
-        <section
-          className="brief-block opening-block"
-          aria-labelledby="opening-title"
-        >
-          <div className="block-heading">
-            <p>04</p>
-            <h2 id="opening-title">Suggested opening</h2>
-          </div>
-          <p className="language">{preRead.language}</p>
-          <blockquote>{currentOpening}</blockquote>
-          <WhyButton
-            citations={preRead.opening.citations}
-            clientId={clientId}
-            inverse
-          />
-        </section>
-
-        <section
-          className="brief-block unsure-block"
-          aria-labelledby="unsure-title"
-        >
-          <div className="block-heading">
-            <p>05</p>
-            <h2 id="unsure-title">What we are not sure about</h2>
-          </div>
-          <p>{preRead.uncertainty.text}</p>
-          <WhyButton
-            citations={preRead.uncertainty.citations}
-            clientId={clientId}
-          />
-        </section>
+      <div className="client-heading">
+        <DashboardHeader
+          preRead={preRead}
+          ranked={rankedClient}
+          facts={facts}
+          asOf={projection.as_of}
+          reviewState={reviewState}
+          onReviewBrief={() => {
+            setTab("overview");
+            reviewBar.current?.scrollIntoView({ block: "center" });
+          }}
+        />
       </div>
 
-      <section className="workflow-strip" aria-labelledby="workflow-title">
-        <div>
-          <p className="eyebrow">CRM · Gmail · Teams · Map · Notes</p>
-          <h2 id="workflow-title">Where you left off</h2>
-        </div>
-        <WorkflowList items={preRead.workflow} clientId={clientId} />
-      </section>
+      <TabList
+        className="dashboard-tabs"
+        selectedValue={tab}
+        onTabSelect={(_, data) => setTab(data.value as TabValue)}
+      >
+        {TABS.map((item) => (
+          <Tab key={item.value} id={`tab-${item.value}`} value={item.value}>
+            {item.label}
+          </Tab>
+        ))}
+      </TabList>
+
+      <div role="tabpanel" aria-labelledby={`tab-${tab}`}>
+        {tab === "insights" && (
+          <InsightsPanel preRead={preRead} facts={facts} />
+        )}
+        {tab === "data" && <DataPanel facts={facts} clientId={clientId} />}
+        {tab === "memory" && (
+          <MemoryPanel preRead={preRead} evidence={projection.evidence} />
+        )}
+        {tab === "overview" && (
+          <>
+            <div className="pre-read-ledger">
+              <section
+                className="brief-block changed-block"
+                aria-labelledby="changed-title"
+              >
+                <div className="block-heading">
+                  <p>01</p>
+                  <h2 id="changed-title">What changed</h2>
+                </div>
+                <CitedList
+                  items={preRead.what_changed}
+                  clientId={clientId}
+                  className="change-list"
+                />
+              </section>
+
+              <section
+                className="brief-block gap-block"
+                aria-labelledby="gap-title"
+              >
+                <div className="block-heading">
+                  <p>02</p>
+                  <h2 id="gap-title">You said / Data says</h2>
+                </div>
+                <div className="gap-pair">
+                  <div>
+                    <span>You said</span>
+                    <p>“{preRead.gap.belief}”</p>
+                  </div>
+                  <div className="data-says">
+                    <span>Data says</span>
+                    <p>{preRead.gap.data}</p>
+                    <WhyButton
+                      citations={preRead.gap.citations}
+                      clientId={clientId}
+                      inverse
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <section
+                className="brief-block rules-block"
+                aria-labelledby="rules-title"
+              >
+                <div className="block-heading">
+                  <p>03</p>
+                  <h2 id="rules-title">Rules &amp; money</h2>
+                </div>
+                <CitedList
+                  items={preRead.rules_money}
+                  clientId={clientId}
+                  className="rule-list"
+                />
+              </section>
+
+              <section
+                className="brief-block opening-block"
+                aria-labelledby="opening-title"
+              >
+                <div className="block-heading">
+                  <p>04</p>
+                  <h2 id="opening-title">Suggested opening</h2>
+                </div>
+                <p className="language">{preRead.language}</p>
+                <blockquote>{currentOpening}</blockquote>
+                <WhyButton
+                  citations={preRead.opening.citations}
+                  clientId={clientId}
+                  inverse
+                />
+              </section>
+
+              <section
+                className="brief-block unsure-block"
+                aria-labelledby="unsure-title"
+              >
+                <div className="block-heading">
+                  <p>05</p>
+                  <h2 id="unsure-title">What we are not sure about</h2>
+                </div>
+                <p>{preRead.uncertainty.text}</p>
+                <WhyButton
+                  citations={preRead.uncertainty.citations}
+                  clientId={clientId}
+                />
+              </section>
+            </div>
+
+            <section
+              className="workflow-strip"
+              aria-labelledby="workflow-title"
+            >
+              <div>
+                <p className="eyebrow">CRM · Gmail · Teams · Map · Notes</p>
+                <h2 id="workflow-title">Where you left off</h2>
+              </div>
+              <WorkflowList items={preRead.workflow} clientId={clientId} />
+            </section>
+          </>
+        )}
+      </div>
 
       {editing && (
         <div className="edit-panel">
@@ -222,7 +275,7 @@ export function PreRead({ projection }: { projection: MondayBriefProjection }) {
         </div>
       )}
 
-      <footer className="review-bar">
+      <footer className="review-bar" ref={reviewBar}>
         <div className="review-copy">
           <strong>RM checkpoint</strong>
           <span>Only this decision is written to the review log.</span>

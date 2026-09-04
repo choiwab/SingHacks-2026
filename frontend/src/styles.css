@@ -465,7 +465,22 @@ h2 {
 .client-heading h1,
 .scenario-heading h1 {
   max-width: 22ch;
+  margin: 0;
+  font-size: clamp(2.1rem, 6cqw, 3.2rem);
+  line-height: 1.05;
+}
+
+.scenario-heading h1 {
   font-size: clamp(2.5rem, 9vw, 4.4rem);
+}
+
+/* The lower dashboard tabs sit directly under the client header (PRD 5.6). */
+.dashboard-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--rule);
+  background: var(--canvas);
 }
 
 .review-state {

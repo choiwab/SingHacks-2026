@@ -89,6 +89,52 @@ describe("Monday Brief", () => {
     ).toBeVisible();
   });
 
+  it("moves through the Overview, Insights, Data, and Memory tabs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => Promise.resolve(projectionResponse())),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+
+    // Dashboard header (PRD 5.2): profile, next meeting, and data health.
+    expect(
+      await screen.findByText(
+        "Margarethe Voss-Brenner has a Conservative profile.",
+      ),
+    ).toBeVisible();
+    expect(screen.getByText("Next meeting · Mon 10:30")).toBeVisible();
+    expect(screen.getByText("Data Current")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "What changed" })).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Insights" }));
+    // The profile fact is context, so only the two discrepancies rank.
+    const insights = screen.getAllByRole("heading", { level: 3 });
+    expect(insights.map((node) => node.textContent)).toEqual([
+      "Equity is above the mandate limit.",
+      "German inheritance tax instalment starts in 36 days.",
+      "Suggested question",
+      "What we are not sure about",
+    ]);
+    expect(
+      screen.queryByRole("heading", { name: "What changed" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("tab", { name: "Data" }));
+    expect(screen.getByRole("heading", { name: "Profile" })).toBeVisible();
+    expect(screen.getByText("booking centre")).toBeVisible();
+
+    await user.click(screen.getByRole("tab", { name: "Memory" }));
+    expect(
+      screen.getByText("2026-02-16 · Meeting · Priscilla Ong"),
+    ).toBeVisible();
+    expect(screen.getByText("\u201cKeep it safe.\u201d")).toBeVisible();
+  });
+
   it("expands evidence and restores focus to the Why button", async () => {
     vi.stubGlobal(
       "fetch",

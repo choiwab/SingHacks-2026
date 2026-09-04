@@ -9,3 +9,7 @@ Object.defineProperty(Element.prototype, "scrollTo", {
   value: () => undefined,
   writable: true,
 });
+Object.defineProperty(Element.prototype, "scrollIntoView", {
+  value: () => undefined,
+  writable: true,
+});

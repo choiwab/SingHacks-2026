@@ -33,14 +33,18 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.getByRole("button", { name: "Strait reopens" }).click();
   await expect(page.locator(".scenario-label")).toHaveText("Strait reopens");
 
+  await page.goto("/clients/CL-0003/pre-read");
   for (const viewport of [
     { width: 1280, height: 800 },
     { width: 390, height: 844 },
   ]) {
     await page.setViewportSize(viewport);
-    const overflows = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth,
-    );
-    expect(overflows).toBe(false);
+    for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
+      await page.getByRole("tab", { name: tab }).click();
+      const overflows = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflows, `${tab} at ${viewport.width}px`).toBe(false);
+    }
   }
 });
