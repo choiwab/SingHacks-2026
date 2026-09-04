@@ -324,7 +324,13 @@ export function PreRead({
             authorship={reviewState}
           />
         )}
-        {tab === "data" && <DataPanel facts={facts} clientId={clientId} />}
+        {tab === "data" && (
+          <DataPanel
+            facts={facts}
+            clientId={clientId}
+            clientName={preRead.name}
+          />
+        )}
         {tab === "memory" && (
           <MemoryPanel
             preRead={preRead}

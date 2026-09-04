@@ -1,6 +1,49 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`data evidence retains the selected client and fact at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    for (const client of ["Margarethe Voss-Brenner", "Abdullah Al-Mansoori"]) {
+      await page
+        .getByRole("navigation", { name: "Client switcher" })
+        .getByRole("button", { name: new RegExp(client) })
+        .click();
+      await page.getByRole("tab", { name: "Data", exact: true }).click();
+      const data = page.getByRole("tabpanel", { name: "Data", exact: true });
+      const card = data
+        .getByRole("region", { name: "Concentration", exact: true })
+        .getByRole("article");
+      const headline = await card.locator("span").first().innerText();
+      expect(headline).toMatch(/^Connected positions represent/);
+      const why = card.getByRole("button", { name: "Why?", exact: true });
+      await why.focus();
+      await why.press("Enter");
+      const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+      await expect(
+        drawer.getByRole("region", { name: "Generated claim" }),
+      ).toHaveText(`Claim on the dashboard${client} · ${headline}`);
+      await expect(drawer).toContainText("Deterministic fact");
+      await expect(drawer).toContainText("Calculation inputs and result");
+      await expect(drawer).toContainText("data/holdings.csv · row holdings:");
+      await expect(drawer).toContainText("as of 2026-08-26");
+      if (client === "Abdullah Al-Mansoori") {
+        await expect(drawer).not.toContainText("Margarethe");
+      }
+      expect(
+        await drawer.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(drawer).not.toBeVisible();
+      await expect(why).toBeFocused();
+      await expect(data).toBeVisible();
+    }
+  });
+
   test(`insight evidence retains questions, uncertainty, and review at ${width}px`, async ({
     page,
   }) => {

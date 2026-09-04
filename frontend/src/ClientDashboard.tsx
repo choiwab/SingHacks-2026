@@ -1136,9 +1136,11 @@ export function OpenCommitments({
 export function DataPanel({
   facts,
   clientId,
+  clientName,
 }: {
   facts: ProjectionFact[];
   clientId: string;
+  clientName: string;
 }) {
   const styles = useStyles();
   const kinds = [...new Set(facts.map((fact) => fact.kind))];
@@ -1169,7 +1171,11 @@ export function DataPanel({
                     source row{fact.source_rows.length === 1 ? "" : "s"}
                   </Caption1>
                   <div className={styles.action}>
-                    <WhyButton citations={[fact.id]} clientId={clientId} />
+                    <WhyButton
+                      citations={[fact.id]}
+                      clientId={clientId}
+                      claim={`${clientName} · ${fact.what}`}
+                    />
                   </div>
                 </article>
               ))}
