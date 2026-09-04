@@ -1,6 +1,44 @@
 import { expect, test } from "@playwright/test";
 
 for (const width of [1280, 390]) {
+  test(`scenario changes announce their result without moving focus at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0019/scenario");
+    const announcement = page.getByRole("main").getByRole("status");
+    await expect(announcement).toContainText("Abdullah Al-Mansoori");
+    await expect(announcement).toHaveAttribute("aria-atomic", "true");
+    // Keep the same live region mounted so assistive technology observes updates.
+    const originalRegion = await announcement.elementHandle();
+    for (const scenario of ["Strait escalates", "Strait reopens"]) {
+      const toggle = page.getByRole("button", { name: scenario, exact: true });
+      await toggle.focus();
+      await toggle.press("Enter");
+      await expect(toggle).toBeFocused();
+      await expect(toggle).toHaveAttribute("aria-pressed", "true");
+      const valueRange = await page.locator(".range-value").innerText();
+      const percentRange = await page.locator(".range-percent").innerText();
+      await expect(announcement).toHaveText(
+        `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). Estimated range · not a forecast.`,
+      );
+      expect(
+        await announcement.evaluate(
+          (element, original) => element === original,
+          originalRegion,
+        ),
+      ).toBe(true);
+      await expect(announcement).toMatchAriaSnapshot(`
+        - status: /Abdullah Al-Mansoori/
+      `);
+    }
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`scenario sector evidence retains client, scenario, and caveat at ${width}px`, async ({
     page,
   }) => {

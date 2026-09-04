@@ -45,6 +45,7 @@ export function Scenario({
     "Precomputed range, ",
     "Estimated range · ",
   );
+  const resultSummary = `${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${disclaimer}`;
   const scale = (value: number) =>
     Math.max(0, Math.min(100, ((value + 20) / 40) * 100));
   const left = scale(scenario.low_pct);
@@ -91,6 +92,10 @@ export function Scenario({
         </div>
       </header>
 
+      <p className="scenario-announcement" role="status" aria-atomic="true">
+        {resultSummary}
+      </p>
+
       <section className="scenario-result" aria-labelledby="scenario-name">
         <div className="range-copy">
           <p className="scenario-label" id="scenario-name">
@@ -101,7 +106,7 @@ export function Scenario({
           <WhyButton
             citations={scenario.citations}
             clientId={clientId}
-            claim={`${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${disclaimer}`}
+            claim={resultSummary}
             children="Why this range?"
           />
         </div>
