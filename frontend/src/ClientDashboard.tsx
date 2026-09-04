@@ -1228,13 +1228,16 @@ const STOPWORDS = new Set(
 function queryTerms(query: string): string[] {
   return [
     ...new Set(
-      query
-        // Keep dotted country abbreviations intact before splitting punctuation.
-        .replace(
-          /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
-          (_, country: string) => `U${country.toUpperCase()}`,
-        )
-        .split(/[^\p{L}\p{N}]+/u)
+      (
+        query
+          // Keep dotted country abbreviations intact before splitting punctuation.
+          .replace(
+            /(?<![\p{L}\p{N}.])u\.([sk])\.?(?![\p{L}\p{N}.])/giu,
+            (_, country: string) => `U${country.toUpperCase()}`,
+          )
+          // Amounts such as 3.4m are one search term, not 3 and 4m.
+          .match(/[\p{L}\p{N}]+(?:\.\p{N}+[\p{L}\p{N}]*)?/gu) ?? []
+      )
         .filter(
           (word) =>
             word.length > 1 &&
@@ -1252,17 +1255,20 @@ function matchScore(text: string, terms: string[]): number {
     .length;
 }
 
-/** Short terms such as UK, Q2 and FX must not match inside unrelated words. */
+/** Keep short terms and amounts from matching inside unrelated words or numbers. */
 function termPattern(term: string): string {
+  const literal = term.replaceAll(".", "\\.");
+  if (/^\p{N}/u.test(term)) {
+    return `(?<![\\p{L}\\p{N}.])${literal}(?![\\p{L}\\p{N}]|\\.\\p{N})`;
+  }
   return term.length === 2
-    ? `(?<![\\p{L}\\p{N}])${term}(?![\\p{L}\\p{N}])`
-    : term;
+    ? `(?<![\\p{L}\\p{N}])${literal}(?![\\p{L}\\p{N}])`
+    : literal;
 }
 
 /**
  * Keeps the retrieved records readable by marking the words that matched.
- * Terms are letters and digits only by construction, so they need no escaping
- * before going into the split pattern.
+ * termPattern escapes decimal points while preserving the source wording.
  */
 function Highlight({ text, terms }: { text: string; terms: string[] }) {
   const styles = useStyles();

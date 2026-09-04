@@ -1559,6 +1559,58 @@ for (const width of [1280, 390]) {
     ).toBe(false);
   });
 
+  test(`Memory amount searches preserve decimals at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Memory", exact: true }).click();
+    const searchRegion = page.getByRole("region", {
+      name: "Search the client memory",
+    });
+    const search = searchRegion.getByRole("searchbox");
+    const notes = page.getByRole("region", { name: "RM notes", exact: true });
+    for (const query of ["9.4m", "4m", "13.4m", "3.45m", "34m"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        `0 of 2 notes and 0 of 1 belief mention ${query}.`,
+      );
+      await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(0);
+      await expect(notes.locator("mark")).toHaveCount(0);
+      await expect(search).toHaveValue(query);
+      await expect(search).toBeFocused();
+    }
+    for (const query of ["3.4m", "What did she say about 3.4M?"]) {
+      await search.fill(query);
+      await expect(searchRegion.getByRole("status")).toContainText(
+        "1 of 2 notes and 0 of 1 belief mention 3.4m.",
+      );
+      await expect(notes.locator("mark")).toHaveText("3.4m");
+      await expect(notes).toContainText("EUR 3.4m falls due before year end.");
+      await expect(notes).not.toContainText("Risk profiling completed");
+      await expect(search).toHaveValue(query);
+    }
+    const why = notes.getByRole("button", { name: "Why?" });
+    await why.click();
+    const drawer = page.getByRole("dialog", { name: "Why?" });
+    await expect(drawer).toContainText("N-006");
+    await expect(drawer).toContainText("EUR 3.4m falls due before year end.");
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    await expect(notes.locator("mark")).toHaveText("3.4m");
+    await search.focus();
+    await searchRegion
+      .getByRole("button", { name: "Clear note search" })
+      .click();
+    await expect(search).toHaveValue("");
+    await expect(notes.getByRole("button", { name: "Why?" })).toHaveCount(2);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`short Memory queries filter notes at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0007/pre-read");
