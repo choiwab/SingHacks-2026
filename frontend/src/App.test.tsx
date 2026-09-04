@@ -10,6 +10,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
 
 import { App } from "./App";
+import { measure } from "./ClientDashboard";
+import type { ProjectionFact } from "./contracts";
 import { projectionFixture } from "./test/fixture";
 
 afterEach(() => {
@@ -145,6 +147,13 @@ describe("Monday Brief", () => {
     expect(
       within(top).getAllByText("To confirm: Confirm intent before advising."),
     ).toHaveLength(1);
+    // Only the mandate fact puts a value on a scale, so only its card draws a
+    // bar; the deadline's inputs are money and days.
+    const bars = within(top).getAllByText(/against the 30% maximum/);
+    expect(bars).toHaveLength(1);
+    expect(bars[0]).toHaveTextContent(
+      "Equity allocation against the 30% maximum",
+    );
 
     await user.click(screen.getByRole("tab", { name: "Insights" }));
     expect(
@@ -429,5 +438,52 @@ describe("Monday Brief", () => {
       screen.getByRole("button", { name: "Dismiss the review error" }),
     );
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("measure", () => {
+  const gap = (
+    numbers: Partial<
+      Extract<ProjectionFact, { kind: "mandate_gap" }>["numbers"]
+    >,
+  ) =>
+    measure({
+      id: "f",
+      kind: "mandate_gap",
+      what: "",
+      source_rows: [],
+      event_ids: [],
+      confidence: "high",
+      numbers: {
+        asset_class: "Equity",
+        actual_pct: 71.5,
+        limit_pct: 30,
+        boundary: "maximum",
+        gap_pct: 41.5,
+        scope: "Household look-through",
+        ...numbers,
+      },
+    });
+
+  it("scales past the larger of the value and the limit", () => {
+    // 71.5 against a 30% cap: the fill sits near the end and the marker at 38%.
+    expect(gap({})).toMatchObject({ actual: 71.5, limit: 30, scale: 78.65 });
+  });
+
+  it("reads the breach in the direction the boundary points", () => {
+    expect(gap({})?.breached).toBe(true);
+    expect(gap({ actual_pct: 12.8, limit_pct: 20 })?.breached).toBe(false);
+    // A minimum band is breached from below, not above.
+    expect(gap({ boundary: "minimum", actual_pct: 23.4 })?.breached).toBe(true);
+    expect(
+      gap({ boundary: "minimum", actual_pct: 7.1, limit_pct: 0 })?.breached,
+    ).toBe(false);
+  });
+
+  it("draws nothing for a degenerate 0% against 0% band", () => {
+    // Several clients carry one; without this the fill width is NaN%.
+    expect(
+      gap({ boundary: "minimum", actual_pct: 0, limit_pct: 0 }),
+    ).toBeUndefined();
   });
 });

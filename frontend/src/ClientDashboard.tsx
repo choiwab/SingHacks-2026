@@ -123,6 +123,37 @@ const useStyles = makeStyles({
     flexWrap: "wrap",
     gap: tokens.spacingHorizontalXS,
   },
+  measure: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXXS,
+  },
+  track: {
+    position: "relative",
+    blockSize: "0.5rem",
+    ...shorthands.borderRadius(tokens.borderRadiusSmall),
+    backgroundColor: tokens.colorNeutralBackground4,
+    // The limit marker sits at limit/scale, which is always inside the track.
+    overflow: "hidden",
+  },
+  fill: {
+    blockSize: "100%",
+    ...shorthands.borderRadius(tokens.borderRadiusSmall),
+    backgroundColor: tokens.colorPaletteGreenBackground3,
+  },
+  fillBreached: {
+    backgroundColor: tokens.colorPaletteRedBackground3,
+  },
+  fillPlain: {
+    backgroundColor: tokens.colorBrandBackground,
+  },
+  limitMark: {
+    position: "absolute",
+    insetBlockStart: 0,
+    insetBlockEnd: 0,
+    inlineSize: "2px",
+    backgroundColor: tokens.colorNeutralForeground1,
+  },
   numbers: {
     display: "grid",
     gridTemplateColumns: "auto 1fr",
@@ -334,6 +365,105 @@ function stake(fact: ProjectionFact, currency?: string): string {
       return `${n.life_stage}, resident in ${n.residence}, booked in ${n.booking_centre}.`;
     }
   }
+}
+
+/**
+ * A fact whose calculation inputs put a measured value on a scale, so the card
+ * can show how far outside it sits instead of only stating the two numbers.
+ * `limit` is the threshold the fact engine emitted; a fact with no threshold in
+ * its inputs gets a plain proportion bar rather than an invented line.
+ *
+ * Deadline and change facts get no bar: their inputs are money and days, not a
+ * position on one scale.
+ */
+type Measure = {
+  label: string;
+  actual: number;
+  scale: number;
+  limit?: number;
+  breached: boolean;
+};
+
+export function measure(fact: ProjectionFact): Measure | undefined {
+  switch (fact.kind) {
+    case "mandate_gap": {
+      const n = fact.numbers;
+      // Headroom past the larger of the two keeps the marker off the end. Some
+      // clients carry a degenerate 0% against 0% band, which draws nothing.
+      const scale = Math.max(n.actual_pct, n.limit_pct) * 1.1;
+      if (scale <= 0) return undefined;
+      return {
+        label: `${n.asset_class} allocation against the ${n.limit_pct}% ${n.boundary}`,
+        actual: n.actual_pct,
+        limit: n.limit_pct,
+        scale,
+        breached:
+          n.boundary === "minimum"
+            ? n.actual_pct < n.limit_pct
+            : n.actual_pct > n.limit_pct,
+      };
+    }
+    case "facility": {
+      const n = fact.numbers;
+      const scale = Math.max(n.ltv_pct, n.trigger_pct) * 1.1;
+      if (scale <= 0) return undefined;
+      return {
+        label: `Loan-to-value against the ${n.trigger_pct}% margin-call trigger`,
+        actual: n.ltv_pct,
+        limit: n.trigger_pct,
+        scale,
+        breached: n.ltv_pct > n.trigger_pct,
+      };
+    }
+    case "concentration":
+      // No threshold exists for concentration, so this is a plain proportion
+      // of the portfolio with no line to cross.
+      return {
+        label: "Connected positions as a share of the portfolio",
+        actual: fact.numbers.weight_pct,
+        scale: 100,
+        breached: false,
+      };
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * The one visual on an insight card (PRD 5.4, 5.6): where the measured value
+ * sits against the mandate or trigger line the fact engine supplied. The track
+ * is aria-hidden because the caption and the fact headline already state every
+ * number it draws.
+ */
+function MeasureBar({ fact }: { fact: ProjectionFact }) {
+  const styles = useStyles();
+  const bar = measure(fact);
+  if (!bar) return null;
+
+  const percent = (value: number) =>
+    `${Math.min(100, (value / bar.scale) * 100)}%`;
+
+  return (
+    <div className={styles.measure}>
+      <Caption1>{bar.label}</Caption1>
+      <div className={styles.track} aria-hidden="true">
+        <div
+          className={mergeClasses(
+            styles.fill,
+            bar.breached && styles.fillBreached,
+            bar.limit === undefined && styles.fillPlain,
+          )}
+          style={{ inlineSize: percent(bar.actual) }}
+        />
+        {bar.limit === undefined ? null : (
+          <div
+            className={styles.limitMark}
+            style={{ insetInlineStart: percent(bar.limit) }}
+          />
+        )}
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -589,6 +719,7 @@ function InsightCard({
         </Badge>
       </div>
       <Subtitle2 as="h3">{fact.what}</Subtitle2>
+      <MeasureBar fact={fact} />
       <Body1 as="p" className={styles.summary}>
         {matters}
       </Body1>
@@ -967,6 +1098,7 @@ export function DataPanel({
               .map((fact) => (
                 <article className={styles.card} key={fact.id}>
                   <Body1Strong>{fact.what}</Body1Strong>
+                  <MeasureBar fact={fact} />
                   <FactNumbers fact={fact} />
                   <Caption1>
                     Confidence: {fact.confidence} · {fact.source_rows.length}{" "}

@@ -38,6 +38,17 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await expect(top).toContainText(
     "Do you want Equity brought back inside the 30% maximum",
   );
+  // The mandate card draws the 71.5% fill past the 30% limit marker; the two
+  // cards whose facts carry no scale draw nothing.
+  await expect(
+    top.getByText("Equity allocation against the 30% maximum"),
+  ).toBeVisible();
+  const fill = top.locator('[aria-hidden="true"] > div').first();
+  const [fillBox, trackBox] = [
+    await fill.boundingBox(),
+    await top.locator('[aria-hidden="true"]').first().boundingBox(),
+  ];
+  expect(fillBox!.width / trackBox!.width).toBeCloseTo(71.5 / (71.5 * 1.1), 2);
 
   // The Insights tab carries the insights the top three pushed below the fold.
   await page.getByRole("tab", { name: "Insights" }).click();
