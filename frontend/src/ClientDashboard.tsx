@@ -1268,10 +1268,12 @@ function queryTerms(query: string): string[] {
   ];
 }
 
-/** How many distinct query terms the text contains. */
-function matchScore(text: string, terms: string[]): number {
-  return terms.filter((term) => new RegExp(termPattern(term), "iu").test(text))
-    .length;
+/** Count distinct terms without inventing phrases across separate fields. */
+function matchScore(fields: string[], terms: string[]): number {
+  return terms.filter((term) => {
+    const pattern = new RegExp(termPattern(term), "iu");
+    return fields.some((field) => pattern.test(field));
+  }).length;
 }
 
 /** Keep short terms and amounts from matching inside unrelated words or numbers. */
@@ -1336,7 +1338,7 @@ const plural = (count: number, word: string) =>
   `${count} ${word}${count === 1 ? "" : "s"}`;
 
 /** Best match first; equal scores keep the order they were given in. */
-function retrieve<T>(items: T[], terms: string[], text: (item: T) => string) {
+function retrieve<T>(items: T[], terms: string[], text: (item: T) => string[]) {
   if (terms.length === 0) return items;
   return items
     .map((item) => ({ item, score: matchScore(text(item), terms) }))
@@ -1366,15 +1368,19 @@ export function MemoryPanel({
     .sort((a, b) =>
       String(a.record.note_date).localeCompare(String(b.record.note_date)),
     );
-  const noteText = (note: (typeof notes)[number]) =>
-    `${String(note.record.note ?? note.title)} ${String(note.record.channel ?? "")} ${String(note.record.note_date ?? "")} ${String(note.record.note_id ?? "")} ${String(note.record.rm_name ?? "")}`;
+  const noteText = (note: (typeof notes)[number]) => [
+    String(note.record.note ?? note.title),
+    String(note.record.channel ?? ""),
+    String(note.record.note_date ?? ""),
+    String(note.record.note_id ?? ""),
+    String(note.record.rm_name ?? ""),
+  ];
 
   const matchedNotes = retrieve(notes, terms, noteText);
-  const matchedBeliefs = retrieve(
-    preRead.beliefs,
-    terms,
-    (belief) => `${belief.text} ${belief.note_id}`,
-  );
+  const matchedBeliefs = retrieve(preRead.beliefs, terms, (belief) => [
+    belief.text,
+    belief.note_id,
+  ]);
 
   return (
     <div className={mergeClasses(styles.panel, styles.memory)}>

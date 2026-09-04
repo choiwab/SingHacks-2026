@@ -38,6 +38,12 @@ for (const width of [1280, 390]) {
       '"EUR 3"',
       '"2026-05"',
       '"006"',
+      // Separate source fields must not create a phrase absent from the note.
+      '"conservative. Meeting"',
+      '"Email 2026-05-29"',
+      '"2026-05-29 N-006"',
+      '"N-006 Priscilla"',
+      '"money. N-005"',
     ]) {
       await search.fill(query);
       await expect(panel.getByRole("status")).toHaveText(
@@ -45,7 +51,13 @@ for (const width of [1280, 390]) {
       );
       await expect(panel.locator("mark")).toHaveCount(0);
     }
-    for (const wording of ["3.4m", "EUR 3.4m", "2026-05-29", "N-006"]) {
+    for (const wording of [
+      "3.4m",
+      "EUR 3.4m",
+      "2026-05-29",
+      "N-006",
+      "Email",
+    ]) {
       await search.fill(`"${wording}"`);
       await expect(panel.getByRole("status")).toHaveText(
         `1 of 2 notes and 0 of 1 belief mention "${wording.toLowerCase()}".`,
@@ -53,6 +65,14 @@ for (const width of [1280, 390]) {
       await expect(notes.locator("mark")).toHaveText(wording);
       await expect(search).toBeFocused();
     }
+    await search.fill('"Priscilla Ong"');
+    await expect(panel.getByRole("status")).toHaveText(
+      '2 of 2 notes and 0 of 1 belief mention "priscilla ong".',
+    );
+    await expect(notes.locator("mark")).toHaveText([
+      "Priscilla Ong",
+      "Priscilla Ong",
+    ]);
     await search.fill('"safe and boring"');
     await expect(notes.locator("mark")).toHaveText("safe and boring");
     await expect(beliefs.locator("mark")).toHaveCount(0);
