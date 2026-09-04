@@ -304,10 +304,28 @@ function FactNumbers({ fact }: { fact: ProjectionFact }) {
  * header never claims more certainty than the pipeline produced (PRD 5.2).
  */
 function dataHealth(facts: ProjectionFact[]) {
-  if (facts.some((fact) => fact.confidence === "low"))
-    return { label: "Needs confirmation", color: "warning" as const };
-  if (facts.length === 0) return { label: "Stale", color: "danger" as const };
-  return { label: "Current", color: "success" as const };
+  const lowConfidence = facts.filter((fact) => fact.confidence === "low");
+  if (lowConfidence.length > 0)
+    return {
+      label: "Needs confirmation",
+      color: "warning" as const,
+      explanation:
+        "Some client facts have low confidence and need confirmation.",
+      citations: lowConfidence.map((fact) => fact.id),
+    };
+  if (facts.length === 0)
+    return {
+      label: "Stale",
+      color: "danger" as const,
+      explanation: "No client facts are available in this snapshot.",
+      citations: [],
+    };
+  return {
+    label: "Current",
+    color: "success" as const,
+    explanation: "No client facts are marked low confidence in this snapshot.",
+    citations: facts.map((fact) => fact.id),
+  };
 }
 
 type FactOf<K extends ProjectionFact["kind"]> = Extract<
@@ -695,6 +713,18 @@ export function DashboardHeader({
         <Badge appearance="filled" color={health.color}>
           Data {health.label}
         </Badge>
+        <Caption1>{health.explanation}</Caption1>
+        {health.citations.length > 0 && (
+          <div className={styles.action}>
+            <WhyButton
+              citations={health.citations}
+              clientId={preRead.client_id}
+              claim={`${preRead.name}: Data ${health.label}. ${health.explanation} Data as of ${asOf}. This status reflects fact confidence, not a live data refresh.`}
+            >
+              Why this data status?
+            </WhyButton>
+          </div>
+        )}
         <Caption1>
           Data as of {asOf} · reporting preference: {preRead.language}
         </Caption1>

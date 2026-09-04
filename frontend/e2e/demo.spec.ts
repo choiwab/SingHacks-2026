@@ -1,6 +1,112 @@
 import { expect, test } from "@playwright/test";
+import type { MondayBriefProjection } from "../src/contracts";
 
 for (const width of [1280, 390]) {
+  test(`data status explains its supporting facts at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    await page.goto("/clients/CL-0003/pre-read");
+    const why = page.getByRole("button", { name: "Why this data status?" });
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await expect(
+        page.getByText(
+          "No client facts are marked low confidence in this snapshot.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      await why.focus();
+      await page.keyboard.press("Enter");
+      await expect(drawer).toContainText(
+        "Margarethe Voss-Brenner: Data Current.",
+      );
+      await expect(drawer).toContainText(
+        "This status reflects fact confidence, not a live data refresh.",
+      );
+      await expect(drawer).toContainText(
+        "Confidence medium · as of 2026-08-26",
+      );
+      await expect(drawer).toContainText(
+        "data/clients.csv · row clients:CL-0003",
+      );
+      await expect(drawer).toContainText("data/holdings.csv");
+      expect(
+        await drawer.evaluate((el) => el.scrollWidth <= el.clientWidth),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(why).toBeFocused();
+    }
+    await page
+      .getByRole("navigation", { name: "Client switcher" })
+      .getByRole("button", { name: /Alistair Pemberton-Hale/ })
+      .click();
+    await why.click();
+    await expect(drawer).toContainText(
+      "Alistair Pemberton-Hale: Data Current.",
+    );
+    await expect(drawer).not.toContainText("CL-0003");
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
+  test(`data status explains low-confidence and missing facts at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 844 });
+    let missing = false;
+    await page.route("**/api/monday-brief", async (route) => {
+      const response = await route.fetch();
+      const projection: MondayBriefProjection = await response.json();
+      const facts = projection.facts["CL-0003"];
+      const deadline = facts.find((fact) => fact.kind === "deadline")!;
+      deadline.confidence = "low";
+      if (missing) projection.facts["CL-0003"] = [];
+      await route.fulfill({ response, json: projection });
+    });
+    await page.goto("/clients/CL-0003/pre-read");
+    await expect(
+      page.getByText("Data Needs confirmation", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(
+        "Some client facts have low confidence and need confirmation.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const why = page.getByRole("button", { name: "Why this data status?" });
+    await why.click();
+    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
+    await expect(drawer).toContainText(
+      "Margarethe Voss-Brenner: Data Needs confirmation.",
+    );
+    await expect(drawer).toContainText("Confidence low · as of 2026-08-26");
+    await expect(drawer).toContainText("data/planned_cash_needs.csv");
+    await expect(drawer).not.toContainText("Confidence high");
+    await expect(drawer).not.toContainText("Confidence medium");
+    await page.keyboard.press("Escape");
+    await expect(why).toBeFocused();
+    missing = true;
+    await page.reload();
+    await expect(
+      page.getByText("No client facts are available in this snapshot.", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(why).toHaveCount(0);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+  });
+
   test(`Memory retrieves exact quoted phrases at ${width}px`, async ({
     page,
   }) => {
