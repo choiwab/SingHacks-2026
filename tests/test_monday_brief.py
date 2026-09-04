@@ -28,9 +28,10 @@ def test_cross_currency_cash_coverage_uses_as_of_fx() -> None:
     projection = build_monday_brief(DATA, as_of=AS_OF)
     deadline = next(fact for fact in projection.facts["CL-0006"] if fact.kind == "deadline")
 
-    assert deadline.numbers["amount_in_portfolio_currency"] == 6_760_000
-    assert deadline.numbers["portfolio_currency"] == "SGD"
-    assert deadline.numbers["coverage_pct"] == 250.2
+    assert deadline.numbers.amount_in_portfolio_currency == 6_760_000
+    assert deadline.numbers.portfolio_currency == "SGD"
+    assert deadline.numbers.coverage_pct == 250.2
+    assert "market_context:2026-08-26:USDSGD" in deadline.source_rows
 
 
 def test_every_projection_reference_resolves() -> None:
@@ -87,6 +88,22 @@ def test_missing_fx_quote_is_a_build_diagnostic(tmp_path) -> None:
 
     assert any(
         item.code == "missing_fx_quote" and "SGD" in item.message
+        for item in caught.value.diagnostics
+    )
+
+
+def test_duplicate_event_identity_is_a_build_diagnostic(tmp_path) -> None:
+    source = tmp_path / "data"
+    shutil.copytree(DATA, source, ignore=shutil.ignore_patterns("generated"))
+    events = pd.read_csv(source / "event_log.csv")
+    events = pd.concat([events, events.iloc[[0]]], ignore_index=True)
+    events.to_csv(source / "event_log.csv", index=False)
+
+    with pytest.raises(ProjectionBuildError) as caught:
+        build_monday_brief(source, as_of=AS_OF)
+
+    assert any(
+        item.file == "event_log.csv" and item.code == "duplicate_identifier"
         for item in caught.value.diagnostics
     )
 

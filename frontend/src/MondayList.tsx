@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 
-import type { MondayBriefProjection, RankedClient } from "./generated/api";
+import type { MondayBriefProjection, RankedClient } from "./contracts";
 
 const WEEK = [
   { key: "Mon", label: "Mon", date: "31 Aug" },

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
-import type { MondayBriefProjection, ScenarioKey } from "./generated/api";
+import type { MondayBriefProjection, ScenarioKey } from "./contracts";
 import { CitedList, WhyButton } from "./shared";
 
 function money(value: number, currency: string): string {

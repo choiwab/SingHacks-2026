@@ -36,11 +36,17 @@ def test_app_factory_has_no_build_or_write_side_effects(tmp_path) -> None:
 
 def test_home_health_and_typed_projection_are_available(tmp_path) -> None:
     projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
+    frontend = tmp_path / "frontend"
+    frontend.mkdir()
+    (frontend / "index.html").write_text(
+        "<main>Calls to make. Meetings to prepare.</main>", encoding="utf-8"
+    )
     app = create_app(
         source_dir=tmp_path,
         database=":memory:",
         projection=projection,
         save_diagnostic=False,
+        frontend_dist=frontend,
     )
 
     home = send(app, "GET", "/")
@@ -55,6 +61,32 @@ def test_home_health_and_typed_projection_are_available(tmp_path) -> None:
     assert data.json()["schema_version"] == 1
     assert len(data.json()["ranking"]) == 20
     assert old_endpoint.status_code == 404
+
+
+def test_frontend_falls_back_to_index_for_client_routes(tmp_path) -> None:
+    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
+    frontend = tmp_path / "frontend"
+    assets = frontend / "assets"
+    assets.mkdir(parents=True)
+    (frontend / "index.html").write_text("<main id='root'></main>", encoding="utf-8")
+    (assets / "app.js").write_text("console.log('ready')", encoding="utf-8")
+    app = create_app(
+        source_dir=tmp_path,
+        database=":memory:",
+        projection=projection,
+        save_diagnostic=False,
+        frontend_dist=frontend,
+    )
+
+    route = send(app, "GET", "/clients/CL-0003/pre-read")
+    asset = send(app, "GET", "/assets/app.js")
+    unknown_api = send(app, "GET", "/api/not-a-route")
+
+    assert route.status_code == 200
+    assert "id='root'" in route.text
+    assert asset.status_code == 200
+    assert "ready" in asset.text
+    assert unknown_api.status_code == 404
 
 
 def test_review_is_persisted_to_sqlite(tmp_path) -> None:

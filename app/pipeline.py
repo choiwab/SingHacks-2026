@@ -1,21 +1,20 @@
 """Offline fact-to-narrative pipeline for the Monday Brief demo."""
 
+# Pandas' overloads widen common DataFrame selections into scalar and ndarray unions.
+# pyright: reportAttributeAccessIssue=false, reportArgumentType=false, reportCallIssue=false
+
 from __future__ import annotations
 
 import json
 import re
 from datetime import date
 from hashlib import sha256
-from pathlib import Path
 from typing import Any
 
 import pandas as pd
 
 from app.monday_brief.policy import POLICY
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
-GENERATED = DATA / "generated"
 AS_OF = date(2026, 8, 26)
 SNAPSHOT = "2026-08-26"
 BASELINE = "2025-12-31"
@@ -44,12 +43,6 @@ STOP_WORDS = {
 }
 
 
-def _load_sources(source_dir: Path = DATA) -> tuple[dict[str, pd.DataFrame], list[dict[str, Any]]]:
-    tables = {name: pd.read_csv(source_dir / f"{name}.csv") for name in TABLE_NAMES}
-    notes = json.loads((source_dir / "rm_notes.json").read_text(encoding="utf-8"))
-    return tables, notes
-
-
 def _native(value: Any) -> Any:
     if pd.isna(value):
         return None
@@ -70,10 +63,22 @@ def _evidence_id(table: str, row: pd.Series) -> str:
     if table == "holdings":
         key = f"{row['snapshot_date']}:{row['portfolio_id']}:{row['instrument_id']}"
     elif table == "event_log":
-        key = (
-            f"{row['event_date']}:{_slug(str(row['event_type']))}:"
-            f"{_slug(str(row['region']))}:{_slug(str(row['description']))[:48]}"
+        canonical = json.dumps(
+            _record(
+                row,
+                (
+                    "event_date",
+                    "event_type",
+                    "region",
+                    "description",
+                    "primary_transmission",
+                    "severity",
+                ),
+            ),
+            sort_keys=True,
+            default=str,
         )
+        key = f"{row['event_date']}:{sha256(canonical.encode()).hexdigest()[:16]}"
     elif table == "market_context":
         key = f"{row['snapshot_date']}:{row['series_id']}"
     elif table == "mandates":
@@ -303,12 +308,13 @@ def _deadline_fact(
     daily = current[current["liquidity_tier"] == "Daily"]["market_value_base"].sum()
     amount = float(need["amount"])
     portfolio_currency = str(current["portfolio_ccy"].iloc[0])
-    amount_in_portfolio_currency = _convert_currency(
+    amount_in_portfolio_currency, fx_evidence = _convert_currency(
         amount,
         str(need["currency"]),
         portfolio_currency,
         tables["market_context"],
         as_of,
+        evidence,
     )
     evidence_id = _add_evidence(
         evidence,
@@ -335,7 +341,7 @@ def _deadline_fact(
             ),
             "description": need["description"],
         },
-        [evidence_id],
+        [evidence_id, *fx_evidence],
     )
 
 
@@ -345,14 +351,30 @@ def _convert_currency(
     target_currency: str,
     market_context: pd.DataFrame,
     as_of: date,
-) -> float:
+    evidence: dict[str, dict[str, Any]],
+) -> tuple[float, list[str]]:
     """Convert through USD using validated as-of quotes."""
     if source_currency == target_currency:
-        return amount
-    quotes = market_context[
+        return amount, []
+    quote_rows = market_context[
         (market_context["snapshot_date"] == as_of.isoformat())
         & (market_context["category"] == "FX")
-    ].set_index("series_id")["value"]
+    ]
+    quotes = quote_rows.set_index("series_id")["value"]
+    citations: list[str] = []
+
+    def quote(code: str) -> float:
+        row = quote_rows[quote_rows["series_id"] == code].iloc[0]
+        citations.append(
+            _add_evidence(
+                evidence,
+                "market_context",
+                row,
+                f"{code} exchange rate at {as_of.isoformat()}",
+                ("snapshot_date", "series_id", "series_name", "unit", "value"),
+            )
+        )
+        return float(quotes[code])
 
     def to_usd(value: float, currency: str) -> float:
         if currency == "USD":
@@ -360,8 +382,8 @@ def _convert_currency(
         direct = f"{currency}USD"
         inverse = f"USD{currency}"
         if direct in quotes:
-            return value * float(quotes[direct])
-        return value / float(quotes[inverse])
+            return value * quote(direct)
+        return value / quote(inverse)
 
     def from_usd(value: float, currency: str) -> float:
         if currency == "USD":
@@ -369,10 +391,11 @@ def _convert_currency(
         direct = f"USD{currency}"
         inverse = f"{currency}USD"
         if direct in quotes:
-            return value * float(quotes[direct])
-        return value / float(quotes[inverse])
+            return value * quote(direct)
+        return value / quote(inverse)
 
-    return from_usd(to_usd(amount, source_currency), target_currency)
+    converted = from_usd(to_usd(amount, source_currency), target_currency)
+    return converted, list(dict.fromkeys(citations))
 
 
 def _facility_fact(
@@ -904,24 +927,3 @@ def _build_projection(
         "scenarios": scenarios,
         "evidence": evidence,
     }
-
-
-def build_app_data() -> dict[str, Any]:
-    """Compatibility wrapper. New callers should use app.monday_brief.build_monday_brief."""
-    tables, notes = _load_sources()
-    return _build_projection(tables, notes)
-
-
-def build_and_save() -> dict[str, Any]:
-    data = build_app_data()
-    GENERATED.mkdir(exist_ok=True)
-    (GENERATED / "app_data.json").write_text(
-        json.dumps(data, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    return data
-
-
-if __name__ == "__main__":
-    result = build_and_save()
-    print(f"Prepared {len(result['ranking'])} clients in {len(result['pipeline'])} stations.")

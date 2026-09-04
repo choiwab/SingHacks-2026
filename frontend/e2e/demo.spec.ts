@@ -1,32 +1,11 @@
 import { expect, test } from "@playwright/test";
 
-import { projectionFixture } from "../src/test/fixture";
-
-test.beforeEach(async ({ page }) => {
-  await page.route("**/api/monday-brief", async (route) => {
-    await route.fulfill({ json: projectionFixture });
-  });
-  await page.route("**/api/reviews", async (route) => {
-    const review = route.request().postDataJSON() as Record<string, string>;
-    await route.fulfill({
-      json: {
-        review: {
-          ...review,
-          review_id: "review-1",
-          rm: "Priscilla Ong",
-          timestamp: "2026-08-31T01:30:00Z",
-        },
-      },
-    });
-  });
-});
-
 test("judge demo path remains navigable and responsive", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Margarethe Voss-Brenner/ }).click();
   await page.getByRole("button", { name: "Why?" }).first().click();
   await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
-    "Current equity holding",
+    "data/holdings.csv",
   );
   await page
     .getByRole("dialog", { name: "Why?" })
@@ -43,7 +22,7 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await expect(page.getByRole("status").last()).toContainText("Approved");
 
   await page.goto("/clients/CL-0019/scenario");
-  await expect(page.getByText("Abdullah Al-Nuaimi")).toBeVisible();
+  await expect(page.getByText("Abdullah Al-Mansoori")).toBeVisible();
   await page.getByRole("button", { name: "Strait escalates" }).click();
   await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
   await page.getByRole("button", { name: "Strait reopens" }).click();

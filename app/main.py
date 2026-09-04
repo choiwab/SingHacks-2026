@@ -8,16 +8,15 @@ from datetime import date
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, HTMLResponse
 
 from app.monday_brief import MondayBriefProjection, build_monday_brief, save_projection
-from app.monday_brief.models import ReviewRecord, ReviewRequest
+from app.monday_brief.models import ReviewRequest, ReviewResponse
 from app.monday_brief.reviews import ReviewLedger
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-STATIC = ROOT / "app" / "static"
+FRONTEND_DIST = ROOT / "frontend" / "dist"
 AS_OF = date(2026, 8, 26)
 
 
@@ -28,6 +27,7 @@ def create_app(
     database: Path | str | None = None,
     projection: MondayBriefProjection | None = None,
     save_diagnostic: bool = True,
+    frontend_dist: Path = FRONTEND_DIST,
 ) -> FastAPI:
     """Create an isolated app; all I/O occurs inside its lifespan."""
     database = database or source_dir / "generated" / "reviews.sqlite3"
@@ -47,11 +47,6 @@ def create_app(
             ledger.close()
 
     application = FastAPI(title="Monday Brief", version="0.2.0", lifespan=lifespan)
-    application.mount("/static", StaticFiles(directory=STATIC), name="static")
-
-    @application.get("/", include_in_schema=False)
-    async def index() -> FileResponse:
-        return FileResponse(STATIC / "index.html")
 
     @application.get("/api/health")
     async def health(request: Request) -> dict[str, str]:
@@ -62,13 +57,32 @@ def create_app(
     async def monday_brief(request: Request) -> MondayBriefProjection:
         return request.app.state.projection
 
-    @application.post("/api/reviews")
-    async def review(payload: ReviewRequest, request: Request) -> dict[str, ReviewRecord]:
+    @application.post("/api/reviews", response_model=ReviewResponse)
+    async def review(payload: ReviewRequest, request: Request) -> ReviewResponse:
         current: MondayBriefProjection = request.app.state.projection
         if payload.client_id not in current.pre_reads:
             raise HTTPException(status_code=404, detail="Client pre-read not found")
         ledger: ReviewLedger = request.app.state.review_ledger
-        return {"review": ledger.append(payload, rm="Priscilla Ong")}
+        return ReviewResponse(review=ledger.append(payload, rm="Priscilla Ong"))
+
+    @application.get("/{frontend_path:path}", include_in_schema=False, response_model=None)
+    async def frontend(frontend_path: str) -> FileResponse | HTMLResponse:
+        """Serve Vite output and fall back to its index for client-side routes."""
+        if frontend_path == "api" or frontend_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+
+        root = frontend_dist.resolve()
+        index = root / "index.html"
+        if not index.is_file():
+            return HTMLResponse(
+                "Frontend build not found. Run `pnpm dev` or `pnpm build`.",
+                status_code=503,
+            )
+
+        requested = (root / frontend_path).resolve()
+        if requested.is_relative_to(root) and requested.is_file():
+            return FileResponse(requested)
+        return FileResponse(index)
 
     return application
 

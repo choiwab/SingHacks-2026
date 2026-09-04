@@ -6,7 +6,7 @@ import json
 import math
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 from pydantic import ValidationError
@@ -188,7 +188,7 @@ def _orphans(
                     file,
                     "orphan_reference",
                     f"{value!r} does not resolve",
-                    row=int(index) + 2,
+                    row=int(str(index)) + 2,
                     field=field,
                 )
             )
@@ -200,7 +200,7 @@ def _validate_scalar_columns(
     for name, fields in NUMERIC_COLUMNS.items():
         frame = tables[name]
         for field in fields:
-            numeric = pd.to_numeric(frame[field], errors="coerce")
+            numeric = cast(pd.Series, pd.to_numeric(frame[field], errors="coerce"))
             invalid = numeric.isna() | ~numeric.map(lambda value: math.isfinite(float(value)))
             for index in frame.index[invalid]:
                 diagnostics.append(
@@ -208,7 +208,7 @@ def _validate_scalar_columns(
                         f"{name}.csv",
                         "invalid_number",
                         f"expected a finite number, got {frame.at[index, field]!r}",
-                        row=int(index) + 2,
+                        row=int(str(index)) + 2,
                         field=field,
                     )
                 )
@@ -311,6 +311,25 @@ def _validate_sources(
         ["snapshot_date", "series_id"],
         diagnostics,
     )
+    _duplicate_composite(
+        mandates,
+        "mandates.csv",
+        ["mandate_code", "asset_class"],
+        diagnostics,
+    )
+    _duplicate_composite(
+        tables["event_log"],
+        "event_log.csv",
+        [
+            "event_date",
+            "event_type",
+            "region",
+            "description",
+            "primary_transmission",
+            "severity",
+        ],
+        diagnostics,
+    )
 
     client_ids = set(clients["client_id"].astype(str))
     portfolio_ids = set(portfolios["portfolio_id"].astype(str))
@@ -391,7 +410,7 @@ def _validate_sources(
                     f"no {BASELINE} positions for {client_id}",
                 )
             )
-        values = pd.to_numeric(rows["market_value_base"], errors="coerce")
+        values = cast(pd.Series, pd.to_numeric(rows["market_value_base"], errors="coerce"))
         invalid_values = values.empty or not all(math.isfinite(float(value)) for value in values)
         if invalid_values or values.sum() <= 0:
             diagnostics.append(
@@ -417,17 +436,18 @@ def _validate_sources(
                 )
             )
     current_fx = market[(market["snapshot_date"] == snapshot) & (market["category"] == "FX")]
-    fx_values = pd.to_numeric(current_fx["value"], errors="coerce")
-    for index in current_fx.index[fx_values <= 0]:
-        diagnostics.append(
-            _diagnostic(
-                "market_context.csv",
-                "invalid_fx_quote",
-                "FX quote must be greater than zero",
-                row=int(index) + 2,
-                field="value",
+    fx_values = cast(pd.Series, pd.to_numeric(current_fx["value"], errors="coerce"))
+    for index, value in fx_values.items():
+        if float(value) <= 0:
+            diagnostics.append(
+                _diagnostic(
+                    "market_context.csv",
+                    "invalid_fx_quote",
+                    "FX quote must be greater than zero",
+                    row=int(str(index)) + 2,
+                    field="value",
+                )
             )
-        )
 
 
 def _fact_kind(fact_id: str) -> str:

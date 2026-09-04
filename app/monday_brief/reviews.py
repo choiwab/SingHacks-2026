@@ -166,13 +166,15 @@ class ReviewLedger:
     @staticmethod
     def _legacy_record(raw: dict[str, Any], source: str, index: int) -> ReviewRecord:
         identity = json.dumps(raw, sort_keys=True, ensure_ascii=False, default=str)
-        return ReviewRecord(
-            review_id=str(uuid5(NAMESPACE_URL, f"{source}:{index}:{identity}")),
-            client_id=raw.get("client_id"),
-            action=raw.get("action"),
-            text=raw.get("text", ""),
-            rm=raw.get("rm", "Priscilla Ong"),
-            timestamp=raw.get("timestamp"),
+        return ReviewRecord.model_validate(
+            {
+                "review_id": str(uuid5(NAMESPACE_URL, f"{source}:{index}:{identity}")),
+                "client_id": raw.get("client_id"),
+                "action": raw.get("action"),
+                "text": raw.get("text", ""),
+                "rm": raw.get("rm", "Priscilla Ong"),
+                "timestamp": raw.get("timestamp"),
+            }
         )
 
     def close(self) -> None:

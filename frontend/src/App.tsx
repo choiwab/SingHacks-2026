@@ -9,7 +9,7 @@ import {
 
 import { getMondayBrief } from "./api";
 import { EvidenceProvider } from "./evidence";
-import type { MondayBriefProjection } from "./generated/api";
+import type { MondayBriefProjection } from "./contracts";
 import { MondayList } from "./MondayList";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";

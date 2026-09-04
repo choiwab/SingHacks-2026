@@ -29,7 +29,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 11.25.0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -58,7 +58,7 @@ jobs:
       - name: Lint frontend
         run: pnpm lint
 
-      - name: Type-check frontend
+      - name: Type-check Python and frontend
         run: pnpm typecheck
 
       - name: Test frontend

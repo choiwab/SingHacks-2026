@@ -19,62 +19,65 @@ importers:
         version: 7.18.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     devDependencies:
       '@eslint/js':
-        specifier: latest
+        specifier: ^10.0.1
         version: 10.0.1(eslint@10.9.1(supports-color@10.2.2))
       '@playwright/test':
-        specifier: latest
+        specifier: ^1.62.1
         version: 1.62.1
       '@testing-library/jest-dom':
-        specifier: latest
+        specifier: ^7.0.1
         version: 7.0.1(@testing-library/dom@10.4.1)(vitest@5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1)))
       '@testing-library/react':
-        specifier: latest
+        specifier: ^16.3.3
         version: 16.3.3(@testing-library/dom@10.4.1)(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@testing-library/user-event':
-        specifier: latest
+        specifier: ^14.6.7
         version: 14.6.7(@testing-library/dom@10.4.1)
       '@types/node':
-        specifier: latest
+        specifier: ^26.0.0
         version: 26.4.1
       '@types/react':
-        specifier: latest
+        specifier: ^19.2.18
         version: 19.2.18
       '@types/react-dom':
-        specifier: latest
+        specifier: ^19.2.7
         version: 19.2.7(@types/react@19.2.18)
       '@typescript-eslint/parser':
-        specifier: latest
+        specifier: ^8.69.0
         version: 8.69.0(@typescript/typescript6@6.0.2)(eslint@10.9.1(supports-color@10.2.2))(supports-color@10.2.2)
       '@typescript/native':
         specifier: npm:typescript@^7.0.0
         version: typescript@7.0.2
       '@vitejs/plugin-react':
-        specifier: latest
+        specifier: ^6.1.1
         version: 6.1.1(vite@8.2.2(@types/node@26.4.1))
       concurrently:
-        specifier: latest
+        specifier: ^10.0.5
         version: 10.0.5
       eslint:
-        specifier: latest
+        specifier: ^10.9.1
         version: 10.9.1(supports-color@10.2.2)
       eslint-plugin-react-hooks:
-        specifier: latest
+        specifier: ^7.1.1
         version: 7.1.1(eslint@10.9.1(supports-color@10.2.2))(supports-color@10.2.2)
       eslint-plugin-react-refresh:
-        specifier: latest
+        specifier: ^0.5.6
         version: 0.5.6(eslint@10.9.1(supports-color@10.2.2))
       globals:
-        specifier: latest
+        specifier: ^17.12.0
         version: 17.12.0
       jsdom:
-        specifier: latest
+        specifier: ^30.0.1
         version: 30.0.1
       openapi-typescript:
-        specifier: latest
+        specifier: ^7.13.0
         version: 7.13.0(@typescript/typescript6@6.0.2)
       prettier:
-        specifier: latest
+        specifier: ^3.9.0
         version: 3.9.6
+      pyright:
+        specifier: ^1.1.413
+        version: 1.1.413
       typescript:
         specifier: npm:@typescript/typescript6@^6.0.0
         version: '@typescript/typescript6@6.0.2'
@@ -82,7 +85,7 @@ importers:
         specifier: ^8.2.0
         version: 8.2.2(@types/node@26.4.1)
       vitest:
-        specifier: latest
+        specifier: ^5.0.0
         version: 5.0.0(@types/node@26.4.1)(jsdom@30.0.1)(vite@8.2.2(@types/node@26.4.1))
 
 packages:
@@ -1260,6 +1263,11 @@ packages:
   punycode@2.3.1:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
+
+  pyright@1.1.413:
+    resolution: {integrity: sha512-1lpxKrh0DHHpfAQOfciZo2ojua2jase3wwO9at8kldc+F/p1PBscxA5CQ3G1qg5lMOMhXo6ZaiMLMXEAqADIAg==}
+    engines: {node: '>=14.0.0'}
+    hasBin: true
 
   react-dom@19.2.8:
     resolution: {integrity: sha512-rVprimfGBG3DR+Tq0IQG2DT5PxKth1WIGDmj5yPmlzr4YBe7uyE+Du4oVqTDXZSHGGGXRtTJEGSSePyQCMBglQ==}
@@ -2624,6 +2632,10 @@ snapshots:
       react-is: 17.0.2
 
   punycode@2.3.1: {}
+
+  pyright@1.1.413:
+    optionalDependencies:
+      fsevents: 2.3.3
 
   react-dom@19.2.8(react@19.2.8):
     dependencies:

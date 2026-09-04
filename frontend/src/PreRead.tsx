@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { saveReview } from "./api";
-import type { MondayBriefProjection, ReviewAction } from "./generated/api";
+import type { MondayBriefProjection, ReviewAction } from "./contracts";
 import { CitedList, WhyButton, WorkflowList } from "./shared";
 
 type ReviewState = "Unreviewed" | "Approved" | "Edited" | "Rejected";

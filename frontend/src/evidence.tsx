@@ -13,7 +13,7 @@ import type {
   CitationId,
   MondayBriefProjection,
   ProjectionFact,
-} from "./generated/api";
+} from "./contracts";
 
 interface EvidenceRequest {
   citations: CitationId[];

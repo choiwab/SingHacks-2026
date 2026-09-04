@@ -2,7 +2,7 @@ import type {
   ClientPreRead,
   MondayBriefProjection,
   ScenarioPair,
-} from "../generated/api";
+} from "../contracts";
 
 function preRead(clientId: string, name: string): ClientPreRead {
   return {
@@ -84,7 +84,13 @@ function scenarios(currency: string): ScenarioPair {
 export const projectionFixture: MondayBriefProjection = {
   schema_version: 1,
   as_of: "2026-08-26",
-  pipeline: "offline",
+  pipeline: [
+    "Fact engine",
+    "Belief extractor",
+    "Gap matcher",
+    "Narrator",
+    "Review log",
+  ],
   ranking_formula: "0.4 gap + 0.35 deadline + 0.25 consequence",
   ranking: [
     {
@@ -95,24 +101,24 @@ export const projectionFixture: MondayBriefProjection = {
       reason: "Equity is above the mandate limit.",
       meeting: "Mon 10:30",
       meeting_source: "Calendar preview",
-      components: { gap: 95 },
+      components: { gap: 95, deadline: 95, consequence: 95 },
       citations: ["CL-0003:fact:gap"],
     },
     {
       client_id: "CL-0019",
-      name: "Abdullah Al-Nuaimi",
+      name: "Abdullah Al-Mansoori",
       score: 90,
       urgency: "soon",
       reason: "Shipping conditions affect the portfolio.",
       meeting: null,
       meeting_source: null,
-      components: { gap: 90 },
+      components: { gap: 90, deadline: 90, consequence: 90 },
       citations: ["CL-0019:fact:gap"],
     },
   ],
   pre_reads: {
     "CL-0003": preRead("CL-0003", "Margarethe Voss-Brenner"),
-    "CL-0019": preRead("CL-0019", "Abdullah Al-Nuaimi"),
+    "CL-0019": preRead("CL-0019", "Abdullah Al-Mansoori"),
   },
   scenarios: {
     "CL-0003": scenarios("EUR"),
@@ -124,7 +130,14 @@ export const projectionFixture: MondayBriefProjection = {
         id: "CL-0003:fact:gap",
         kind: "mandate_gap",
         what: "Equity is above the mandate limit.",
-        numbers: { actual_pct: 71.5 },
+        numbers: {
+          asset_class: "Equity",
+          actual_pct: 71.5,
+          limit_pct: 30,
+          boundary: "maximum",
+          gap_pct: 41.5,
+          scope: "Household look-through; strictest applicable band",
+        },
         source_rows: ["holding:1"],
         event_ids: ["event:1"],
         confidence: "high",
@@ -135,7 +148,14 @@ export const projectionFixture: MondayBriefProjection = {
         id: "CL-0019:fact:gap",
         kind: "mandate_gap",
         what: "Shipping conditions affect the portfolio.",
-        numbers: {},
+        numbers: {
+          asset_class: "Equity",
+          actual_pct: 65,
+          limit_pct: 60,
+          boundary: "maximum",
+          gap_pct: 5,
+          scope: "Household look-through; strictest applicable band",
+        },
         source_rows: ["holding:1"],
         event_ids: ["event:1"],
         confidence: "medium",

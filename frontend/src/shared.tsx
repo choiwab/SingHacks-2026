@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 
 import { useEvidence } from "./evidence";
-import type { CitedText, CitationId, WorkflowContext } from "./generated/api";
+import type { CitedText, CitationId, WorkflowContext } from "./contracts";
 
 export function WhyButton({
   citations,

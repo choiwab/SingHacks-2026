@@ -2,7 +2,7 @@ import type {
   MondayBriefProjection,
   ReviewRequest,
   ReviewResponse,
-} from "./generated/api";
+} from "./contracts";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
