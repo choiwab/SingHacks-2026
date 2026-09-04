@@ -123,8 +123,38 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     .fill("May I walk you through the gap?");
   await page.getByRole("button", { name: "Save edit" }).click();
   await expect(page.getByRole("status").last()).toContainText("Edited");
+  const opening = page.getByRole("region", { name: "Suggested opening" });
+  await expect(opening).toContainText("May I walk you through the gap?");
+  await switcher.getByRole("button", { name: /Abdullah Al-Mansoori/ }).click();
+  await expect(opening).not.toContainText("May I walk you through the gap?");
+  await switcher
+    .getByRole("button", { name: /Margarethe Voss-Brenner/ })
+    .click();
+  await expect(opening).toContainText("May I walk you through the gap?");
+  const approval = page.waitForRequest(
+    (request) =>
+      request.url().endsWith("/api/reviews") && request.method() === "POST",
+  );
   await page.getByRole("button", { name: "Approve pre-read" }).click();
+  expect((await approval).postDataJSON()).toMatchObject({
+    action: "Approve",
+    text: "May I walk you through the gap?",
+  });
   await expect(page.getByRole("status").last()).toContainText("Approved");
+  await expect(opening).toContainText("May I walk you through the gap?");
+  await page
+    .getByRole("button", { name: "Rehearse a Strait scenario →" })
+    .click();
+  await page.getByRole("tab", { name: "Pre-read", exact: true }).click();
+  await expect(opening).toContainText("May I walk you through the gap?");
+  await opening.getByRole("button", { name: "Why?" }).click();
+  await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+    "May I walk you through the gap?",
+  );
+  await expect(page.getByRole("dialog", { name: "Why?" })).toContainText(
+    "Approved by the RM",
+  );
+  await page.getByRole("button", { name: "Close source trail" }).click();
 
   // The compact calendar tracks brief readiness across the dashboard (PRD 5.3).
   const calendar = page.getByRole("navigation", {

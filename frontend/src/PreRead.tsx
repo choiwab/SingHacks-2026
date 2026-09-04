@@ -123,11 +123,13 @@ function BriefSection({
 export function PreRead({
   projection,
   reviews,
+  savedOpenings,
   onReviewed,
 }: {
   projection: MondayBriefProjection;
   reviews: Record<string, Authorship>;
-  onReviewed: (clientId: string, state: Authorship) => void;
+  savedOpenings: Record<string, string>;
+  onReviewed: (clientId: string, state: Authorship, text: string) => void;
 }) {
   const styles = useStyles();
   const { clientId = "" } = useParams();
@@ -135,7 +137,7 @@ export function PreRead({
   const preRead = projection.pre_reads[clientId];
   const [editing, setEditing] = useState(false);
   const [editedOpening, setEditedOpening] = useState(
-    preRead?.opening.text ?? "",
+    savedOpenings[clientId] ?? preRead?.opening.text ?? "",
   );
   const [receipt, setReceipt] = useState("");
   const [toast, setToast] = useState("");
@@ -171,8 +173,7 @@ export function PreRead({
   );
   const rankedClient = projection.ranking[rank];
   const facts = projection.facts[clientId] ?? [];
-  const currentOpening =
-    reviewState === "Edited" ? editedOpening.trim() : preRead.opening.text;
+  const currentOpening = savedOpenings[clientId] ?? preRead.opening.text;
 
   const persistReview = async (action: ReviewAction) => {
     setPending(action);
@@ -187,7 +188,7 @@ export function PreRead({
         Reject: "Rejected",
       };
       const label = labels[action];
-      onReviewed(clientId, label);
+      onReviewed(clientId, label, response.review.text);
       const time = new Date(response.review.timestamp).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
@@ -266,7 +267,10 @@ export function PreRead({
       <div role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {tab === "insights" && (
           <InsightsPanel
-            preRead={preRead}
+            preRead={{
+              ...preRead,
+              opening: { ...preRead.opening, text: currentOpening },
+            }}
             facts={facts}
             authorship={reviewState}
           />

@@ -11,7 +11,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { App } from "./App";
 import { measure } from "./ClientDashboard";
-import type { ProjectionFact } from "./contracts";
+import type { ProjectionFact, ReviewRequest } from "./contracts";
 import { projectionFixture } from "./test/fixture";
 
 afterEach(() => {
@@ -428,6 +428,93 @@ describe("Monday Brief", () => {
     await user.click(screen.getByRole("button", { name: "Approve pre-read" }));
     await waitFor(() => expect(bookedMeeting()).toHaveTextContent("Ready"));
     expect(screen.getByText("Approved by the RM")).toBeVisible();
+  });
+
+  it("keeps saved wording through client switches, failed edits, and approval", async () => {
+    let failSave = false;
+    const requests: ReviewRequest[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (!String(input).endsWith("/api/reviews")) {
+          return Promise.resolve(projectionResponse());
+        }
+        const request = JSON.parse(String(init?.body)) as ReviewRequest;
+        requests.push(request);
+        return Promise.resolve(
+          failSave
+            ? new Response(JSON.stringify({ detail: "Ledger unavailable" }), {
+                status: 503,
+              })
+            : new Response(
+                JSON.stringify({
+                  review: {
+                    ...request,
+                    review_id: "r-edit",
+                    rm: "Priscilla Ong",
+                    timestamp: "2026-09-05T09:00:00+00:00",
+                  },
+                }),
+              ),
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/clients/CL-0003/pre-read"]}>
+        <App />
+      </MemoryRouter>,
+    );
+    const opening = () =>
+      screen.getByRole("region", { name: "Suggested opening" });
+    const selectClient = async (name: RegExp) => {
+      await user.click(
+        within(
+          screen.getByRole("navigation", { name: "Client switcher" }),
+        ).getByRole("button", { name }),
+      );
+    };
+    const saved = "May we discuss your cash needs first?";
+    await user.click(await screen.findByRole("button", { name: "Edit" }));
+    await user.clear(screen.getByLabelText("Edit the opening line"));
+    await user.type(screen.getByLabelText("Edit the opening line"), saved);
+    expect(opening()).not.toHaveTextContent(saved);
+    await user.click(screen.getByRole("button", { name: "Save edit" }));
+    await waitFor(() => expect(opening()).toHaveTextContent(saved));
+
+    await selectClient(/Abdullah/);
+    expect(opening()).not.toHaveTextContent(saved);
+    await selectClient(/Margarethe/);
+    expect(opening()).toHaveTextContent(saved);
+    expect(screen.getByText("Edited by the RM")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Edit" }));
+    expect(screen.getByLabelText("Edit the opening line")).toHaveValue(saved);
+    await user.clear(screen.getByLabelText("Edit the opening line"));
+    await user.type(
+      screen.getByLabelText("Edit the opening line"),
+      "Unsaved replacement",
+    );
+    failSave = true;
+    await user.click(screen.getByRole("button", { name: "Save edit" }));
+    await screen.findByRole("alert");
+    expect(opening()).toHaveTextContent(saved);
+    expect(opening()).not.toHaveTextContent("Unsaved replacement");
+
+    failSave = false;
+    await user.click(screen.getByRole("button", { name: "Approve pre-read" }));
+    await screen.findByText("Approved by the RM");
+    expect(requests.at(-1)).toEqual({
+      client_id: "CL-0003",
+      action: "Approve",
+      text: saved,
+    });
+    expect(opening()).toHaveTextContent(saved);
+    await selectClient(/Abdullah/);
+    await selectClient(/Margarethe/);
+    expect(opening()).toHaveTextContent(saved);
+    await user.click(screen.getByRole("tab", { name: "Insights" }));
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(saved);
   });
 
   it("surfaces review failures without leaving the pre-read", async () => {

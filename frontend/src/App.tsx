@@ -58,7 +58,8 @@ function useRoute(projection: MondayBriefProjection) {
 function PreReadRoute(props: {
   projection: MondayBriefProjection;
   reviews: Record<string, Authorship>;
-  onReviewed: (clientId: string, state: Authorship) => void;
+  savedOpenings: Record<string, string>;
+  onReviewed: (clientId: string, state: Authorship, text: string) => void;
 }) {
   const { clientId = "" } = useParams();
   return <PreRead key={clientId} {...props} />;
@@ -69,6 +70,9 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
   // The RM's review decisions live above the routes so the compact calendar and
   // the dashboard header agree on which briefs are ready.
   const [reviews, setReviews] = useState<Record<string, Authorship>>({});
+  const [savedOpenings, setSavedOpenings] = useState<Record<string, string>>(
+    {},
+  );
 
   return (
     <EvidenceProvider projection={projection}>
@@ -91,9 +95,14 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
               <PreReadRoute
                 projection={projection}
                 reviews={reviews}
-                onReviewed={(clientId, state) =>
-                  setReviews((current) => ({ ...current, [clientId]: state }))
-                }
+                savedOpenings={savedOpenings}
+                onReviewed={(clientId, state, text) => {
+                  setReviews((current) => ({ ...current, [clientId]: state }));
+                  setSavedOpenings((current) => ({
+                    ...current,
+                    [clientId]: text,
+                  }));
+                }}
               />
             }
           />
