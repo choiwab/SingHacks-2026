@@ -1,38 +1,17 @@
-"""Read-only source inspection tools owned by the context layer."""
+"""Read-only source inspection tools for the context agent.
+
+Source hashing and the source file list are Member 3's (``app.pipeline.sources``) and are
+re-exported here so the graph keeps one import path.
+"""
 
 from __future__ import annotations
 
 import csv
-from hashlib import sha256
 from pathlib import Path
 
-SOURCE_FILES = (
-    "clients.csv",
-    "portfolios.csv",
-    "holdings.csv",
-    "instruments.csv",
-    "transactions.csv",
-    "mandates.csv",
-    "commitments.csv",
-    "planned_cash_needs.csv",
-    "credit_facilities.csv",
-    "market_context.csv",
-    "event_log.csv",
-    "rm_notes.json",
-)
+from app.pipeline.sources import SOURCE_FILES, source_versions
 
-
-def source_versions(source_dir: Path) -> tuple[dict[str, str], list[str]]:
-    """Return content hashes and readable diagnostics for every expected source."""
-    versions: dict[str, str] = {}
-    issues: list[str] = []
-    for name in SOURCE_FILES:
-        path = source_dir / name
-        try:
-            versions[name] = sha256(path.read_bytes()).hexdigest()
-        except OSError as exc:
-            issues.append(f"{name}: {exc.strerror or 'unreadable'}")
-    return versions, issues
+__all__ = ["SOURCE_FILES", "load_client_record", "source_versions"]
 
 
 def load_client_record(source_dir: Path, client_id: str) -> dict[str, str] | None:
