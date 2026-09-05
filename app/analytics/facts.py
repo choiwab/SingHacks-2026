@@ -108,13 +108,12 @@ def _mandate_fact(
         candidates.append((gap, str(band["asset_class"]), actual, limit, boundary, band))
     default = (0, "None", 0, 0, "maximum", pd.Series())
     gap, asset_class, actual, limit, boundary, band = max(candidates, default=default)
-    rows = current[current["asset_class"] == asset_class]
     source_rows = [
         add_evidence(
             evidence,
             "holdings",
             row,
-            f"Current {asset_class} holding",
+            "Current holding contributing to allocation denominator",
             (
                 "snapshot_date",
                 "portfolio_id",
@@ -123,9 +122,13 @@ def _mandate_fact(
                 "asset_class",
                 "market_value_base",
                 "weight_pct",
+                "valuation_date",
+                "liquidity_tier",
+                "portfolio_ccy",
+                "sector",
             ),
         )
-        for _, row in rows.iterrows()
+        for _, row in current.iterrows()
     ]
     if not band.empty:
         source_rows.append(
@@ -161,14 +164,18 @@ def _change_facts(
     as_of: date = AS_OF,
 ) -> list[dict[str, Any]]:
     client_id = str(client["client_id"])
-    baseline = holdings[holdings["snapshot_date"] == BASELINE]
-    current = holdings[holdings["snapshot_date"] == as_of.isoformat()]
+    scoped_holdings = holdings[holdings["snapshot_date"] <= as_of.isoformat()]
+    scoped_events = events[
+        (events["event_date"] >= BASELINE) & (events["event_date"] <= as_of.isoformat())
+    ]
+    baseline = scoped_holdings[scoped_holdings["snapshot_date"] == BASELINE]
+    current = scoped_holdings[scoped_holdings["snapshot_date"] == as_of.isoformat()]
     base_values = baseline.groupby("instrument_id")["market_value_base"].sum()
     current_values = current.groupby("instrument_id")["market_value_base"].sum()
     deltas = current_values.sub(base_values, fill_value=0).sort_values(key=abs, ascending=False)
     facts = []
     for index, (instrument_id, delta) in enumerate(deltas.head(3).items(), start=1):
-        rows = holdings[holdings["instrument_id"] == instrument_id]
+        rows = scoped_holdings[scoped_holdings["instrument_id"] == instrument_id]
         representative = rows.sort_values("snapshot_date").iloc[-1]
         source_rows = [
             add_evidence(
@@ -184,16 +191,24 @@ def _change_facts(
                     "market_value_base",
                     "price_local",
                     "quantity",
+                    "asset_class",
+                    "sector",
+                    "liquidity_tier",
+                    "portfolio_ccy",
+                    "weight_pct",
+                    "valuation_date",
                 ),
             )
-            for _, row in rows[rows["snapshot_date"].isin([BASELINE, SNAPSHOT])].iterrows()
+            for _, row in rows[rows["snapshot_date"].isin([BASELINE, as_of.isoformat()])].iterrows()
         ]
-        event_ids = _match_event(representative, events, evidence)
+        event_ids = _match_event(representative, scoped_events, evidence)
         facts.append(
             _fact(
                 client_id,
                 f"change-{index}",
-                f"{representative['instrument_name']} changed by {delta:,.0f}.",
+                f"{representative['instrument_name']} position value changed by "
+                f"{current['portfolio_ccy'].iloc[0]} {delta:,.0f} "
+                f"between {BASELINE} and {as_of.isoformat()}.",
                 {
                     "instrument": representative["instrument_name"],
                     "delta": round(float(delta), 2),
@@ -223,11 +238,37 @@ def _deadline_fact(
             "deadline",
             f"KYC review is due {due.strftime('%d %b %Y')}.",
             {"days": max((due - as_of).days, 0), "amount": 0, "currency": None},
-            [],
+            [
+                add_evidence(
+                    evidence,
+                    "clients",
+                    client,
+                    str(client["client_name"]),
+                    ("client_id", "client_name", "kyc_review_due"),
+                )
+            ],
         )
     need = needs.sort_values("due_from").iloc[0]
     due = date.fromisoformat(str(need["due_from"]))
-    daily = current[current["liquidity_tier"] == "Daily"]["market_value_base"].sum()
+    daily_holdings = current[current["liquidity_tier"] == "Daily"]
+    daily = daily_holdings["market_value_base"].sum()
+    daily_evidence = [
+        add_evidence(
+            evidence,
+            "holdings",
+            row,
+            "Daily-liquid holding contributing to cash coverage",
+            (
+                "snapshot_date",
+                "portfolio_id",
+                "instrument_id",
+                "market_value_base",
+                "portfolio_ccy",
+                "liquidity_tier",
+            ),
+        )
+        for _, row in daily_holdings.iterrows()
+    ]
     amount = float(need["amount"])
     portfolio_currency = str(current["portfolio_ccy"].iloc[0])
     amount_in_portfolio_currency, fx_evidence = _convert_currency(
@@ -248,7 +289,9 @@ def _deadline_fact(
     return _fact(
         client_id,
         "deadline",
-        f"{need['description']} starts in {max((due - as_of).days, 0)} days.",
+        f"{need['description']} of {need['currency']} {amount:,.0f} starts in "
+        f"{max((due - as_of).days, 0)} days. Daily-liquid holdings total "
+        f"{portfolio_currency} {daily:,.0f}, before collateral and other commitments.",
         {
             "days": max((due - as_of).days, 0),
             "amount": amount,
@@ -263,7 +306,7 @@ def _deadline_fact(
             ),
             "description": need["description"],
         },
-        [evidence_id, *fx_evidence],
+        [evidence_id, *fx_evidence, *daily_evidence],
     )
 
 
@@ -324,12 +367,22 @@ def _facility_fact(
     client_id: str,
     tables: dict[str, pd.DataFrame],
     evidence: dict[str, dict[str, Any]],
+    as_of: date = AS_OF,
 ) -> dict[str, Any] | None:
     facilities = tables["credit_facilities"].query("client_id == @client_id")
     if facilities.empty:
         return None
-    facility = facilities.sort_values("ltv_pct_2026-08-26", ascending=False).iloc[0]
-    ltv = float(facility["ltv_pct_2026-08-26"])
+    snapshots = [
+        column.removeprefix("ltv_pct_")
+        for column in facilities.columns
+        if column.startswith("ltv_pct_")
+        and date.fromisoformat(column.removeprefix("ltv_pct_")) <= as_of
+    ]
+    if not snapshots:
+        raise ValueError(f"No facility LTV history at or before {as_of} for {client_id}")
+    snapshot = max(snapshots)
+    facility = facilities.sort_values(f"ltv_pct_{snapshot}", ascending=False).iloc[0]
+    ltv = float(facility[f"ltv_pct_{snapshot}"])
     trigger = float(facility["margin_call_ltv_pct"])
     evidence_id = add_evidence(
         evidence,
@@ -339,9 +392,9 @@ def _facility_fact(
         (
             "facility_id",
             "facility_ccy",
-            "drawn_2026-08-26",
-            "lending_value_2026-08-26",
-            "ltv_pct_2026-08-26",
+            f"drawn_{snapshot}",
+            f"lending_value_{snapshot}",
+            f"ltv_pct_{snapshot}",
             "margin_call_ltv_pct",
         ),
     )
@@ -382,7 +435,7 @@ def _theme_fact(
             evidence,
             "holdings",
             row,
-            "Current concentration holding",
+            "Current holding contributing to concentration denominator",
             (
                 "snapshot_date",
                 "instrument_id",
@@ -393,7 +446,7 @@ def _theme_fact(
                 "liquidity_tier",
             ),
         )
-        for _, row in themed.iterrows()
+        for _, row in current.iterrows()
     ]
     return _fact(
         client_id,
@@ -449,6 +502,7 @@ def _fact_engine(
                 "reporting_language",
                 "risk_tolerance_score",
                 "life_stage",
+                "kyc_review_due",
             ),
         )
         profile = _fact(
@@ -470,7 +524,7 @@ def _fact_engine(
         facts.extend(_change_facts(client, client_holdings, tables["event_log"], evidence, as_of))
         facts.append(_mandate_fact(client, current, tables, evidence))
         facts.append(_deadline_fact(client, current, tables, evidence, as_of))
-        facility = _facility_fact(client_id, tables, evidence)
+        facility = _facility_fact(client_id, tables, evidence, as_of)
         if facility:
             facts.append(facility)
         facts.append(_theme_fact(client_id, current, evidence))

@@ -2,10 +2,41 @@
 
 The hard migration from `app/client_flow` is complete. All three agents and graph controls live
 here; communication replay and TF-IDF retrieval live in `app/mcp`. There are no compatibility exports.
-The graph runs independently of the dashboard. The incoming data-team migration removed the
-Monday Brief API; the frontend still needs the replacement API/view-model integration.
+The graph runs independently of the dashboard fixture preview. The pipeline now exposes a
+versioned Demo View Model API, but the frontend has not yet migrated to it. Preview review
+decisions are session-local simulations, separate from the durable graph and API ledgers.
 
-## Run the offline example
+## Run against the data directory
+
+```bash
+uv run python -m scripts.run_client_flow --client-id CL-0003 --as-of 2026-08-26 --output data/generated/client-flow/CL-0003.json
+```
+
+The source-backed graph uses `app/pipeline/agent_inputs.py`, existing calculators and scores,
+and `app/agents/verification.py`. It pauses for review without approving anything. Read
+`pack`, `bundle.evidence`, `connected_context`, `verification`, and `trace` in the JSON.
+See [the sample inspection](../../docs/SAMPLE_CLIENT_FLOW.md) for the observed results.
+
+All records are synthetic hackathon data, but the source notes are preserved verbatim. They are
+labelled `dataset` and `Cached`; no Gmail/Teams/calendar connection is implied. The temporal
+calculators and their evidence respect all five dataset snapshot dates.
+
+The gate checks exact Facts, source-span citations, score preservation, required disclosures,
+scope, and constrained conversation wording. It is not a general semantic verifier or production
+compliance system. Free-form model text and unsupported RM edits pause for confirmation. The
+alternate opening "Could we start by discussing your priorities for this meeting?" is supported
+for exercising the edit/reverify path. Financial calculations remain the pipeline's responsibility.
+
+For interactive in-process review, use `build_data_flow(Path("data"))` from
+`scripts.run_client_flow`, keep its graph and client-specific thread, and resume using the review
+example below. Reinvoke that same graph after editing a **copy** of the source dataset to exercise
+updates. Content hashes, not the revision label, determine whether data changed. The CLI is a
+durable inspection/review runner using SQLite; it is not a background monitor. See
+[persistent memory and MCP](../../docs/PERSISTENT_MEMORY_MCP.md) for restart-safe execution,
+local interaction imports, and the live server. The `build_data_flow()` helper above remains
+in-memory; `persistent_data_flow()` is the durable runtime.
+
+## Retained fixture-replay example
 
 ```bash
 uv run python -m scripts.member_2_demo
@@ -63,6 +94,8 @@ The shared Fact/Evidence contracts live in `app/pipeline/schemas.py`; calculator
 `app/analytics`. Raw calculator dictionaries are not agent inputs. Member 3 publishes canonical one-number Facts.
 The authored demo fixtures preserve their existing narrative strings in `fact_descriptions`;
 the adapter does not add those descriptions to published financial artifacts.
+The data-directory CLI uses `app/pipeline/agent_inputs.py` as its separate input adapter;
+its contracts must remain aligned with those canonical Facts and the client-scoped Evidence Map.
 `legacy_verification` does **not** validate
 the new meeting pack and is not wired into the graph.
 
@@ -101,13 +134,14 @@ altering financial values or scores. Unchanged content preserves its actual prio
 Member 3 should expose `pack`, `pack_version`, `status`, `issues`, `verification`, `connected_context`,
 `last_approved`, and relevant traces through its view-model adapter. For `needs_confirmation`, show
 the failed claim/reason and label `last_approved` as an older version with an update warning. Never
-present the failed candidate as meeting-ready. No new dashboard or persistence API was added here.
+present the failed candidate as meeting-ready. No new dashboard API was added here.
 
 `record_review` receives stable event IDs and may be retried during graph resume. Upsert rather than
 append blindly. If the sink fails, the graph does not finalize the approval. New review requests must
-include the current pack version. Use a separate thread per client. Trace/history are kept in memory
-for the small hackathon session; durable history, retention and concurrent request serialization belong
-to Member 3's storage/API layer.
+include the current pack version. Use a separate thread per client. The shared review node now
+rechecks input versions after resume and refreshes changed/unavailable inputs without accepting
+the decision. The durable runtime persists trace/history and the retrieval index with SQLite;
+retention and concurrent request serialization remain outside this single-writer demo.
 
 ## Optional OpenAI generation
 
@@ -131,9 +165,11 @@ a gate failure pauses the graph, without triggering a rewrite. The example's fro
 will normally reject novel model wording: supply Member 4's real verifier for live integration.
 Live requests have not been made during implementation; the adapter is covered with mocked responses.
 
-Live MCP transports, actual external-account retrieval, recording real connector responses and neural
-embeddings remain optional future work. The current `app/mcp` module is honest fixture replay with
-`synthetic_fixture` provenance and `Cached` availability, not a network MCP implementation.
+`app/mcp/server.py` now exposes real read-only MCP tools over stdio and loopback Streamable HTTP;
+`app/mcp/client.py` connects the graph's input loaders through that protocol when explicitly selected.
+Durable added interactions live in `app/mcp/store.py`. Dataset/fixture records remain `Cached` even
+when the MCP transport is live. External-account retrieval, OAuth connectors, automatic recording
+and neural embeddings remain future work.
 
 ## Verification
 

@@ -196,6 +196,30 @@ folder and run the commands above.
 and one worked client. It deliberately computes nothing clever — it exists so you can see the shape
 of the data in 30 seconds.
 
+### Run the data-backed agent flow
+
+The runnable graph reads the original synthetic dataset from `data/`, computes cited financial
+Facts, retrieves exact RM note spans, and produces a Meeting Brief and Client Memory Card.
+It stops at the human-review interrupt. No API key, external connector, or automatic approval
+is required. The Evidence Gate validates source-backed constrained wording, not a frozen
+list of expected fixture claims.
+
+```bash
+uv python install 3.13
+uv sync --locked --all-groups
+uv run python -m scripts.run_client_flow --client-id CL-0003 --as-of 2026-08-26 --output data/generated/client-flow/CL-0003.json
+```
+
+See [the sample inspection](docs/SAMPLE_CLIENT_FLOW.md) and
+[the agent integration guide](app/agents/README.md) for evidence, limitations and review/resume.
+The other four dataset snapshot dates can also be supplied through `--as-of`.
+
+The CLI now persists memory, graph checkpoints, and review state in `data/generated/memory/`.
+To use the live read-only MCP transport, start `uv run python -m app.mcp.server --transport streamable-http`
+and add `--mcp-url http://127.0.0.1:8001/mcp` to the flow command. See
+[persistent memory and MCP](docs/PERSISTENT_MEMORY_MCP.md) for interaction imports, recall,
+review across restarts, and local-only security limits. External Gmail/Teams accounts are not connected.
+
 ### Run the dashboard fixture preview
 
 The demo is a Fluent UI RM dashboard for Priscilla Ong, following the [Member 1 dashboard and UX brief](docs/PRD_TEAMS_RM_INTELLIGENCE.md).
@@ -211,8 +235,6 @@ See [the preview boundary and fixture provenance](frontend/preview/README.md).
 No API key or external service is required.
 
 ```bash
-uv python install 3.13
-uv sync --locked --all-groups
 pnpm install --frozen-lockfile
 pnpm dev:preview
 ```
@@ -261,11 +283,21 @@ pnpm test:e2e
 
 ### Demo architecture
 
-The Member 2 agent workflow lives in `app/agents` and `app/mcp`. Run
-`uv run python -m scripts.member_2_demo --update` for the offline meeting-pack example, or read
-[its integration guide](app/agents/README.md) for curated-input contracts and versioned review.
-The example uses synthetic communications and a fixture-only verifier. The optional pipeline
-bridge persists generated packs and edits; Member 4's full verifier is still required for approval.
+`app/pipeline/agent_inputs.py` publishes typed client-scoped inputs from the data directory.
+`app/analytics` owns financial calculations and the three explainable Signal groups.
+`app/agents` owns Context, Wealth Intelligence and RM Briefing nodes, a constrained Evidence Gate,
+and version-aware review. `app/mcp` owns record normalization, local TF-IDF retrieval,
+persistent interactions, and the live read-only MCP server.
+Dataset notes are labelled `Cached`; Gmail, Teams and calendar are `Not connected`.
+
+The graph handles first-seen, changed and unchanged inputs when invoked; it is not a background
+monitor. The CLI uses SQLite checkpoints; the standalone test helper defaults to in-memory
+checkpoints. No trades or client communications are sent.
+
+The older `scripts.member_2_demo --update` is retained as a labelled fixture-replay regression
+example; it is separate from the data-directory command above and uses a fixture-only verifier.
+The optional Member 3 pipeline bridge persists generated packs and edits; its full verifier
+still needs to be connected before it can grant approval.
 
 [ADR 0002](docs/adr/0002-split-pipeline-along-data-team-seam.md) splits analytics, pipeline plumbing, and agent-generated prose between their owners.
 The old `GET /api/monday-brief` endpoint and generated projection models have been removed.

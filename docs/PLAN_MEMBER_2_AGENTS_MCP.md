@@ -1,9 +1,11 @@
 # Member 2 implementation plan: agents, memory, and MCP
 
-Status: Member 2 implementation completed against provisional fixtures. See
-[the implementation and integration guide](../app/agents/README.md) for commands and contracts.
-Real curated loaders, the final Member 4 Evidence Gate, and Member 3 persistence/API integration
-remain team handoffs. Live MCP transports and neural embeddings remain deferred.
+Status: The graph now runs against the source dataset with a source-backed, constrained Evidence
+Gate, SQLite memory/checkpoints/review history, and a live read-only local MCP server (stdio and
+Streamable HTTP). See [the runtime guide](PERSISTENT_MEMORY_MCP.md) and
+[the agent guide](../app/agents/README.md). External account connectors, neural embeddings, and
+the frontend API integration remain deferred. The interview decisions and schedule below record
+the original plan; they are not a current implementation checklist.
 
 Scope: Member 2 in [the PRD](PRD_TEAMS_RM_INTELLIGENCE.md#member-2--agents--external-mcps-1-person).
 This plan records the subsequent interview decisions where they refine the PRD. Financial schemas,
