@@ -333,3 +333,50 @@ it("withholds comparison when a newer version was saved after the workspace load
     screen.queryByRole("article", { name: "Current Meeting Brief" }),
   ).not.toBeInTheDocument();
 });
+
+it("lets the RM select an older saved version and shows removed claims on that side", async () => {
+  const value = history();
+  const older = version("999999999999", "An older conversation.");
+  older.meeting_brief = {
+    sections: {
+      opening: {
+        id: "opening",
+        text: "An older conversation.",
+        citations: ["note:old"],
+      },
+      questions: [
+        {
+          id: "old-question",
+          text: "A question removed from the current Brief.",
+          citations: ["note:old"],
+        },
+      ],
+    },
+  };
+  value.versions.push(older);
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(value)));
+  render(
+    <BriefHistoryPanel
+      client={client}
+      runId={model.run_id}
+      onModelChange={vi.fn()}
+    />,
+  );
+  await screen.findByText("Discuss the original plans.");
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: "Compare with" }),
+    "999999999999:1",
+  );
+  expect(
+    screen.queryByText("Discuss the original plans."),
+  ).not.toBeInTheDocument();
+  const earlier = screen.getByRole("article", {
+    name: "Earlier Meeting Brief",
+  });
+  expect(earlier).toHaveTextContent("An older conversation.");
+  expect(
+    within(earlier)
+      .getByText("A question removed from the current Brief.")
+      .closest(".brief-version-claim"),
+  ).toHaveClass("is-changed");
+});
