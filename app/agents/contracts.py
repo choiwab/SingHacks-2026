@@ -41,6 +41,7 @@ class CuratedClientBundle(ContractModel):
     as_of: date
     version: str
     facts: list[Fact] = Field(min_length=1)
+    fact_descriptions: dict[str, str] = Field(default_factory=dict)
     signals: list[Signal]
     evidence: dict[str, Evidence]
     quality_issues: list[str] = Field(default_factory=list)
@@ -53,6 +54,10 @@ class CuratedClientBundle(ContractModel):
             not fact_id.startswith(f"{self.client_id}:fact:") for fact_id in facts
         ):
             raise ValueError("Facts must be unique and belong to the requested client")
+        if any(f.client_id != self.client_id or f.as_of != self.as_of for f in self.facts):
+            raise ValueError("Facts must match the requested client and as-of date")
+        if not self.fact_descriptions.keys() <= facts:
+            raise ValueError("Fact descriptions reference missing facts")
         if len({signal.id for signal in self.signals}) != len(self.signals):
             raise ValueError("Duplicate signal ID")
         if any(not set(signal.fact_ids) <= facts for signal in self.signals):
@@ -60,10 +65,7 @@ class CuratedClientBundle(ContractModel):
         if any(key != item.id for key, item in self.evidence.items()):
             raise ValueError("Evidence key does not match evidence ID")
         for fact in self.facts:
-            if (
-                not fact.source_rows
-                or not set(fact.source_rows + fact.event_ids) <= self.evidence.keys()
-            ):
+            if not fact.evidence_ids or not set(fact.evidence_ids) <= self.evidence.keys():
                 raise ValueError(f"Unresolved evidence for {fact.id}")
         return self
 

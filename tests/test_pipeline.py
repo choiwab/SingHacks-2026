@@ -193,11 +193,11 @@ def test_migrated_artifacts_and_legacy_gate_share_pipeline_evidence() -> None:
     assert not evidence_gate(state)["verification_report"]["passed"]
 
 
-def test_pipeline_cli_runs_without_writing_files(tmp_path) -> None:
+def test_pipeline_cli_publishes_without_mutating_source_files(tmp_path) -> None:
+
     source = tmp_path / "data"
     shutil.copytree(DATA, source, ignore=shutil.ignore_patterns("generated"))
-    before = sorted(path.relative_to(source) for path in source.rglob("*"))
-
+    before = {path.name: path.read_bytes() for path in source.iterdir() if path.is_file()}
     completed = subprocess.run(
         [
             sys.executable,
@@ -214,8 +214,8 @@ def test_pipeline_cli_runs_without_writing_files(tmp_path) -> None:
         text=True,
         check=False,
     )
-
     assert completed.returncode == 0, completed.stderr
     assert "clients: 20" in completed.stdout
-    assert "CL-0003:fact:mandate-gap" in completed.stdout
-    assert sorted(path.relative_to(source) for path in source.rglob("*")) == before
+    assert "run_id:" in completed.stdout
+    assert (source / "generated/curated/latest.json").is_file()
+    assert before == {path.name: path.read_bytes() for path in source.iterdir() if path.is_file()}

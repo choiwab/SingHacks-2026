@@ -19,9 +19,19 @@
     "test:e2e": "playwright test",
     "export:openapi": "uv run python -m scripts.export_openapi --output .generated/openapi.json",
     "generate:api": "pnpm export:openapi && openapi-typescript .generated/openapi.json -o frontend/src/generated/openapi.ts",
-    "check:contract": "uv run python -m scripts.check_contract"
+    "check:contract": "uv run python -m scripts.check_contract",
+    "dev:preview": "vite --config frontend/vite.config.ts --mode preview",
+    "build:preview": "tsc -b frontend/tsconfig.json && vite build --config frontend/vite.config.ts --mode preview",
+    "preview": "vite preview --config frontend/vite.config.ts --mode preview",
+    "pipeline:run": "uv run python -m app.pipeline run",
+    "pipeline:seed": "uv run python -m app.pipeline seed",
+    "pipeline:update": "uv run python -m app.pipeline update",
+    "pipeline:reset": "uv run python -m app.pipeline reset",
+    "pipeline:diff": "uv run python -m app.pipeline diff"
   },
   "dependencies": {
+    "@fluentui/react-components": "^9.74.7",
+    "@fluentui/react-icons": "^2.0.339",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.18.0"

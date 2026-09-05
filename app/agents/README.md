@@ -78,7 +78,7 @@ result = graph.invoke(
 
 The three callables are required. There is no default passing verifier and no financial builder
 inside an agent. `contracts.py` defines the provisional curated input and Member 2's output schemas;
-the existing data-team `Fact` and `Evidence` models are reused. Each model exposes
+the canonical one-number data-team `Fact` and `Evidence` models are reused. Each model exposes
 `model_json_schema()` for contract exchange.
 
 The gate receives copies of the candidate and input artifacts. It must validate financial values,
@@ -90,8 +90,11 @@ state. The verifier can reconstruct hashes with `record_content()` and `fingerpr
 The old raw-source helper, selected-client adapter, citation traversal and pre-read gate have moved
 to `app/pipeline/{source_inspection,client_artifacts,evidence,legacy_verification}.py`.
 The shared Fact/Evidence contracts live in `app/pipeline/schemas.py`; calculators remain in
-`app/analytics`. `app/pipeline/agent_inputs.py` now supplies the typed Fact discriminator and
-client-scoped Evidence Map; do not pass raw calculator dictionaries directly to the graph.
+`app/analytics`. Raw calculator dictionaries are not agent inputs. Member 3 publishes canonical one-number Facts.
+The authored demo fixtures preserve their existing narrative strings in `fact_descriptions`;
+the adapter does not add those descriptions to published financial artifacts.
+The data-directory CLI uses `app/pipeline/agent_inputs.py` as its separate input adapter;
+its contracts must remain aligned with those canonical Facts and the client-scoped Evidence Map.
 `legacy_verification` does **not** validate
 the new meeting pack and is not wired into the graph.
 
@@ -179,3 +182,26 @@ Acceptance tests cover joint approval, invalid/stale review recovery, immutable 
 correction flags, all update cases, prior-approved fallback, source isolation, precise citation spans,
 record edits/deletions, deterministic ordering, and optional-provider fallback. Golden files are
 reviewable expected artifacts, not a substitute for the data team's final Evidence Gate.
+
+## Optional M3 offline integration
+
+`app.pipeline.member2_bridge.member2_hooks(store, load_communications=...)` connects the
+three deterministic generation nodes to M3's persisted lifecycle. Pass its result as `agents`
+to `PipelineRuntime` or `create_app`. The default loader explicitly reports every communication
+source as not connected. A supplied loader must choose complete snapshots by the immutable
+run ID, not mutable global state. The demo's authored communications only cover CL-0003.
+
+The bridge preserves the full candidate pack and hash, MemoryIndex snapshot, exact communication
+records, source statuses, retrieval log and generation traces in the ledger. Review remains
+owned by M3, without creating an independent LangGraph review/checkpoint store. This is an
+opt-in generation connection, not a complete meeting-ready integration: M4's final Signal
+mapping and verifier remain required. Nonempty Signals require an explicitly supplied
+`signal_adapter`; this adapter never invents scores, topics or uncertainty wording.
+
+With current legacy analytics, all 20 clients produce deterministic candidate packs.
+All 20 remain unverified. Edits use claim IDs through `ReviewRequest.section`: only the
+opening and talking points may change. The adapter marks RM authorship, rebuilds the
+canonical pack hash and projections, and synchronously verifies the complete edited pack
+and persisted communication context. Prior brief versions remain in the ledger.
+The existing lifecycle caches by financial run; independent communication refresh still
+requires additional integration.

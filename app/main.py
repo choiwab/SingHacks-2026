@@ -7,11 +7,19 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from app.pipeline.schemas import ReviewRequest, ReviewResponse
-from app.pipeline.sources import load_sources
+from app.pipeline.actions import DemoUpdateRequest, ReviewActionRequest, ReviewActionResponse
+from app.pipeline.api_schemas import DemoViewModel
+from app.pipeline.features import AnalyticsProvider, legacy_analytics
+from app.pipeline.graph_adapter import AgentHooks
+from app.pipeline.history import ClientHistory, load_client_history
+from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
+from app.pipeline.publish import read_latest
+from app.pipeline.runtime import PipelineRuntime
+from app.pipeline.schemas import ReviewRequest
+from app.pipeline.view_model import build_view_model
 from app.store import ReviewLedger
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,18 +34,34 @@ def create_app(
     as_of: date = AS_OF,
     database: Path | str | None = None,
     frontend_dist: Path = FRONTEND_DIST,
+    curated_dir: Path | None = None,
+    overlay_dir: Path | None = None,
+    analytics: AnalyticsProvider = legacy_analytics,
+    agents: AgentHooks | None = None,
 ) -> FastAPI:
     """Create an isolated app; all I/O occurs inside its lifespan."""
     database = database or source_dir / "generated" / "reviews.sqlite3"
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        tables, _notes = load_sources(source_dir, as_of=as_of)
         ledger = ReviewLedger(database)
-        ledger.import_legacy_json(source_dir / "generated" / "review_log.json")
-        application.state.client_ids = frozenset(tables["clients"]["client_id"].astype(str))
+        store = ArtifactStore(curated_dir or source_dir / "generated/curated")
+        runtime = PipelineRuntime(
+            store,
+            ledger,
+            source_dir=source_dir,
+            as_of=as_of,
+            overlay_dir=overlay_dir,
+            analytics=analytics,
+            agents=agents,
+        )
         application.state.review_ledger = ledger
+        application.state.pipeline_runtime = runtime
         try:
+            if read_latest(store.root) is None:
+                runtime.seed()
+            else:
+                runtime.prepare_current()
             yield
         finally:
             ledger.close()
@@ -48,13 +72,52 @@ def create_app(
     async def health() -> dict[str, str]:
         return {"status": "ok", "as_of": as_of.isoformat()}
 
-    @application.post("/api/reviews", response_model=ReviewResponse)
-    async def review(payload: ReviewRequest, request: Request) -> ReviewResponse:
-        client_ids: frozenset[str] = request.app.state.client_ids
-        if payload.client_id not in client_ids:
-            raise HTTPException(status_code=404, detail="Client not found")
-        ledger: ReviewLedger = request.app.state.review_ledger
-        return ReviewResponse(review=ledger.append(payload, rm="Priscilla Ong"))
+    def view(runtime: PipelineRuntime, *, updating: bool = False) -> DemoViewModel:
+        with runtime.lock:
+            return build_view_model(
+                runtime.store, runtime.ledger, source_dir=runtime.source_dir, updating=updating
+            )
+
+    @application.get("/api/app", response_model=DemoViewModel)
+    def app_data(request: Request) -> DemoViewModel:
+        return view(request.app.state.pipeline_runtime)
+
+    @application.get("/api/clients/{client_id}/history", response_model=ClientHistory)
+    def client_history(
+        client_id: str,
+        request: Request,
+        run_id: str | None = Query(default=None, pattern=r"^[a-f0-9]{12}$"),
+    ) -> ClientHistory:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        try:
+            with runtime.lock:
+                return load_client_history(runtime.store, runtime.ledger, client_id, run_id=run_id)
+        except ArtifactNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    @application.post("/api/demo/update", response_model=DemoViewModel)
+    def demo_update(payload: DemoUpdateRequest, request: Request) -> DemoViewModel:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        try:
+            with runtime.lock:
+                runtime.update() if payload.action == "apply" else runtime.reset()
+                return view(runtime, updating=True)
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @application.post("/api/reviews", response_model=ReviewActionResponse)
+    def review(payload: ReviewActionRequest, request: Request) -> ReviewActionResponse:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        try:
+            return ReviewActionResponse.model_validate(
+                runtime.review(ReviewRequest.model_validate(payload.model_dump()))
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @application.get("/{frontend_path:path}", include_in_schema=False, response_model=None)
     async def frontend(frontend_path: str) -> FileResponse | HTMLResponse:

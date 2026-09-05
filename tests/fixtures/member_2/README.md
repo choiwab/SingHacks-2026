@@ -23,3 +23,10 @@ Evidence Gate. The graph requires an explicitly supplied verifier at constructio
 
 Input records use stable dates and IDs. Retrieval timestamps do not affect content fingerprints.
 Each content hash covers source text and provenance; changes invalidate old chunk citations.
+
+The integration migration represents each authored legacy fixture fact using a canonical
+one-number Fact and retains the full original calculator inputs plus authored wording in
+`fact_descriptions`. `fixture.legacy.*` formula IDs explicitly identify these demonstration
+conversions. Golden input fingerprints changed with this schema migration; generated claims
+and financial wording remain the same. These provisional fixtures are never injected into
+the 20-client pipeline's published financial artifacts.

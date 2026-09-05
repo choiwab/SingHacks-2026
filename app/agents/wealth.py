@@ -30,7 +30,9 @@ def wealth_intelligence_agent(state: AgentState) -> dict[str, Any]:
         fact_claims = [
             Claim(
                 id=f"insight:{signal.id}:{fact_id}",
-                text=facts[fact_id].what,
+                text=bundle.fact_descriptions.get(fact_id)
+                or f"{facts[fact_id].kind}: {facts[fact_id].value:g} "
+                f"{facts[fact_id].currency or facts[fact_id].unit}.",
                 citations=[fact_id],
                 kind="fact",
             )

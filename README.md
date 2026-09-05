@@ -220,19 +220,50 @@ and add `--mcp-url http://127.0.0.1:8001/mcp` to the flow command. See
 [persistent memory and MCP](docs/PERSISTENT_MEMORY_MCP.md) for interaction imports, recall,
 review across restarts, and local-only security limits. External Gmail/Teams accounts are not connected.
 
-### Frontend development
+### Run the dashboard fixture preview
 
-The retained React screens are not yet connected to this Meeting Brief output. The old
-`GET /api/monday-brief` endpoint was removed during the data-team split; opening the frontend
-currently shows a disconnected-data error. Do not confuse the fixture-driven browser test with
-an integrated agent-to-dashboard demo. Review persistence remains available at `POST /api/reviews`.
+The demo is a Fluent UI RM dashboard for Priscilla Ong, following the [Member 1 dashboard and UX brief](docs/PRD_TEAMS_RM_INTELLIGENCE.md).
+The home screen shows a top-five priority queue and a compact upcoming-meetings calendar.
+The persistent client switcher searches all 20 clients by name or ID.
+Each selected client has a profile, a preview of three facts in source order, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
+The meeting brief leads from the client's statements and portfolio facts to an RM review checkpoint.
+An optional scenario rehearsal shows two precomputed Strait scenario ranges with their snapshot context and uncertainty.
+The dashboard currently runs against a frozen synthetic fixture while the frontend integration with the versioned Demo View Model API is being completed.
+The preview is explicitly labeled, and Approve, Edit, and Reject only simulate decisions for the current page session.
+No preview decisions are written to the real review ledger.
+See [the preview boundary and fixture provenance](frontend/preview/README.md).
+No API key or external service is required.
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm dev:preview
 ```
 
-Open `http://127.0.0.1:5173` for frontend development.
+Open `http://127.0.0.1:5173`.
+
+For a short dashboard walkthrough:
+
+1. Search for `CL-0003` in the client switcher and select Margarethe Voss-Brenner, or select her meeting in the calendar.
+2. Inspect the fact preview, then find **You said / Data says** in **Overview** to compare her stated aversion to risk with 71.5% equity against a 30% limit.
+3. Open that comparison's **Why?** action to inspect the claim, calculation inputs, and exact source rows; press Escape to return to the same action.
+4. Review **What changed**, **Rules & money**, and **Planned cash needs**, including the EUR 3.4m inheritance-tax cash need.
+   Open its evidence to inspect the source dates and certainty.
+5. Open **Data** for grouped facts, or **Memory** and search `"safe and boring"` for the exact recorded phrase with highlighted matches and note evidence.
+6. Select **Review meeting brief** to reach the **RM checkpoint**, choose **Edit**, revise the opening, and choose **Save edit** or **Cancel edit**.
+7. Choose **Approve pre-read** to simulate approval and show **Approved by the RM**; use **Reject** to return a brief to **Needs review**.
+8. Optionally select Abdullah Al-Mansoori and open **Scenario rehearsal** to compare the Strait ranges and their evidence.
+
+Saved wording and review status survive navigation between clients and screens in the current page session.
+The calendar labels saved edits and approvals **Ready**, while the authorship badge distinguishes **Edited by the RM** from **Approved by the RM**.
+Reloading resets these visible states; preview decisions are never persisted.
+
+The controlled incremental-update demonstration in the PRD still requires frontend integration with Member 3's API and versioned Demo View Model.
+**Planned cash needs** renders the supplied deadline facts in their original order.
+Private-fund commitments and open follow-ups are not available.
+Ranked insights, per-insight questions and update states, the two-minute summary, discussion topics, data health, refresh and generation timestamps, and meeting purposes require upstream projection fields.
+The UI discloses these gaps instead of inferring them from confidence, fact kinds, or raw evidence.
+The Insights tab labels the supplied opening as an opening, not as a separate generated question.
+The language label reflects the client's reporting preference; some clients have English fallback openings, while Margarethe's opening is German.
 
 Run the automated checks with:
 
@@ -255,17 +286,36 @@ pnpm test:e2e
 `app/pipeline/agent_inputs.py` publishes typed client-scoped inputs from the data directory.
 `app/analytics` owns financial calculations and the three explainable Signal groups.
 `app/agents` owns Context, Wealth Intelligence and RM Briefing nodes, a constrained Evidence Gate,
-and version-aware review. `app/mcp` owns record normalization and local TF-IDF retrieval.
+and version-aware review. `app/mcp` owns record normalization, local TF-IDF retrieval,
+persistent interactions, and the live read-only MCP server.
 Dataset notes are labelled `Cached`; Gmail, Teams and calendar are `Not connected`.
 
 The graph handles first-seen, changed and unchanged inputs when invoked; it is not a background
-monitor. Its default checkpoint is in memory. Durable graph storage and the new dashboard API
-are still integration work. No trades or client communications are sent.
+monitor. The CLI uses SQLite checkpoints; the standalone test helper defaults to in-memory
+checkpoints. No trades or client communications are sent.
 
 The older `scripts.member_2_demo --update` is retained as a labelled fixture-replay regression
-example; it is separate from the data-directory command above.
+example; it is separate from the data-directory command above and uses a fixture-only verifier.
+The optional Member 3 pipeline bridge persists generated packs and edits; its full verifier
+still needs to be connected before it can grant approval.
 
-Create an optimized frontend build with `pnpm build`. Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
+[ADR 0002](docs/adr/0002-split-pipeline-along-data-team-seam.md) splits analytics, pipeline plumbing, and agent-generated prose between their owners.
+The old `GET /api/monday-brief` endpoint and generated projection models have been removed.
+The pipeline now exposes `GET /api/app`, `POST /api/reviews`, and a SQLite ledger through the
+versioned Demo View Model and review-action contracts. The frontend still needs to migrate
+from its historical preview model to those live contracts.
+Generated TypeScript types describe the live API; preview types describe the frozen fixture.
+
+React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and scenario rehearsal inside a shared Fluent UI shell.
+`pnpm dev:preview` explicitly enables a Vite fixture server at `/preview/dashboard` and a non-persistent simulated review endpoint at `/preview/reviews`.
+The handwritten preview types preserve the historical UI shape until the frontend consumes the published replacement contract.
+The frontend does not recalculate or generate financial content.
+Browser tests exercise this fixture preview and separately verify the live API's unavailable state.
+
+Create a normal optimized frontend build with `pnpm build`.
+To inspect an optimized fixture preview, use `pnpm build:preview` followed by `pnpm preview`.
+The fixture middleware runs only in Vite preview mode; FastAPI does not serve preview endpoints.
+Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
 
 ### Where to start
 
