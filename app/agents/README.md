@@ -5,7 +5,34 @@ here; communication replay and TF-IDF retrieval live in `app/mcp`. There are no 
 The graph runs independently of the dashboard. The incoming data-team migration removed the
 Monday Brief API; the frontend still needs the replacement API/view-model integration.
 
-## Run the offline example
+## Run against the data directory
+
+```bash
+uv run python -m scripts.run_client_flow --client-id CL-0003 --as-of 2026-08-26 --output data/generated/client-flow/CL-0003.json
+```
+
+The source-backed graph uses `app/pipeline/agent_inputs.py`, existing calculators and scores,
+and `app/agents/verification.py`. It pauses for review without approving anything. Read
+`pack`, `bundle.evidence`, `connected_context`, `verification`, and `trace` in the JSON.
+See [the sample inspection](../../docs/SAMPLE_CLIENT_FLOW.md) for the observed results.
+
+All records are synthetic hackathon data, but the source notes are preserved verbatim. They are
+labelled `dataset` and `Cached`; no Gmail/Teams/calendar connection is implied. The temporal
+calculators and their evidence respect all five dataset snapshot dates.
+
+The gate checks exact Facts, source-span citations, score preservation, required disclosures,
+scope, and constrained conversation wording. It is not a general semantic verifier or production
+compliance system. Free-form model text and unsupported RM edits pause for confirmation. The
+alternate opening "Could we start by discussing your priorities for this meeting?" is supported
+for exercising the edit/reverify path. Financial calculations remain the pipeline's responsibility.
+
+For interactive in-process review, use `build_data_flow(Path("data"))` from
+`scripts.run_client_flow`, keep its graph and client-specific thread, and resume using the review
+example below. Reinvoke that same graph after editing a **copy** of the source dataset to exercise
+updates. Content hashes, not the revision label, determine whether data changed. The CLI is a
+single-run inspection tool, not a durable review server or background monitor.
+
+## Retained fixture-replay example
 
 ```bash
 uv run python -m scripts.member_2_demo
@@ -60,8 +87,8 @@ state. The verifier can reconstruct hashes with `record_content()` and `fingerpr
 The old raw-source helper, selected-client adapter, citation traversal and pre-read gate have moved
 to `app/pipeline/{source_inspection,client_artifacts,evidence,legacy_verification}.py`.
 The shared Fact/Evidence contracts live in `app/pipeline/schemas.py`; calculators remain in
-`app/analytics`. Raw calculator records do not yet carry the typed Fact `kind` discriminator;
-Member 3's final curated loader must publish the typed contract, not pass raw dictionaries directly.
+`app/analytics`. `app/pipeline/agent_inputs.py` now supplies the typed Fact discriminator and
+client-scoped Evidence Map; do not pass raw calculator dictionaries directly to the graph.
 `legacy_verification` does **not** validate
 the new meeting pack and is not wired into the graph.
 

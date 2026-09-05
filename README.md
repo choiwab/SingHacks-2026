@@ -196,26 +196,37 @@ folder and run the commands above.
 and one worked client. It deliberately computes nothing clever — it exists so you can see the shape
 of the data in 30 seconds.
 
-### Run the Monday Brief demo
+### Run the data-backed agent flow
 
-The demo is a three-screen Monday workflow for Priscilla Ong.
-Its two highlighted features are an Explainable Priority Calendar and an Evidence-backed Scenario Rehearsal.
-The pre-read is the approval checkpoint between them.
-The calendar ranks all 20 clients across calls and booked meetings, while the rehearsal re-shocks the selected portfolio under two precomputed Strait scenarios.
-The Python projection module runs once during application startup and saves a diagnostic snapshot to `data/generated/app_data.json`.
-The React interface loads that versioned projection through one `GET /api/monday-brief` request.
-Approve, Edit, or Reject is the only live write and is stored in the local SQLite review ledger.
-No API key or external service is required.
+The runnable graph reads the original synthetic dataset from `data/`, computes cited financial
+Facts, retrieves exact RM note spans, and produces a Meeting Brief and Client Memory Card.
+It stops at the human-review interrupt. No API key, external connector, or automatic approval
+is required. The Evidence Gate validates source-backed constrained wording, not a frozen
+list of expected fixture claims.
 
 ```bash
 uv python install 3.13
 uv sync --locked --all-groups
+uv run python -m scripts.run_client_flow --client-id CL-0003 --as-of 2026-08-26 --output data/generated/client-flow/CL-0003.json
+```
+
+See [the sample inspection](docs/SAMPLE_CLIENT_FLOW.md) and
+[the agent integration guide](app/agents/README.md) for evidence, limitations and review/resume.
+The other four dataset snapshot dates can also be supplied through `--as-of`.
+
+### Frontend development
+
+The retained React screens are not yet connected to this Meeting Brief output. The old
+`GET /api/monday-brief` endpoint was removed during the data-team split; opening the frontend
+currently shows a disconnected-data error. Do not confuse the fixture-driven browser test with
+an integrated agent-to-dashboard demo. Review persistence remains available at `POST /api/reviews`.
+
+```bash
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open `http://127.0.0.1:5173`.
-For the shortest demo, open Margarethe Voss-Brenner, inspect a **Why?** source trail, edit the German opening, approve it, then open Abdullah Al-Mansoori and toggle the Strait scenario.
+Open `http://127.0.0.1:5173` for frontend development.
 
 Run the automated checks with:
 
@@ -235,15 +246,18 @@ pnpm test:e2e
 
 ### Demo architecture
 
-The separate Member 2 agent workflow now lives in `app/agents` and `app/mcp`. Run
-`uv run python -m scripts.member_2_demo --update` for the offline meeting-pack example, or read
-[its integration guide](app/agents/README.md) for curated-input contracts and versioned joint review.
-It uses explicitly synthetic communication fixtures and a frozen-claim test verifier; the data
-team supplies the final verifier, persistence, and dashboard integration.
+`app/pipeline/agent_inputs.py` publishes typed client-scoped inputs from the data directory.
+`app/analytics` owns financial calculations and the three explainable Signal groups.
+`app/agents` owns Context, Wealth Intelligence and RM Briefing nodes, a constrained Evidence Gate,
+and version-aware review. `app/mcp` owns record normalization and local TF-IDF retrieval.
+Dataset notes are labelled `Cached`; Gmail, Teams and calendar are `Not connected`.
 
-The Python projection module owns source loading, validation, ranking, narration, scenarios, and evidence assembly behind one interface. FastAPI builds the projection during its application lifespan and exposes it through `GET /api/monday-brief`. Pydantic models define the response, and committed TypeScript types are generated from the OpenAPI document.
+The graph handles first-seen, changed and unchanged inputs when invoked; it is not a background
+monitor. Its default checkpoint is in memory. Durable graph storage and the new dashboard API
+are still integration work. No trades or client communications are sent.
 
-React 19, TypeScript, Vite, and React Router render the Monday list, client pre-read, and scenario rehearsal. The root route loads the complete projection once and shares it with client routes, so scenario toggles do not require another request. Review decisions use `POST /api/reviews` and a local SQLite ledger; the generated JSON projection is diagnostic output only.
+The older `scripts.member_2_demo --update` is retained as a labelled fixture-replay regression
+example; it is separate from the data-directory command above.
 
 Create an optimized frontend build with `pnpm build`. Python dependencies are locked by `uv.lock`, and frontend dependencies are locked by `pnpm-lock.yaml`.
 

@@ -8,6 +8,7 @@ from app.agents.contracts import CuratedClientBundle, fingerprint
 from app.agents.state import AgentState
 from app.mcp.records import ConnectedContext
 from app.mcp.retrieval import MemoryIndex
+from app.pipeline.errors import SourceValidationError
 
 BundleLoader = Callable[[str, date, str], CuratedClientBundle]
 CommunicationLoader = Callable[[str, datetime, str], ConnectedContext]
@@ -63,6 +64,16 @@ def context_agent(
         previous = state.get("input_versions", {}) if same_client else {}
         financial_change = versions["bundle"] != previous.get("bundle")
         memory_change = any(versions[k] != previous.get(k) for k in ("memory", "availability"))
+        prior_bundle = state.get("bundle", {})
+        observed_changes = {}
+        for field in ("facts", "signals"):
+            old_items = {item["id"]: item for item in prior_bundle.get(field, [])}
+            new_items = {item.id: item.model_dump(mode="json") for item in getattr(bundle, field)}
+            observed_changes[field] = sorted(
+                key
+                for key in old_items.keys() | new_items.keys()
+                if old_items.get(key) != new_items.get(key)
+            )
         mode = (
             "first_seen"
             if not previous
@@ -100,11 +111,19 @@ def context_agent(
                     "result": mode,
                     "change_kind": change_kind,
                     "changed_record_ids": changed_records,
+                    "observed_changes": observed_changes,
                     "input_versions": versions,
                     "data_change_report": bundle.change_report.model_dump(mode="json"),
                     "retrievals": connected.retrieval_log,
                 }
             ],
+        }
+    except SourceValidationError as exc:
+        return {
+            "context_failed": True,
+            "issues": [str(item) for item in exc.diagnostics],
+            "status": "needs_confirmation",
+            "trace": [{"node": "context", "result": "source_validation_failed"}],
         }
     except (ValueError, OSError) as exc:
         # Validation errors may contain entire records: don't echo them into the public trace.

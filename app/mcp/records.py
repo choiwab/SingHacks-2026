@@ -23,7 +23,7 @@ class CommunicationRecord(ContractModel):
     participants: list[str] = Field(min_length=1)
     text: str = Field(min_length=1, max_length=20000)
     topics: list[str]
-    provenance: Literal["synthetic_fixture", "recorded_live"]
+    provenance: Literal["synthetic_fixture", "dataset", "recorded_live"]
     availability: Literal["Cached", "Live"] = "Cached"
     based_on: list[str] = Field(default_factory=list)
     preference_key: str | None = None
@@ -33,7 +33,7 @@ class CommunicationRecord(ContractModel):
     def valid_provenance(self) -> Self:
         if not self.id.startswith(f"{self.source}:"):
             raise ValueError("Record ID must be namespaced by source")
-        if self.provenance == "synthetic_fixture" and self.availability == "Live":
+        if self.provenance in {"synthetic_fixture", "dataset"} and self.availability == "Live":
             raise ValueError("Authored fixtures cannot claim a live retrieval")
         if bool(self.preference_key) != bool(self.preference_value):
             raise ValueError("Preference key and value must appear together")
