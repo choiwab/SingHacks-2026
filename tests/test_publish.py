@@ -3,7 +3,13 @@ from pathlib import Path
 
 import pytest
 
-from app.pipeline.publish import compute_run_id, publish_run, read_latest, reset_latest
+from app.pipeline.publish import (
+    PIPELINE_VERSION,
+    compute_run_id,
+    publish_run,
+    read_latest,
+    reset_latest,
+)
 from app.pipeline.schemas import (
     ChangeReport,
     ClientProfile,
@@ -26,7 +32,7 @@ def manifest(*, source_hash: str = "seed", overlay: bool = False) -> RunManifest
     return RunManifest(
         as_of=AS_OF,
         run_id=compute_run_id(AS_OF, sources, overlays),
-        pipeline_version="1",
+        pipeline_version=PIPELINE_VERSION,
         git_sha="not-part-of-identity",
         source_hashes=sources,
         overlay_hashes=overlays,
@@ -71,7 +77,12 @@ def test_run_identity_is_order_independent_and_changes_with_each_identity_input(
         compute_run_id(date(2026, 8, 25), {"b": "2", "a": "1"}, {"d": "4", "c": "3"}),
         compute_run_id(AS_OF, {"b": "changed", "a": "1"}, {"d": "4", "c": "3"}),
         compute_run_id(AS_OF, {"b": "2", "a": "1"}, {"d": "changed", "c": "3"}),
-        compute_run_id(AS_OF, {"b": "2", "a": "1"}, {"d": "4", "c": "3"}, pipeline_version="2"),
+        compute_run_id(
+            AS_OF,
+            {"b": "2", "a": "1"},
+            {"d": "4", "c": "3"},
+            pipeline_version=f"{PIPELINE_VERSION}-next",
+        ),
     ]
     assert all(value != left for value in variants)
     assert len(left) == 12

@@ -319,6 +319,7 @@ def test_transaction_routing_compares_eligible_content_not_overlay_location(tmp_
     with (DEFAULT_SOURCE_DIR / "transactions.csv").open() as handle:
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames
+        assert fieldnames is not None
         row = next(row for row in reader if row["client_id"] == "CL-0003")
     if update == "narrative":
         row["narrative"] = "Transfer purpose clarified for the next meeting."

@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clients/{client_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client History */
+        get: operations["client_history_api_clients__client_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/demo/update": {
         parameters: {
             query?: never;
@@ -76,6 +93,35 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** BriefHistoryVersion */
+        BriefHistoryVersion: {
+            /** Run Id */
+            run_id: string;
+            /** Brief Version */
+            brief_version: number;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "generated" | "rm_edited";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Meeting Brief */
+            meeting_brief: {
+                [key: string]: components["schemas"]["JsonValue"];
+            } | null;
+            /** Verification */
+            verification: {
+                [key: string]: components["schemas"]["JsonValue"];
+            };
+            /** Trace */
+            trace?: components["schemas"]["JsonValue"][];
+            /** Reviews */
+            reviews?: components["schemas"]["ReviewRecord"][];
+        };
         /** ChangeReport */
         ChangeReport: {
             /**
@@ -107,6 +153,8 @@ export interface components {
             affected_signal_ids?: string[];
             /** Changed Source Files */
             changed_source_files?: string[];
+            /** Changed Context Sections */
+            changed_context_sections?: string[];
         };
         /**
          * ClientHeader
@@ -133,6 +181,15 @@ export interface components {
             reporting_language: string;
             /** Booking Centre */
             booking_centre: string;
+        };
+        /** ClientHistory */
+        ClientHistory: {
+            /** Client Id */
+            client_id: string;
+            /** Run Id */
+            run_id: string;
+            /** Versions */
+            versions: components["schemas"]["BriefHistoryVersion"][];
         };
         /** ClientView */
         ClientView: {
@@ -242,6 +299,15 @@ export interface components {
             /** Evidence */
             evidence?: {
                 [key: string]: components["schemas"]["Evidence"];
+            };
+            /**
+             * Connected Evidence
+             * @description Cited Connected Records keyed by id, preserving connector provenance and availability separately from dataset Evidence. Exact indexed chunk IDs map to {chunk, record, record_version}, retaining the original parent record.
+             */
+            connected_evidence?: {
+                [key: string]: {
+                    [key: string]: components["schemas"]["JsonValue"];
+                };
             };
             /** Reviews */
             reviews?: components["schemas"]["ReviewRecord"][];
@@ -402,6 +468,14 @@ export interface components {
             before?: string | null;
             /** After */
             after?: string | null;
+            /** Changed Fields */
+            changed_fields?: string[];
+            /** Before Priority Score */
+            before_priority_score?: number | null;
+            /** After Priority Score */
+            after_priority_score?: number | null;
+            before_threshold?: components["schemas"]["JsonValue"];
+            after_threshold?: components["schemas"]["JsonValue"];
         };
         /** ValidationError */
         ValidationError: {
@@ -463,6 +537,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoViewModel"];
+                };
+            };
+        };
+    };
+    client_history_api_clients__client_id__history_get: {
+        parameters: {
+            query?: {
+                run_id?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientHistory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

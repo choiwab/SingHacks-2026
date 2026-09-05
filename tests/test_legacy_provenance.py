@@ -45,6 +45,7 @@ def test_actual_zero_cash_need_amount_is_retained_with_source_evidence(tmp_path)
     with (DEFAULT_SOURCE_DIR / "planned_cash_needs.csv").open() as handle:
         reader = csv.DictReader(handle)
         fields = reader.fieldnames
+        assert fields is not None
         row = next(row for row in reader if row["need_id"] == "CN-004")
     row["amount"] = "0"
     with (overlay / "planned_cash_needs.csv").open("w") as handle:

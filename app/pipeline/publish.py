@@ -24,7 +24,7 @@ from app.pipeline.schemas import (
     SignalSet,
 )
 
-PIPELINE_VERSION = "1"
+PIPELINE_VERSION = "2"
 DEFAULT_CURATED_DIR = Path(__file__).resolve().parents[2] / "data/generated/curated"
 
 

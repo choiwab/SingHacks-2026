@@ -69,6 +69,7 @@ def test_transaction_only_update_replaces_brief_from_current_evidence(tmp_path):
     with (DEFAULT_SOURCE_DIR / "transactions.csv").open() as handle:
         reader = csv.DictReader(handle)
         fieldnames = reader.fieldnames
+        assert fieldnames is not None
         row = next(row for row in reader if row["client_id"] == "CL-0003")
     row.update(
         transaction_id="TXN-NEW",
