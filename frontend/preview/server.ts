@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { Connect, Plugin } from "vite";
 
-import type { ReviewResponse } from "../src/contracts";
+import type { ReviewResponse } from "../src/contracts.ts";
 
 /** Development preview only. Never mounted by FastAPI or the normal build. */
 export function fixturePreview(): Plugin {
