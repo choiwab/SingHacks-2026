@@ -48,6 +48,12 @@ function claims(brief: BriefVersion["meeting_brief"]): Claim[] {
     }),
   );
 }
+function timestamp(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Date unavailable"
+    : `${new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(date)} UTC`;
+}
 function versionKey(version: BriefVersion) {
   return `${version.run_id}:${version.brief_version}`;
 }
@@ -84,7 +90,9 @@ function VersionCard({
       <p className="brief-version-run">
         Pipeline Run <code>{version.run_id}</code>
       </p>
-      <time dateTime={version.created_at}>{version.created_at}</time>
+      <time dateTime={version.created_at} title={version.created_at}>
+        {timestamp(version.created_at)}
+      </time>
       {!version.meeting_brief ? (
         <p className="brief-history-notice">
           Evidence Gate has not passed. Meeting Brief content is withheld.
@@ -140,7 +148,7 @@ function VersionCard({
               <div key={review.review_id}>
                 <p>
                   <strong>{review.action}</strong> · {review.rm} ·{" "}
-                  {review.timestamp}
+                  {timestamp(review.timestamp)}
                 </p>
                 <p>
                   Review <code>{review.review_id}</code> · Run{" "}
