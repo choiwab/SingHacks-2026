@@ -175,3 +175,44 @@ it("prints only on request", async () => {
   );
   expect(print).toHaveBeenCalledOnce();
 });
+
+it.each([
+  { passed: true, errors: ["Unresolved source"] },
+  { passed: true, checks: [{ passed: true, errors: ["Claim failed"] }] },
+  { passed: true, checks: "invalid" },
+])(
+  "does not publish a nominal pass with failed or malformed checks",
+  (verification) => {
+    render(
+      <MeetingPresentation
+        client={{ ...client, verification }}
+        model={model}
+        onClose={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole("button", { name: "Print Meeting Brief" }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByText("What has changed in your plans?"),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("keeps keyboard focus within presentation controls", async () => {
+  render(
+    <MeetingPresentation client={client} model={model} onClose={() => {}} />,
+  );
+  const user = userEvent.setup();
+  expect(
+    screen.getByRole("button", { name: "Back to preparation" }),
+  ).toHaveFocus();
+  await user.tab({ shift: true });
+  expect(
+    screen.getByRole("button", { name: "Print Meeting Brief" }),
+  ).toHaveFocus();
+  await user.tab();
+  expect(
+    screen.getByRole("button", { name: "Back to preparation" }),
+  ).toHaveFocus();
+});

@@ -103,7 +103,9 @@ export function MeetingPresentation({
         : approved
           ? "Reviewed Meeting Brief"
           : "Draft: needs Relationship Manager review";
-  const sections = object(client.meeting_brief?.sections);
+  const sections = object(
+    client.meeting_brief?.sections ?? client.meeting_brief,
+  );
   const content = [
     { title: "Open the conversation", entries: claims(sections.opening) },
     { title: "At a glance", entries: claims(sections.summary) },
