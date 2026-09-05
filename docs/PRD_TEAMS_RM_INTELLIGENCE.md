@@ -700,6 +700,11 @@ refresher.
 
 ### Member 2 — Agents & external MCPs (1 person)
 
+Implementation detail and subsequent interview decisions are recorded in
+[the Member 2 implementation plan](PLAN_MEMBER_2_AGENTS_MCP.md). These include the hard package
+cutover, authored synthetic fixture provenance, deterministic retrieval, and joint review of the
+brief and Memory Card; the plan identifies the handoffs still needed from Members 3 and 4.
+
 **Primary objective:** Give the RM a memory. Fetch everything the RM and this client have said to
 each other — emails, Teams messages, notes, meetings — through MCP, make it retrievable through
 RAG, and condense it into a cited one-glance Memory Card plus a cited meeting brief. Structured

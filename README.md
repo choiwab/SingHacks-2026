@@ -235,6 +235,12 @@ pnpm test:e2e
 
 ### Demo architecture
 
+The separate Member 2 agent workflow now lives in `app/agents` and `app/mcp`. Run
+`uv run python -m scripts.member_2_demo --update` for the offline meeting-pack example, or read
+[its integration guide](app/agents/README.md) for curated-input contracts and versioned joint review.
+It uses explicitly synthetic communication fixtures and a frozen-claim test verifier; the data
+team supplies the final verifier, persistence, and dashboard integration.
+
 The Python projection module owns source loading, validation, ranking, narration, scenarios, and evidence assembly behind one interface. FastAPI builds the projection during its application lifespan and exposes it through `GET /api/monday-brief`. Pydantic models define the response, and committed TypeScript types are generated from the OpenAPI document.
 
 React 19, TypeScript, Vite, and React Router render the Monday list, client pre-read, and scenario rehearsal. The root route loads the complete projection once and shares it with client routes, so scenario toggles do not require another request. Review decisions use `POST /api/reviews` and a local SQLite ledger; the generated JSON projection is diagnostic output only.

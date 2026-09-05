@@ -1,7 +1,6 @@
-"""Read-only source inspection tools for the context agent.
+"""Legacy read-only source inspection tools, owned by the data team.
 
-Source hashing and the source file list are Member 3's (``app.pipeline.sources``) and are
-re-exported here so the graph keeps one import path.
+Source hashing and the source file list remain in ``app.pipeline.sources``.
 """
 
 from __future__ import annotations

@@ -1,0 +1,126 @@
+[
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [
+      "rm_notes:N-005"
+    ],
+    "id": "notes:introduction",
+    "source": "notes",
+    "occurred_at": "2026-02-16T08:00:00Z",
+    "text": "Margarethe inherited her late husband's portfolio and wants help understanding it.",
+    "topics": [
+      "who_they_are"
+    ]
+  },
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [
+      "rm_notes:N-005"
+    ],
+    "id": "notes:initial-intent",
+    "source": "notes",
+    "occurred_at": "2026-02-16T08:00:00Z",
+    "text": "Please do not make any portfolio changes for now; I need time to understand what I hold.",
+    "topics": [
+      "stated_needs_and_goals"
+    ],
+    "preference_key": "portfolio_change",
+    "preference_value": "defer"
+  },
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [
+      "rm_notes:N-006"
+    ],
+    "id": "gmail:safe-and-boring",
+    "source": "gmail",
+    "occurred_at": "2026-05-29T08:00:00Z",
+    "text": "I would prefer something safe and boring. Please explain how the portfolio could be affected.",
+    "topics": [
+      "stated_needs_and_goals"
+    ]
+  },
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [],
+    "id": "teams:communication",
+    "source": "teams",
+    "occurred_at": "2026-08-20T08:00:00Z",
+    "text": "For our next conversation, please use plain language and send a short written summary.",
+    "topics": [
+      "personality_and_style"
+    ]
+  },
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [],
+    "id": "notes:follow-up",
+    "source": "notes",
+    "occurred_at": "2026-08-24T08:00:00Z",
+    "text": "Priscilla promised to explain the tax-payment funding options at the next meeting; the explanation is still outstanding.",
+    "topics": [
+      "open_promises"
+    ]
+  },
+  {
+    "client_id": "CL-0003",
+    "version": "1",
+    "retrieved_at": "2026-08-26T09:00:00Z",
+    "participants": [
+      "priscilla@example.test",
+      "margarethe@example.test"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached",
+    "based_on": [],
+    "id": "calendar:meeting",
+    "scheduled_at": "2026-08-31T02:30:00Z",
+    "source": "calendar",
+    "occurred_at": "2026-08-25T08:00:00Z",
+    "text": "Upcoming client meeting: review the inherited portfolio and discuss the inheritance-tax funding plan.",
+    "topics": [
+      "recent_updates",
+      "open_promises"
+    ]
+  }
+]
