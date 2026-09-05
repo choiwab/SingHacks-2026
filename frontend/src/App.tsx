@@ -6,7 +6,6 @@ import {
   MessageBarBody,
   MessageBarTitle,
   Spinner,
-  teamsLightTheme,
 } from "@fluentui/react-components";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -18,6 +17,7 @@ import {
 } from "react-router-dom";
 
 import { getMondayBrief, isPreview } from "./api";
+import { aurelisTheme } from "./theme";
 import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
 import type { Authorship } from "./evidence";
@@ -47,7 +47,7 @@ function useRoute(projection: MondayBriefProjection) {
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
     };
-    document.title = [clientName, titles[route], "Wealth Intelligence"]
+    document.title = [clientName, titles[route], "Aurelis"]
       .filter(Boolean)
       .join(" | ");
   }, [clientName, route]);
@@ -221,7 +221,7 @@ export function App() {
   }, [error]);
 
   return (
-    <FluentProvider theme={teamsLightTheme} className="fluent-root">
+    <FluentProvider theme={aurelisTheme} className="fluent-root">
       {projection ? (
         <RoutedApp projection={projection} />
       ) : (
