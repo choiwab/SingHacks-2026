@@ -61,6 +61,7 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
         current = holdings[holdings["snapshot_date"] == sources.as_of.isoformat()]
         portfolio_currency = str(current.iloc[0]["portfolio_ccy"]) if not current.empty else None
         facts = []
+        descriptions: dict[str, tuple[str, str]] = {}
         for legacy in legacy_facts:
             kind = legacy["id"].rsplit(":", 1)[-1]
             numbers = legacy["numbers"]
@@ -112,11 +113,14 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
                         confidence=1.0 if legacy["confidence"] == "high" else 0.5,
                     )
                 )
+                # One sentence per legacy Fact, attached to the leading field it split into.
+                descriptions.setdefault(legacy["id"], (facts[-1].id, legacy["what"]))
         bundles[client_id] = FactBundle(
             client_id=client_id,
             as_of=sources.as_of,
             run_id=run_id,
             facts=sorted(facts, key=lambda item: item.id),
+            descriptions=dict(descriptions.values()),
         )
     return FeatureArtifacts(
         facts=bundles,

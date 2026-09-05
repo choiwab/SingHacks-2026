@@ -124,16 +124,13 @@ export function Scenario({
         >
           ← Pre-read
         </Link>
-        <p>
-          <strong>Scenario rehearsal</strong>
-        </p>
       </div>
 
       <header className={styles.header}>
         <div className={styles.copy}>
           <Caption1 className={styles.muted}>{preRead.name}</Caption1>
           <Title3 as="h1" id="scenario-title" className={styles.title}>
-            Rehearse the Strait conversation
+            Strait scenarios
           </Title3>
         </div>
         <div className={styles.toggle} role="group" aria-label="Scenario">

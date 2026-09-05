@@ -23,9 +23,7 @@ for (const width of [1280, 390]) {
         page.getByText("Data health unavailable", { exact: true }),
       ).toBeVisible();
       await expect(
-        page.getByText(
-          "Refresh and insight-generation times are not available.",
-        ),
+        page.getByText("Refresh and insight times unavailable."),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Why this data status?" }),
@@ -57,7 +55,7 @@ for (const width of [1280, 390]) {
     const notes = panel.getByRole("region", { name: "RM notes", exact: true });
     const beliefs = panel.getByRole("region", { name: "Extracted beliefs" });
     await expect(search).toHaveAccessibleDescription(
-      "Search by topic, or use double quotes for an exact phrase.",
+      "Use double quotes for an exact phrase.",
     );
     for (const query of [
       '"risk with money"',
@@ -727,7 +725,7 @@ for (const width of [1280, 390]) {
           await expect(
             drawer.getByRole("region", { name: "Generated claim" }),
           ).toHaveText(
-            `Claim on the dashboard${client} · ${scenario}. ${baseline} Precomputed range, not a forecast. ${sector}`,
+            `Claim${client} · ${scenario}. ${baseline} Precomputed range, not a forecast. ${sector}`,
           );
           await expect(drawer).toContainText("data/holdings.csv");
           await expect(drawer).toContainText("data/event_log.csv");
@@ -770,7 +768,7 @@ for (const width of [1280, 390]) {
       const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
       await expect(
         drawer.getByRole("region", { name: "Generated claim" }),
-      ).toHaveText(`Claim on the dashboard${client} · ${headline}`);
+      ).toHaveText(`Claim${client} · ${headline}`);
       await expect(drawer).toContainText("Deterministic fact");
       await expect(drawer).toContainText("Calculation inputs and result");
       await expect(drawer).toContainText("data/holdings.csv · row holdings:");
@@ -884,7 +882,7 @@ for (const width of [1280, 390]) {
     await page.goto("/clients/CL-0003/pre-read");
     await expect(
       page.getByText(
-        /A two-minute summary, discussion topics, and suggested questions are not yet available/,
+        /Summary, discussion topics, and suggested questions unavailable/,
       ),
     ).toBeVisible();
     await expect(
@@ -911,7 +909,7 @@ for (const width of [1280, 390]) {
       name: "Planned cash needs",
     });
     await expect(commitments).toContainText(
-      "Private-fund commitments and open follow-ups are not available in this brief.",
+      "Private-fund commitments and open follow-ups unavailable.",
     );
     const description = "German inheritance tax instalment starts in 36 days.";
     await expect(commitments).toContainText(description);
@@ -923,9 +921,7 @@ for (const width of [1280, 390]) {
     const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
-    ).toHaveText(
-      `Claim on the dashboardMargarethe Voss-Brenner · ${description}`,
-    );
+    ).toHaveText(`ClaimMargarethe Voss-Brenner · ${description}`);
     await expect(drawer).toContainText(
       "data/planned_cash_needs.csv · row planned_cash_needs:CN-004",
     );
@@ -949,7 +945,7 @@ for (const width of [1280, 390]) {
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
     ).toHaveText(
-      "Claim on the dashboardAbdullah Al-Mansoori · Seed capital for Singapore family office entity starts in 128 days.",
+      "ClaimAbdullah Al-Mansoori · Seed capital for Singapore family office entity starts in 128 days.",
     );
     await expect(drawer).toContainText("planned_cash_needs:CN-017");
     await expect(drawer).not.toContainText("Margarethe");
@@ -1123,7 +1119,7 @@ for (const width of [1280, 390]) {
       await expect(
         drawer.getByRole("region", { name: "Generated claim" }),
       ).toHaveText(
-        `Claim on the dashboard${client.name} · Extracted belief: “${client.belief}”`,
+        `Claim${client.name} · Extracted belief: “${client.belief}”`,
       );
       await expect(drawer).toContainText(
         `data/rm_notes.json · row ${client.source}`,
@@ -2872,9 +2868,7 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   });
   await expect(page.getByRole("status").last()).toContainText("Approved");
   await expect(opening).toContainText("May I walk you through the gap?");
-  await page
-    .getByRole("button", { name: "Rehearse a Strait scenario →" })
-    .click();
+  await page.getByRole("button", { name: "Strait scenarios →" }).click();
   await page.getByRole("tab", { name: "Pre-read", exact: true }).click();
   await expect(opening).toContainText("May I walk you through the gap?");
   await opening.getByRole("button", { name: "Why?" }).click();

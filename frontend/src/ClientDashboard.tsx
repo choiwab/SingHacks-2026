@@ -508,7 +508,7 @@ export function DashboardHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
-        <Caption1>Decision pre-read · {preRead.client_id}</Caption1>
+        <Caption1>Meeting brief · {preRead.client_id}</Caption1>
         <Title1 as="h1" id="client-name">
           {preRead.name}
         </Title1>
@@ -541,12 +541,8 @@ export function DashboardHeader({
         <Badge appearance="outline" color="informative">
           Data health unavailable
         </Badge>
-        <Caption1>
-          Refresh and insight-generation times are not available.
-        </Caption1>
-        <Caption1>
-          Data as of {asOf} · reporting preference: {preRead.language}
-        </Caption1>
+        <Caption1>Refresh and insight times unavailable.</Caption1>
+        <Caption1>Data as of {asOf}</Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
@@ -633,8 +629,7 @@ export function FactPreview({
           Client facts
         </Subtitle2>
         <Caption1>
-          Shown in source order. Ranked insights, questions, and update status
-          are not yet available.
+          Facts in source order. Ranked insights and update status unavailable.
         </Caption1>
       </div>
       {preview.length === 0 ? (
@@ -682,10 +677,9 @@ export function InsightsPanel({
         <Subtitle2 as="h3" id="also-active-title">
           More client facts
         </Subtitle2>
-        <Caption1>Remaining facts in source order.</Caption1>
         {rest.length === 0 ? (
           <Body1 className={styles.empty}>
-            Every fact for this client is shown above.
+            All client facts are shown above.
           </Body1>
         ) : (
           <div className={styles.cards}>
@@ -719,7 +713,7 @@ export function InsightsPanel({
         </div>
       </section>
       <section className={styles.group} aria-label="Uncertainty">
-        <Subtitle2 as="h3">What we are not sure about</Subtitle2>
+        <Subtitle2 as="h3">Uncertainty</Subtitle2>
         <Body1>{preRead.uncertainty.text}</Body1>
         <div className={styles.action}>
           <WhyButton
@@ -781,10 +775,6 @@ export function DataPanel({
 
   return (
     <div className={styles.panel}>
-      <Caption1>
-        Every fact behind this client, with its calculation inputs and source
-        rows.
-      </Caption1>
       {kinds.map((kind) => (
         <section
           className={styles.group}
@@ -1003,10 +993,10 @@ export function MemoryPanel({
   return (
     <div className={mergeClasses(styles.panel, styles.memory)}>
       <section className={styles.group} aria-label="Search the client memory">
-        <Subtitle2 as="h3">Ask the notes</Subtitle2>
+        <Subtitle2 as="h3">Search RM notes</Subtitle2>
         <SearchBox
           className={styles.search}
-          placeholder="What did they say about risk?"
+          placeholder="Topic or exact phrase"
           aria-label="Search this client's RM notes"
           dismiss={{ "aria-label": "Clear note search" }}
           value={query}
@@ -1014,7 +1004,7 @@ export function MemoryPanel({
           aria-describedby="memory-search-hint"
         />
         <Caption1 id="memory-search-hint">
-          Search by topic, or use double quotes for an exact phrase.
+          Use double quotes for an exact phrase.
         </Caption1>
         <Caption1 role="status">
           {terms.length === 0 &&
@@ -1026,7 +1016,7 @@ export function MemoryPanel({
         </Caption1>
       </section>
       <section className={styles.group} aria-label="Extracted beliefs">
-        <Subtitle2 as="h3">What the client told us</Subtitle2>
+        <Subtitle2 as="h3">Client statements</Subtitle2>
         {matchedBeliefs.length === 0 ? (
           <Body1 className={styles.empty}>
             {preRead.beliefs.length === 0

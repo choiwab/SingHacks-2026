@@ -128,7 +128,7 @@ def load_curated_bundle(
     return CuratedClientBundle.model_validate({**payload, "version": fingerprint(payload)})
 
 
-def _note_topics(text: str) -> list[str]:
+def note_topics(text: str) -> list[str]:
     # ponytail: explicit keyword tags cover the demo; replace only with labelled evaluations.
     patterns = {
         "who_they_are": r"family|father|husband|wife|daughter|son|retir|inherit|business|griev",
@@ -178,7 +178,7 @@ def load_dataset_notes(
                     "retrieved_at": as_of,
                     "participants": [str(note["rm_name"])],
                     "text": note["note"],
-                    "topics": _note_topics(str(note["note"])),
+                    "topics": note_topics(str(note["note"])),
                     "provenance": "dataset",
                     "availability": "Cached",
                     "based_on": [f"data/rm_notes.json:{note['note_id']}"],

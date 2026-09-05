@@ -101,8 +101,8 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
           <MessageBar intent="info" role="note" aria-label="Fixture preview">
             <MessageBarBody>
               <MessageBarTitle>Fixture preview</MessageBarTitle>
-              Frozen data from 26 August 2026. Review actions are simulated and
-              are not saved.
+              Frozen data from 26 August 2026. Reviews are simulated and
+              unsaved.
             </MessageBarBody>
           </MessageBar>
         )}

@@ -285,9 +285,6 @@ export function EvidenceProvider({
                 : request.clientId}
             </Body1Strong>
           )}
-          <Caption1>
-            The cited facts, holdings, events, market inputs and note rows.
-          </Caption1>
         </DrawerHeader>
         <DrawerBody className={styles.body}>
           {missing.length > 0 && (
@@ -298,8 +295,7 @@ export function EvidenceProvider({
             >
               <MessageBarBody>
                 <MessageBarTitle>Evidence trail is incomplete.</MessageBarTitle>
-                These source records are unavailable in the loaded data. Confirm
-                the missing sources before relying on this claim.
+                Confirm the missing source records before relying on this claim.
                 <ul aria-label="Unavailable source records">
                   {missing.map((citation) => (
                     <li key={citation}>{citation}</li>
@@ -310,7 +306,7 @@ export function EvidenceProvider({
           )}
           {request?.claim && (
             <section className={styles.claim} aria-label="Generated claim">
-              <Caption1>Claim on the dashboard</Caption1>
+              <Caption1>Claim</Caption1>
               <Body1>{request.claim}</Body1>
               {authorship && (
                 <Badge appearance="tint" color={authorship.color}>
@@ -328,7 +324,7 @@ export function EvidenceProvider({
               />
             ))
           ) : (
-            <Body1>No source row for this line.</Body1>
+            <Body1>No source record available.</Body1>
           )}
         </DrawerBody>
       </OverlayDrawer>

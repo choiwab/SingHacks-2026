@@ -344,8 +344,7 @@ export function PreRead({
           <div className={styles.brief}>
             <MessageBar intent="info" layout="multiline">
               <MessageBarBody>
-                A two-minute summary, discussion topics, and suggested questions
-                are not yet available. Review the supplied brief sections below.
+                Summary, discussion topics, and suggested questions unavailable.
               </MessageBarBody>
             </MessageBar>
             <BriefSection title="What changed">
@@ -394,8 +393,7 @@ export function PreRead({
 
             <BriefSection title="Planned cash needs">
               <Caption1>
-                Private-fund commitments and open follow-ups are not available
-                in this brief.
+                Private-fund commitments and open follow-ups unavailable.
               </Caption1>
               <PlannedCashNeeds
                 facts={facts}
@@ -409,7 +407,7 @@ export function PreRead({
                 <Caption1 className={styles.label}>
                   Reporting preference: {preRead.language}
                 </Caption1>
-                <Caption1>The opening may use a different language.</Caption1>
+                <Caption1>Draft language may differ.</Caption1>
                 <Subtitle2 as="p" className={styles.quote}>
                   {currentOpening}
                 </Subtitle2>
@@ -424,7 +422,7 @@ export function PreRead({
               </div>
             </BriefSection>
 
-            <BriefSection title="What we are not sure about">
+            <BriefSection title="Uncertainty">
               <Body1 className={styles.prose}>{preRead.uncertainty.text}</Body1>
               <div className={styles.actions}>
                 <WhyButton
@@ -494,7 +492,7 @@ export function PreRead({
         <MessageBar intent="error" role="alert" className="review-error">
           <MessageBarBody>
             <MessageBarTitle>The review was not saved.</MessageBarTitle>
-            {reviewError.message} The brief stays open.
+            {reviewError.message}
           </MessageBarBody>
           <MessageBarActions
             containerAction={
@@ -542,8 +540,8 @@ export function PreRead({
           </Caption1>
           <Caption1 id="review-session-guidance">
             {isPreview
-              ? "Reloading restores the fixture opening and unreviewed status. No decisions are written to the review log."
-              : "In this demo, reloading restores the generated opening and unreviewed status. Saved decisions remain in the review log."}
+              ? "Preview decisions are unsaved. Reloading resets the opening and review status."
+              : "Reloading resets the opening and review status. Saved decisions remain in the review log."}
           </Caption1>
         </div>
         <div className="review-actions">
@@ -588,7 +586,7 @@ export function PreRead({
           type="button"
           onClick={() => navigate(`/clients/${clientId}/scenario`)}
         >
-          Rehearse a Strait scenario →
+          Strait scenarios →
         </Link>
       </div>
       {toast && (
