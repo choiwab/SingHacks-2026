@@ -64,6 +64,16 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
         for legacy in legacy_facts:
             kind = legacy["id"].rsplit(":", 1)[-1]
             numbers = legacy["numbers"]
+            evidence_ids = sorted(set(legacy["source_rows"] + legacy["event_ids"]))
+            if kind == "deadline" and sources.clients[client_id]["planned_cash_needs"].empty:
+                # The legacy engine uses the client KYC date when no cash need exists.
+                # Its zero amount is a placeholder, not a sourced cash-need measurement.
+                client = sources.clients[client_id]["clients"].iloc[0]
+                numbers = {
+                    "days": numbers["days"],
+                    "kyc_review_due": str(client["kyc_review_due"]),
+                }
+                evidence_ids = [f"clients:{client_id}"]
             for field, value in numbers.items():
                 if isinstance(value, bool) or not isinstance(value, Real):
                     continue
@@ -97,7 +107,7 @@ def legacy_analytics(sources: CleanedSources, run_id: str) -> FeatureArtifacts:
                         currency=currency,
                         formula_id=f"legacy.{kind}.{field}",
                         inputs=numbers,
-                        evidence_ids=sorted(set(legacy["source_rows"] + legacy["event_ids"])),
+                        evidence_ids=evidence_ids,
                         as_of=sources.as_of,
                         confidence=1.0 if legacy["confidence"] == "high" else 0.5,
                     )
