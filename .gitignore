@@ -17,3 +17,5 @@ data/generated/app_data.json
 data/generated/reviews.sqlite3
 data/generated/reviews.sqlite3-shm
 data/generated/reviews.sqlite3-wal
+
+data/generated/curated/

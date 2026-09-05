@@ -1,8 +1,4 @@
-"""Minimal pipeline CLI: ``python -m app.pipeline run [--source-dir data] [--as-of DATE]``.
-
-This command reads and validates the raw sources and computes facts in memory. It writes no
-files; the seed, update, reset, and diff subcommands are a separate issue.
-"""
+"""Run, seed, update, reset, or compare persisted pipeline artifacts."""
 
 from __future__ import annotations
 
@@ -11,48 +7,102 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from app.analytics.facts import fact_engine
-from app.pipeline.errors import SourceValidationError
-from app.pipeline.sources import load_sources
-
-ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_SOURCE_DIR = ROOT / "data"
-DEFAULT_AS_OF = date(2026, 8, 26)
-SPOTLIGHT_CLIENT = "CL-0003"
+from app.pipeline.changes import compare_client
+from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
+from app.pipeline.publish import canonical_json
+from app.pipeline.runner import DEFAULT_AS_OF, DEFAULT_SOURCE_DIR, run_pipeline
+from app.pipeline.runtime import PipelineRuntime
+from app.pipeline.schemas import RunManifest
+from app.store import ReviewLedger
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.pipeline")
     subcommands = parser.add_subparsers(dest="command", required=True)
-    run = subcommands.add_parser("run", help="load, validate, and compute facts in memory")
-    run.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
-    run.add_argument("--as-of", type=date.fromisoformat, default=DEFAULT_AS_OF)
+    for command in ("run", "seed", "update", "reset", "diff"):
+        item = subcommands.add_parser(command)
+        item.add_argument("--source-dir", type=Path, default=DEFAULT_SOURCE_DIR)
+        item.add_argument("--as-of", type=date.fromisoformat, default=DEFAULT_AS_OF)
+        item.add_argument("--curated-dir", type=Path)
+        item.add_argument("--database", type=Path)
+        if command in ("run", "update"):
+            item.add_argument("--overlay", type=Path)
+        if command == "diff":
+            item.add_argument("run_a")
+            item.add_argument("run_b")
+            item.add_argument("client_id", nargs="?")
     return parser
 
 
-def run(source_dir: Path, as_of: date) -> int:
-    try:
-        tables, _notes = load_sources(source_dir, as_of=as_of)
-    except SourceValidationError as exc:
-        print(exc, file=sys.stderr)
-        return 1
-    facts, evidence = fact_engine(tables, as_of)
-    fact_count = sum(len(client_facts) for client_facts in facts.values())
-    print(f"as_of: {as_of.isoformat()}")
-    print(f"clients: {len(facts)}")
-    print(f"facts: {fact_count}")
-    print(f"evidence: {len(evidence)}")
-    print(f"{SPOTLIGHT_CLIENT} facts:")
-    for fact in facts.get(SPOTLIGHT_CLIENT, []):
-        print(f"  {fact['id']}")
-    return 0
+def _summary(manifest: RunManifest) -> None:
+    print(f"run_id: {manifest.run_id}")
+    print(f"as_of: {manifest.as_of}")
+    print(f"clients: {len(manifest.client_ids)}")
+    print(f"errors: {manifest.finding_counts.get('error', 0)}")
+    print(f"warnings: {manifest.finding_counts.get('warning', 0)}")
+    for issue in manifest.context_issues:
+        print(f"context: {issue}")
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    if args.command == "run":
-        return run(args.source_dir, args.as_of)
-    return 2
+    root = args.curated_dir or args.source_dir / "generated/curated"
+    store = ArtifactStore(root)
+    try:
+        if args.command == "run":
+            _summary(
+                run_pipeline(
+                    source_dir=args.source_dir,
+                    as_of=args.as_of,
+                    overlay=args.overlay,
+                    curated_dir=root,
+                )
+            )
+        elif args.command == "diff":
+            before = store.load_manifest(args.run_a)
+            after = store.load_manifest(args.run_b)
+            client_ids = (
+                [args.client_id]
+                if args.client_id
+                else sorted(set(before.client_ids) | set(after.client_ids))
+            )
+            changed = sorted(
+                name
+                for name in before.source_hashes.keys()
+                | after.source_hashes.keys()
+                | before.overlay_hashes.keys()
+                | after.overlay_hashes.keys()
+                if before.source_hashes.get(name) != after.source_hashes.get(name)
+                or before.overlay_hashes.get(name) != after.overlay_hashes.get(name)
+            )
+            reports = [
+                compare_client(
+                    store.load_fact_bundle(client_id, run_id=args.run_b),
+                    store.load_signal_set(client_id, run_id=args.run_b),
+                    store.load_fact_bundle(client_id, run_id=args.run_a),
+                    store.load_signal_set(client_id, run_id=args.run_a),
+                    changed_source_files=changed,
+                ).model_dump(mode="json")
+                for client_id in client_ids
+            ]
+            print(canonical_json(reports).decode(), end="")
+        else:
+            ledger = ReviewLedger(args.database or args.source_dir / "generated/reviews.sqlite3")
+            try:
+                runtime = PipelineRuntime(
+                    store,
+                    ledger,
+                    source_dir=args.source_dir,
+                    as_of=args.as_of,
+                    overlay_dir=getattr(args, "overlay", None),
+                )
+                _summary(getattr(runtime, args.command)())
+            finally:
+                ledger.close()
+        return 0
+    except (ValueError, FileNotFoundError, ArtifactNotFound) as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
