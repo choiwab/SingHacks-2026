@@ -66,7 +66,8 @@ class DemoViewModel(ContractModel):
         default_factory=dict,
         description=(
             "Cited Connected Records keyed by id, preserving connector provenance "
-            "and availability separately from dataset Evidence."
+            "and availability separately from dataset Evidence. Exact indexed chunk IDs "
+            "map to {chunk, record, record_version}, retaining the original parent record."
         ),
     )
     reviews: list[ReviewRecord] = Field(default_factory=list)

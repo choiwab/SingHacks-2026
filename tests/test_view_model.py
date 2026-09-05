@@ -394,3 +394,82 @@ def test_connected_envelope_resolves_memory_and_preserves_calendar_provenance(tm
     assert model.calendar == [record]
     assert model.clients[CLIENT].memory_tab == [record]
     assert model.evidence == {}
+
+
+def chunk_projection(tmp_path, *, citation=None, parent=True):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    record = {
+        "id": "gmail:1",
+        "client_id": CLIENT,
+        "source": "gmail",
+        "version": "v1",
+        "text": "Prefers calls.\nDiscuss objectives.",
+        "availability": "Cached",
+        "provenance": "synthetic_fixture",
+        "occurred_at": "2026-08-20T00:00:00Z",
+        "retrieved_at": "2026-08-26T00:00:00Z",
+    }
+    chunk_id = "gmail:1#abcdef012345:0-14"
+    chunk = {
+        "id": chunk_id,
+        "record_id": record["id"],
+        "start": 0,
+        "end": 14,
+        "text": "Prefers calls.",
+        "topics": ["communication"],
+        "occurred_at": record["occurred_at"],
+    }
+    # Python's string slice is the authoritative span produced by MemoryIndex.
+    chunk["end"] = len(chunk["text"])
+    store_brief(
+        ledger,
+        body={
+            "memory_card": {
+                "communication": {"text": "Prefers calls.", "citations": [citation or chunk_id]}
+            },
+            "connected_context": {"records": [record] if parent else []},
+            "memory_index": {
+                "client_id": CLIENT,
+                "as_of": "2026-08-26T23:59:59Z",
+                "record_versions": {record["id"]: "abcdef0123456789"},
+                "chunks": {chunk_id: chunk},
+            },
+        },
+    )
+    return root, source, ledger, record, chunk
+
+
+def test_exact_connected_chunk_citation_includes_span_and_parent_provenance(tmp_path):
+    root, source, ledger, record, chunk = chunk_projection(tmp_path)
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.connected_evidence == {
+        chunk["id"]: {"chunk": chunk, "record": record, "record_version": "abcdef0123456789"}
+    }
+    assert model.evidence == {}
+
+
+@pytest.mark.parametrize("parent", [False, True])
+def test_unknown_or_orphan_connected_chunk_never_resolves_from_id_prefix(tmp_path, parent):
+    citation = "gmail:1#unknown:0-14" if parent else None
+    root, source, ledger, _record, _chunk = chunk_projection(
+        tmp_path, citation=citation, parent=parent
+    )
+    with pytest.raises(ArtifactNotFound, match="gmail:1#"):
+        build_view_model(ArtifactStore(root), ledger, source)
+
+
+@pytest.mark.parametrize("defect", ["wrong_client", "wrong_span", "missing_version"])
+def test_connected_chunk_requires_matching_cached_parent(tmp_path, defect):
+    root, source, ledger, _record, chunk = chunk_projection(tmp_path)
+    current = ledger.get_brief(CLIENT, SEED)
+    assert current is not None
+    body = current.body
+    if defect == "wrong_client":
+        body["memory_index"]["client_id"] = "CL-9999"
+    elif defect == "wrong_span":
+        body["memory_index"]["chunks"][chunk["id"]]["text"] = "Fabricated text"
+    else:
+        body["memory_index"]["record_versions"] = {}
+    store_brief(ledger, body=body)
+    with pytest.raises(ArtifactNotFound, match="gmail:1#"):
+        build_view_model(ArtifactStore(root), ledger, source)

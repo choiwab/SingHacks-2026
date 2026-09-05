@@ -116,6 +116,40 @@ def _references(value: Any) -> set[str]:
     return result
 
 
+def _connected_chunks(
+    body: dict[str, Any], client_id: str, records: list[dict[str, Any]]
+) -> dict[str, dict[str, Any]]:
+    """Resolve exact persisted index entries against their own cached parent record."""
+    snapshot = body.get("memory_index")
+    if not isinstance(snapshot, dict) or snapshot.get("client_id") != client_id:
+        return {}
+    chunks, versions = snapshot.get("chunks"), snapshot.get("record_versions")
+    if not isinstance(chunks, dict) or not isinstance(versions, dict):
+        return {}
+    parents = {record.get("id"): record for record in records}
+    resolved = {}
+    for identifier, chunk in chunks.items():
+        if not isinstance(chunk, dict) or chunk.get("id") != identifier:
+            continue
+        record_id = chunk.get("record_id")
+        if not isinstance(record_id, str):
+            continue
+        parent, version = parents.get(record_id), versions.get(record_id)
+        if parent is None or parent.get("client_id") != client_id or not isinstance(version, str):
+            continue
+        start, end, text = chunk.get("start"), chunk.get("end"), parent.get("text")
+        if (
+            type(start) is not int
+            or type(end) is not int
+            or not isinstance(text, str)
+            or not 0 <= start < end <= len(text)
+            or text[start:end] != chunk.get("text")
+        ):
+            continue
+        resolved[identifier] = {"chunk": chunk, "record": parent, "record_version": version}
+    return resolved
+
+
 def _stale(source_dir: Path, source_hashes: dict[str, str], overlay_hashes: dict[str, str]) -> bool:
     if overlay_hashes:
         overlay = source_dir / "fixtures/update"
@@ -217,6 +251,7 @@ def build_view_model(
                 if key not in calendar_seen:
                     calendar.append(item)
                     calendar_seen.add(key)
+        connected_records.update(_connected_chunks(body, client_id, connected))
         clients[client_id] = ClientView(
             header=ClientHeader.model_validate(
                 {
