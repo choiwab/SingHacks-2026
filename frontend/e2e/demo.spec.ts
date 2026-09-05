@@ -20,10 +20,7 @@ for (const width of [1280, 390]) {
     for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(
-        page.getByText("Data health unavailable", { exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByText("Refresh and insight times unavailable."),
+        page.getByText(/Data as of \d{4}-\d{2}-\d{2} · health unavailable/),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Why this data status?" }),
@@ -32,7 +29,7 @@ for (const width of [1280, 390]) {
     missing = true;
     await page.reload();
     await expect(
-      page.getByText("Data health unavailable", { exact: true }),
+      page.getByText(/Data as of \d{4}-\d{2}-\d{2} · health unavailable/),
     ).toBeVisible();
     await expect(
       page.getByText("No facts for this client.", { exact: true }),
@@ -2300,7 +2297,7 @@ for (const width of [1280, 390]) {
     const main = page.getByRole("main");
     await expect(main).toBeVisible();
     await expect(main).not.toBeFocused();
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     const workspace = page
       .getByRole("navigation", { name: "Workspace navigation" })
       .getByRole("tablist", { name: "Workspace views" });
@@ -2316,7 +2313,7 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0003\/pre-read$/);
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Pre-read | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Pre-read | Aurelis",
     );
     await expect(main).toBeFocused();
     await expect(main).toHaveCSS("outline-style", "solid");
@@ -2332,9 +2329,7 @@ for (const width of [1280, 390]) {
     await meetings.getByRole("button", { name: /Abdullah/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
-    await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
-    );
+    await expect(page).toHaveTitle("Abdullah Al-Mansoori | Pre-read | Aurelis");
     await expect(main).toBeFocused();
     await expect(main).toHaveJSProperty("scrollTop", 0);
 
@@ -2346,30 +2341,28 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/scenario$/);
     await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Scenario rehearsal | Wealth Intelligence",
+      "Abdullah Al-Mansoori | Scenario rehearsal | Aurelis",
     );
     await expect(main).toBeFocused();
     await page.goBack();
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
-    await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
-    );
+    await expect(page).toHaveTitle("Abdullah Al-Mansoori | Pre-read | Aurelis");
     await expect(main).toBeFocused();
     await main.getByRole("button", { name: /RM dashboard/ }).press("Enter");
     await expect(page).toHaveURL(/\/$/);
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     await expect(main).toBeFocused();
     await page.goto("/clients/CL-0003/scenario");
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Scenario rehearsal | Aurelis",
     );
     await page.reload();
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Scenario rehearsal | Aurelis",
     );
     await page.goto("/clients/CL-9999/pre-read");
     await expect(page).toHaveURL(/\/$/);
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     await expect(main.getByRole("status")).toContainText(
       "CL-9999 was not found",
     );
@@ -2933,9 +2926,13 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     page.getByRole("main").getByText("Abdullah Al-Mansoori", { exact: true }),
   ).toHaveText("Abdullah Al-Mansoori");
   await page.getByRole("button", { name: "Strait escalates" }).click();
-  await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
+  await expect(
+    page.getByRole("heading", { name: "Strait escalates", level: 2 }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Strait reopens" }).click();
-  await expect(page.locator(".scenario-label")).toHaveText("Strait reopens");
+  await expect(
+    page.getByRole("heading", { name: "Strait reopens", level: 2 }),
+  ).toBeVisible();
 
   await page.goto("/clients/CL-0003/pre-read");
   for (const viewport of [

@@ -104,9 +104,7 @@ describe("Monday Brief", () => {
       screen.getByRole("button", { name: "Strait scenarios →" }),
     );
     expect(
-      await screen.findByText("Strait reopens", {
-        selector: ".scenario-label",
-      }),
+      await screen.findByRole("heading", { name: "Strait reopens", level: 2 }),
     ).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -182,7 +180,9 @@ describe("Monday Brief", () => {
       ),
     ).toBeVisible();
     expect(screen.getByText("Next meeting · Mon 10:30")).toBeVisible();
-    expect(screen.getByText("Data health unavailable")).toBeVisible();
+    expect(
+      screen.getByText("Data as of 2026-08-26 · health unavailable"),
+    ).toBeVisible();
     expect(screen.getByRole("heading", { name: "What changed" })).toBeVisible();
 
     // The fact preview stays visible across tabs in projection order.
