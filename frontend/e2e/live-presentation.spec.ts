@@ -2,8 +2,8 @@ import { expect, test } from "@playwright/test";
 
 test("presentation preserves draft/review state, isolates print, and restores preparation", async ({
   page,
-}) => {
-  await page.goto("/clients/CL-0003");
+}, testInfo) => {
+  await page.goto("/clients/CL-0004/pre-read");
   await page.getByRole("button", { name: "Present Meeting Brief" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("status")).toHaveText(
