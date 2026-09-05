@@ -1,3 +1,4 @@
+import { MeetingPresentation } from "./MeetingPresentation";
 import {
   Button,
   Field,
@@ -205,6 +206,7 @@ function ClientWorkspace({
   const [section, setSection] = useState(editable[0]?.id ?? "");
   const [draft, setDraft] = useState(editable[0]?.text ?? "");
   const [editing, setEditing] = useState(false);
+  const [presenting, setPresenting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   async function review(action: "Approve" | "Edit" | "Reject") {
@@ -266,7 +268,17 @@ function ClientWorkspace({
             ? "Reviewed meeting pack"
             : client.brief_status}
         </span>
+        <Button disabled={busy || editing} onClick={() => setPresenting(true)}>
+          Present Meeting Brief
+        </Button>
       </header>
+      {presenting && (
+        <MeetingPresentation
+          client={client}
+          model={model}
+          onClose={() => setPresenting(false)}
+        />
+      )}
       <Continuity client={client} model={model} />
       <section className="live-brief" aria-labelledby="brief-title">
         <div className="live-section-heading">
