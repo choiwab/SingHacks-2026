@@ -288,7 +288,11 @@ pnpm test:e2e
 `app/agents` owns Context, Wealth Intelligence and RM Briefing nodes, a constrained Evidence Gate,
 and version-aware review. `app/mcp` owns record normalization, local TF-IDF retrieval,
 persistent interactions, and the live read-only MCP server.
-Dataset notes are labelled `Cached`; Gmail, Teams and calendar are `Not connected`.
+Dataset notes are labelled `Cached`; external sources are disconnected by default.
+Optional read-only Gmail, Outlook Mail, Google Calendar and Outlook Calendar adapters feed the
+same persistent memory through MCP or an explicit sync command. See
+[Google and Outlook setup](docs/CONNECT_GOOGLE_OUTLOOK.md) for OAuth consent and client scopes.
+Live account authorization is still required; Teams remains deferred.
 
 The graph handles first-seen, changed and unchanged inputs when invoked; it is not a background
 monitor. The CLI uses SQLite checkpoints; the standalone test helper defaults to in-memory

@@ -18,9 +18,13 @@ The CLI now uses SQLite for persistent interactions, graph checkpoints, pack his
 Decisions. A read-only local MCP server exposes dated Curated Client Bundles, communication context,
 and cited memory search over stdio or Streamable HTTP. The graph can consume those live protocol
 responses; dataset/imported records remain labelled Cached, not live external account data.
-See [run and demo instructions](PERSISTENT_MEMORY_MCP.md). Real Gmail/Teams/calendar OAuth,
-background synchronization, and the new dashboard API remain unimplemented. This does not satisfy
-the stretch goal of a live external-account retrieval. Team ownership below remains unchanged.
+See [run and demo instructions](PERSISTENT_MEMORY_MCP.md). Optional read-only Gmail, Outlook Mail,
+Google Calendar and Outlook Calendar adapters, OAuth setup commands and atomic cached snapshots
+are implemented. See [account setup](CONNECT_GOOGLE_OUTLOOK.md). Provider behavior is tested with
+mocked responses; actual demo-account consent and a successful live read are still required before
+claiming the external-retrieval stretch goal. Teams access, background synchronization and the new
+dashboard API remain deferred. The judged path stays deterministic and offline-capable.
+Team ownership below remains unchanged; later Teams references describe planned/fixture behavior.
 
 ## 1. Product statement
 
