@@ -555,11 +555,9 @@ export function LiveDashboard() {
                   {model.clients[text(meeting.client_id)]?.header.client_name ??
                     "Unknown client"}{" "}
                   ·{" "}
-                  {displayDate(
-                    meeting.scheduled_at ??
-                      meeting.start_time ??
-                      meeting.occurred_at,
-                  ) || "Time unavailable"}{" "}
+                  {text(meeting.scheduled_at ?? meeting.start_time)
+                    ? displayDate(meeting.scheduled_at ?? meeting.start_time)
+                    : "Time unavailable"}{" "}
                   · {text(meeting.availability) || "State unavailable"}
                 </Button>
               ))

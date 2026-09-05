@@ -44,6 +44,13 @@ export function MeetingPresentation({
 }) {
   const closeButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", dismiss);
+    return () => document.removeEventListener("keydown", dismiss);
+  }, [onClose]);
+  useEffect(() => {
     const prior = document.activeElement;
     const siblings = Array.from(document.body.children).filter(
       (element): element is HTMLElement =>
@@ -169,7 +176,6 @@ export function MeetingPresentation({
       aria-modal="true"
       aria-labelledby="presentation-title"
       onKeyDown={(event) => {
-        if (event.key === "Escape") onClose();
         if (event.key === "Tab") {
           const buttons = Array.from(
             event.currentTarget.querySelectorAll<HTMLButtonElement>(

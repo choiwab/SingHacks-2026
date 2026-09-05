@@ -244,3 +244,14 @@ it("carries Connected Record availability and provenance into the document", () 
     ),
   ).toBeVisible();
 });
+
+it("handles Escape after printing removes focus from the hidden controls", () => {
+  const onClose = vi.fn();
+  render(
+    <MeetingPresentation client={client} model={model} onClose={onClose} />,
+  );
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+  );
+  expect(onClose).toHaveBeenCalledOnce();
+});

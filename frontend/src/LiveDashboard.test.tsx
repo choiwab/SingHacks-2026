@@ -263,3 +263,25 @@ describe("live Meeting Brief", () => {
     );
   });
 });
+
+it("does not treat a Connected Record creation date as the meeting time", async () => {
+  const data = model();
+  data.calendar = [
+    {
+      id: "calendar:undated",
+      client_id: "CL-0003",
+      occurred_at: "2026-08-25T12:00:00Z",
+      availability: "Cached",
+    },
+  ];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(new Response(JSON.stringify(data))),
+  );
+  start();
+  expect(
+    await screen.findByRole("button", {
+      name: "Margarethe · Time unavailable · Cached",
+    }),
+  ).toBeVisible();
+});
