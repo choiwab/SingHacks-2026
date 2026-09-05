@@ -99,6 +99,7 @@ def project_pack(pack: MeetingPack) -> dict[str, Any]:
         "meeting_brief": {"sections": deepcopy(content["brief"])},
         "insights": deepcopy(content["insights"]),
         "memory_card": deepcopy(content["memory_card"]),
+        "information_requests": deepcopy(content["information_requests"]),
     }
 
 
@@ -182,7 +183,11 @@ def member2_hooks(
             version=revision,
             facts=facts.facts,
             signals=mapped,
-            evidence=evidence.entries,
+            evidence={
+                key: entry
+                for key, entry in evidence.entries.items()
+                if entry.record.get("client_id") in (None, client)
+            },
             fact_descriptions=facts.descriptions,
             quality_issues=[f.message for f in quality.findings if f.severity == "error"],
         )
@@ -193,7 +198,30 @@ def member2_hooks(
         def load_bundle(client: str, as_of: date, revision: str) -> CuratedClientBundle:
             if (client, revision) != (client_id, run_id):
                 raise ValueError("Generation must use the pinned client and run")
-            return bundle(client, as_of, revision)
+            facts = store.load_fact_bundle(client, run_id=revision)
+            signals = store.load_signal_set(client, run_id=revision)
+            if signals.signals and signal_adapter is None:
+                raise ValueError("Finalized Member 4 Signal mapping is not connected")
+            mapped = (
+                [Signal.model_validate(signal_adapter(s)) for s in signals.signals]
+                if signal_adapter is not None
+                else []
+            )
+            evidence = store.load_evidence_map(run_id=revision)
+            quality = store.load_data_quality_report(run_id=revision, client_id=client)
+            return CuratedClientBundle(
+                client_id=client,
+                as_of=as_of,
+                version=revision,
+                facts=facts.facts,
+                signals=mapped,
+                evidence={
+                    key: entry
+                    for key, entry in evidence.entries.items()
+                    if entry.record.get("client_id") in (None, client)
+                },
+                quality_issues=[f.message for f in quality.findings if f.severity == "error"],
+            )
 
         state: AgentState = {
             "run_id": run_id,

@@ -131,6 +131,7 @@ def verify_brief(
                     "input_versions",
                     "connected_sources",
                     "retrieval_log",
+                    "information_requests",
                 )
                 if key in brief
             },

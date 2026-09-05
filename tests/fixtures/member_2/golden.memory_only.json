@@ -2,7 +2,7 @@
   "client_id": "CL-0003",
   "as_of": "2026-08-26",
   "input_versions": {
-    "bundle": "45b96207ff766fff5ad6d1adad1d3b55a432e3301481fd075f6f687721c20783",
+    "bundle": "141b4abac8f04bba735a366ae40efa2513a52d1fd07e2d3960c00c62ff67bdaf",
     "memory": "61b8b2f61737e718e00959cd97d7e4b38935c5d42b6f6056a0168db71a815d74",
     "availability": "21b949f860ad7c5d7419212bafef638be6c7103710f10983200f830a6b09f09e",
     "generation": "v1:deterministic"

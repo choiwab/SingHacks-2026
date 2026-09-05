@@ -46,23 +46,34 @@ class MCPClient:
                 raise ValueError("MCP tool failed or returned no structured content")
             return result.structuredContent
 
-    def _call(self, name: str, client_id: str, as_of: date | datetime) -> dict[str, Any]:
+    def _call(
+        self, name: str, client_id: str, as_of: date | datetime, revision: str = "current"
+    ) -> dict[str, Any]:
         try:
             return asyncio.run(
-                self.call(name, {"client_id": client_id, "as_of": as_of.isoformat()})
+                self.call(
+                    name,
+                    {
+                        "client_id": client_id,
+                        "as_of": as_of.isoformat(),
+                        "revision": revision,
+                    },
+                )
             )
         except Exception as exc:
             # Do not leak server errors, source text, or transport internals into public traces.
             raise OSError("MCP unavailable or invalid response") from exc
 
     def bundle(self, client_id: str, as_of: date, revision: str = "current") -> CuratedClientBundle:
-        return CuratedClientBundle.model_validate(self._call("get_client_bundle", client_id, as_of))
+        return CuratedClientBundle.model_validate(
+            self._call("get_client_bundle", client_id, as_of, revision)
+        )
 
     def context(
         self, client_id: str, as_of: datetime, revision: str = "current"
     ) -> ConnectedContext:
         connected = ConnectedContext.model_validate(
-            self._call("get_client_context", client_id, as_of)
+            self._call("get_client_context", client_id, as_of, revision)
         )
         connected.retrieval_log.append(
             {

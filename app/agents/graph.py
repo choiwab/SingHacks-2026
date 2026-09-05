@@ -26,6 +26,7 @@ def build_agent_flow(
     record_review: Callable[[dict[str, Any]], None] | None = None,
     checkpointer: Any | None = None,
     live_generation: bool = False,
+    generation_policy: str | None = None,
 ):
     """No default passing gate: Member 4 must supply the verifier (or a labelled test double)."""
 
@@ -33,25 +34,33 @@ def build_agent_flow(
         context_agent,
         load_bundle=load_bundle,
         load_communications=load_communications,
-        generation_policy="v1:openai" if live_generation else "v1:deterministic",
+        generation_policy=generation_policy
+        or ("v1:openai" if live_generation else "v1:deterministic"),
     )
 
     def inputs_current(state: AgentState) -> bool:
         current = load_context(state)
-        return not current.get("context_failed") and current.get("input_versions") == state.get(
-            "input_versions"
+        return (
+            not current.get("context_failed")
+            and current.get("input_versions") == state.get("input_versions")
+            and verify(state)["status"] != "needs_confirmation"
         )
 
     def verify(state: AgentState) -> dict[str, Any]:
         publish_reviews(state, record_review)
-        pack = MeetingPack.model_validate(state.get("pack"))
         try:
+            pack = MeetingPack.model_validate(state.get("pack"))
+            if state.get("pack_version") != pack.version:
+                raise ValueError("Stored pack identity does not match content")
+            returned = verify_pack(
+                pack.model_copy(deep=True),
+                CuratedClientBundle.model_validate(state.get("bundle")),
+                ConnectedContext.model_validate(state.get("connected_context")),
+            )
             report = VerificationReport.model_validate(
-                verify_pack(
-                    pack.model_copy(deep=True),
-                    CuratedClientBundle.model_validate(state.get("bundle")),
-                    ConnectedContext.model_validate(state.get("connected_context")),
-                )
+                returned.model_dump(mode="json")
+                if isinstance(returned, VerificationReport)
+                else returned
             )
             if report.pack_version != pack.version:
                 raise ValueError("Verification targets a stale pack")
@@ -83,6 +92,29 @@ def build_agent_flow(
         publish_reviews(state, record_review)
         return needs_confirmation(state)
 
+    def verified_reuse(state: AgentState) -> dict[str, Any]:
+        checked = verify(state)
+        if checked["status"] == "needs_confirmation":
+            return checked
+        reused = reuse(state)
+        if reused["status"] == "approved":
+            approved = state.get("last_approved")
+            try:
+                same_approval = bool(approved) and (
+                    MeetingPack.model_validate(approved).version
+                    == MeetingPack.model_validate(state.get("pack")).version
+                )
+            except ValueError:
+                return {
+                    "verification": None,
+                    "status": "needs_confirmation",
+                    "issues": ["Stored approval is invalid"],
+                    "trace": [{"node": "reuse", "result": "invalid_approval"}],
+                }
+            if not same_approval:
+                reused["status"] = "awaiting_review"
+        return {**checked, **reused, "trace": [*checked["trace"], *reused["trace"]]}
+
     graph = StateGraph(AgentState)
     graph.add_node("context", load_context)
     graph.add_node("wealth", wealth_intelligence_agent)
@@ -91,7 +123,7 @@ def build_agent_flow(
     graph.add_node("human_review", partial(human_review, check_current=inputs_current))
     graph.add_node("finalize", finish)
     graph.add_node("needs_confirmation", stop)
-    graph.add_node("reuse", reuse)
+    graph.add_node("reuse", verified_reuse)
     graph.add_edge(START, "context")
     graph.add_conditional_edges("context", route_context, ["needs_confirmation", "reuse", "wealth"])
     graph.add_edge("wealth", "briefing")

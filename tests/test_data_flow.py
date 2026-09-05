@@ -100,7 +100,11 @@ def test_real_data_review_edit_approval_reuse_and_updates(tmp_path):
     notes_path.write_text(json.dumps(notes))
     memory = graph.invoke(INPUT, config)
     assert memory["change_kind"] == "memory"
-    assert memory["bundle"] == initial["bundle"]
+    assert memory["bundle"]["facts"] == initial["bundle"]["facts"]
+    assert memory["bundle"]["signals"] == initial["bundle"]["signals"]
+    assert memory["bundle"]["version"] == initial["bundle"]["version"]
+    assert memory["bundle"]["pipeline_run_id"] != initial["bundle"]["pipeline_run_id"]
+    assert "rm_notes:N-029" in memory["bundle"]["evidence"]
     assert memory["last_approved"] == approved["pack"]
     assert memory["status"] == "awaiting_review"
     holdings_path = source / "holdings.csv"

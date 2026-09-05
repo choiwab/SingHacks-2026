@@ -25,6 +25,12 @@ def _parser() -> argparse.ArgumentParser:
         item.add_argument("--as-of", type=date.fromisoformat, default=DEFAULT_AS_OF)
         item.add_argument("--curated-dir", type=Path)
         item.add_argument("--database", type=Path)
+        if command in ("seed", "update", "reset"):
+            item.add_argument(
+                "--agents",
+                action="store_true",
+                help="Run LangGraph agents and the strict Evidence Gate without auto-approval",
+            )
         if command in ("run", "update"):
             item.add_argument("--overlay", type=Path)
         if command == "diff":
@@ -89,12 +95,15 @@ def main(argv: list[str] | None = None) -> int:
         else:
             ledger = ReviewLedger(args.database or args.source_dir / "generated/reviews.sqlite3")
             try:
+                from app.pipeline.agent_bridge import phase_a_hooks
+
                 runtime = PipelineRuntime(
                     store,
                     ledger,
                     source_dir=args.source_dir,
                     as_of=args.as_of,
                     overlay_dir=getattr(args, "overlay", None),
+                    agents=phase_a_hooks(store) if args.agents else None,
                 )
                 _summary(getattr(runtime, args.command)())
             finally:

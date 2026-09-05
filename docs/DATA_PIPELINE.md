@@ -23,10 +23,12 @@ uv run python -m app.pipeline update --curated-dir /tmp/curated --database /tmp/
 uv run python -m app.pipeline reset --curated-dir /tmp/curated --database /tmp/reviews.sqlite3
 ```
 
-`seed/update/reset` use the existing application runtime. Its default brief-generation hooks remain
-disconnected, and its citation-only fallback never grants review readiness. Use `run_client_flow`
-for the wired deterministic agent graph with constrained-wording verification. This distinction is
-intentional: a data publication is not a client-approved recommendation or a connected dashboard.
+`seed/update/reset` use the existing application runtime. Add `--agents` to connect its generation
+and verification hooks to the existing LangGraph. Without that option, the hooks remain disconnected
+and the citation-only fallback never grants review readiness. `run_client_flow` uses the wired
+deterministic graph directly. See [the agent handoff](AGENT_PIPELINE_HANDOFF.md) for batch dry runs,
+missing-information requests and strict verification. A verified candidate is not a human-approved
+recommendation or a connected dashboard.
 
 ## Processing layers
 
