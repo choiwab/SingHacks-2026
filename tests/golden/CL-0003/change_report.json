@@ -1,0 +1,137 @@
+{
+  "affected_signal_ids": [],
+  "as_of": "2026-08-26",
+  "changed_context_sections": [
+    "cash_needs",
+    "commitments",
+    "credit",
+    "holdings",
+    "liquidity",
+    "mandate_rules",
+    "portfolios",
+    "profile",
+    "rm_notes",
+    "transactions"
+  ],
+  "changed_fact_ids": [
+    "CL-0003:fact:change-1:delta",
+    "CL-0003:fact:change-2:delta",
+    "CL-0003:fact:change-3:delta",
+    "CL-0003:fact:concentration:value",
+    "CL-0003:fact:concentration:weight_pct",
+    "CL-0003:fact:deadline:amount",
+    "CL-0003:fact:deadline:amount_in_portfolio_currency",
+    "CL-0003:fact:deadline:coverage_pct",
+    "CL-0003:fact:deadline:daily_liquid",
+    "CL-0003:fact:deadline:days",
+    "CL-0003:fact:mandate-gap:actual_pct",
+    "CL-0003:fact:mandate-gap:gap_pct",
+    "CL-0003:fact:mandate-gap:limit_pct",
+    "CL-0003:fact:profile:risk_tolerance_score"
+  ],
+  "changed_source_files": [
+    "clients.csv",
+    "commitments.csv",
+    "credit_facilities.csv",
+    "event_log.csv",
+    "holdings.csv",
+    "instruments.csv",
+    "mandates.csv",
+    "market_context.csv",
+    "planned_cash_needs.csv",
+    "portfolios.csv",
+    "rm_notes.json",
+    "transactions.csv"
+  ],
+  "client_id": "CL-0003",
+  "fact_changes": [
+    {
+      "after": -532400.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:change-1:delta"
+    },
+    {
+      "after": 400588.61,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:change-2:delta"
+    },
+    {
+      "after": -138000.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:change-3:delta"
+    },
+    {
+      "after": 5293200.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:concentration:value"
+    },
+    {
+      "after": 26.1,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:concentration:weight_pct"
+    },
+    {
+      "after": 3400000.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:deadline:amount"
+    },
+    {
+      "after": 3400000.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:deadline:amount_in_portfolio_currency"
+    },
+    {
+      "after": 527.5,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:deadline:coverage_pct"
+    },
+    {
+      "after": 17934556.47,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:deadline:daily_liquid"
+    },
+    {
+      "after": 36.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:deadline:days"
+    },
+    {
+      "after": 71.5,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:mandate-gap:actual_pct"
+    },
+    {
+      "after": 41.5,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:mandate-gap:gap_pct"
+    },
+    {
+      "after": 30.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:mandate-gap:limit_pct"
+    },
+    {
+      "after": 2.0,
+      "before": null,
+      "change": "added",
+      "fact_id": "CL-0003:fact:profile:risk_tolerance_score"
+    }
+  ],
+  "prior_run_id": null,
+  "processing_mode": "first_seen",
+  "run_id": "f72a9d0769b6",
+  "signal_changes": []
+}
