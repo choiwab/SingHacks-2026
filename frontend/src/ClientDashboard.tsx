@@ -482,6 +482,7 @@ export function DashboardHeader({
   asOf,
   reviewState,
   onReviewBrief,
+  onOpenPitch,
 }: {
   preRead: ClientPreRead;
   ranked: RankedClient | undefined;
@@ -489,6 +490,7 @@ export function DashboardHeader({
   asOf: string;
   reviewState: Authorship;
   onReviewBrief: () => void;
+  onOpenPitch?: () => void;
 }) {
   const styles = useStyles();
   const profile = facts.find((fact) => fact.kind === "profile");
@@ -533,6 +535,7 @@ export function DashboardHeader({
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
           </Button>
+          {onOpenPitch && <Button onClick={onOpenPitch}>Pitch deck</Button>}
           <Badge appearance="tint" color={AUTHORSHIP[reviewState].color}>
             {AUTHORSHIP[reviewState].label}
           </Badge>
@@ -613,9 +616,7 @@ export function FactPreview({
         <Subtitle2 as="h2" id="client-facts-title">
           Client facts
         </Subtitle2>
-        <Caption1>
-          Facts in source order. Ranked insights and update status unavailable.
-        </Caption1>
+        <Caption1>Facts in source order.</Caption1>
       </div>
       {preview.length === 0 ? (
         <Body1 className={styles.empty}>No facts for this client.</Body1>

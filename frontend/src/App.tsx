@@ -23,6 +23,7 @@ import { EvidenceProvider } from "./evidence";
 import type { Authorship } from "./evidence";
 import type { MondayBriefProjection } from "./contracts";
 import { Home } from "./Home";
+import { PitchDeck } from "./PitchDeck";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";
 
@@ -31,9 +32,11 @@ function useRoute(projection: MondayBriefProjection) {
   const previousPath = useRef(pathname);
   const route = pathname.endsWith("/scenario")
     ? "scenario"
-    : pathname.endsWith("/pre-read")
-      ? "pre-read"
-      : "list";
+    : pathname.endsWith("/pitch")
+      ? "pitch"
+      : pathname.endsWith("/pre-read")
+        ? "pre-read"
+        : "list";
   const clientId = pathname.match(/^\/clients\/([^/]+)\//)?.[1];
   const selectedClient =
     clientId && projection.pre_reads[clientId] ? clientId : null;
@@ -46,6 +49,7 @@ function useRoute(projection: MondayBriefProjection) {
       list: "RM dashboard",
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
+      pitch: "Pitch deck",
     };
     document.title = [clientName, titles[route], "Aurelis"]
       .filter(Boolean)
@@ -131,6 +135,10 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
           <Route
             path="/clients/:clientId/scenario"
             element={<Scenario projection={projection} />}
+          />
+          <Route
+            path="/clients/:clientId/pitch"
+            element={<PitchDeck projection={projection} />}
           />
           <Route
             path="*"

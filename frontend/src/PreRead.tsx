@@ -36,7 +36,9 @@ import {
   FactPreview,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
+import { getPersona } from "./demo/personas";
 import type { Authorship } from "./evidence";
+import { KeywordChips, LifeEvents, PortfolioBand } from "./PersonaPanels";
 import {
   CitedList,
   Eyebrow,
@@ -188,6 +190,7 @@ export function PreRead({
     );
   }
 
+  const persona = getPersona(clientId);
   const rank = projection.ranking.findIndex(
     (client) => client.client_id === clientId,
   );
@@ -288,10 +291,29 @@ export function PreRead({
             reviewBar.current?.focus({ preventScroll: true });
             reviewBar.current?.scrollIntoView({ block: "center" });
           }}
+          onOpenPitch={
+            persona ? () => navigate(`/clients/${clientId}/pitch`) : undefined
+          }
         />
       </div>
 
+      {persona && <PortfolioBand persona={persona} />}
+
       <FactPreview preRead={preRead} facts={facts} authorship={reviewState} />
+
+      {persona && (
+        <KeywordChips
+          persona={persona}
+          onSelect={(keyword) => {
+            flushSync(() => {
+              setTab("memory");
+              setMemoryQuery(keyword);
+            });
+            briefPanel.current?.focus({ preventScroll: true });
+            briefPanel.current?.scrollIntoView({ block: "start" });
+          }}
+        />
+      )}
 
       <TabList
         className="dashboard-tabs"
@@ -349,6 +371,11 @@ export function PreRead({
             <Caption1 className={styles.unavailableNote}>
               Summary, discussion topics, and suggested questions unavailable.
             </Caption1>
+            {persona && (
+              <BriefSection title="Life & next steps">
+                <LifeEvents persona={persona} />
+              </BriefSection>
+            )}
             <BriefSection title="What changed">
               <CitedList
                 items={preRead.what_changed}
@@ -396,9 +423,6 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Planned cash needs">
-              <Caption1>
-                Private-fund commitments and open follow-ups unavailable.
-              </Caption1>
               <PlannedCashNeeds
                 facts={facts}
                 clientId={clientId}
@@ -409,7 +433,6 @@ export function PreRead({
             <BriefSection title="Suggested opening">
               <div className={surfaces.surface}>
                 <Eyebrow>Reporting preference: {preRead.language}</Eyebrow>
-                <Caption1>Draft language may differ.</Caption1>
                 <Subtitle2 as="p" className={styles.quote}>
                   {currentOpening}
                 </Subtitle2>
@@ -542,8 +565,8 @@ export function PreRead({
           </Caption1>
           <Caption1 id="review-session-guidance">
             {isPreview
-              ? "Preview decisions are unsaved. Reloading resets the opening and review status."
-              : "Reloading resets the opening and review status. Saved decisions remain in the review log."}
+              ? "Preview only. Reloading resets it."
+              : "Saved decisions remain in the review log."}
           </Caption1>
         </div>
         <div className="review-actions">

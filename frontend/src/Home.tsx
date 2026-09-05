@@ -15,7 +15,9 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { CompactCalendar, briefState } from "./ClientDashboard";
+import { DonutChart } from "./charts";
 import type { MondayBriefProjection, RankedClient } from "./contracts";
+import { FEATURED_PERSONAS } from "./demo/personas";
 import type { Authorship } from "./evidence";
 import { Eyebrow, useSurfaceStyles } from "./shared";
 
@@ -132,6 +134,39 @@ const useStyles = makeStyles({
     columnGap: tokens.spacingHorizontalXS,
     rowGap: tokens.spacingVerticalXS,
   },
+  personaPair: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(22rem, 100%), 1fr))",
+    gap: tokens.spacingHorizontalL,
+  },
+  personaCard: {
+    rowGap: tokens.spacingVerticalM,
+    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalXL),
+  },
+  personaName: {
+    display: "block",
+    fontWeight: 400,
+    fontSize: tokens.fontSizeBase500,
+    lineHeight: tokens.lineHeightBase500,
+    marginTop: tokens.spacingVerticalXXS,
+  },
+  personaDetail: {
+    display: "block",
+    color: tokens.colorNeutralForeground3,
+  },
+  personaHook: {
+    color: tokens.colorNeutralForeground2,
+    maxWidth: "48ch",
+  },
+  personaOpen: {
+    color: tokens.colorBrandForeground1,
+    fontWeight: 500,
+    alignSelf: "flex-start",
+    cursor: "pointer",
+    ...shorthands.border("none"),
+    backgroundColor: "transparent",
+    ...shorthands.padding(0),
+  },
 });
 
 function HeroCard({
@@ -226,6 +261,73 @@ function QueueRow({
 }
 
 /**
+ * The two featured contrast personas side by side: aggressive growth against
+ * conservative income, each with its allocation donut. Demo overlay data; the
+ * cards link into the same pre-reads.
+ */
+function PersonaStrip({
+  projection,
+  open,
+}: {
+  projection: MondayBriefProjection;
+  open: (clientId: string) => void;
+}) {
+  const styles = useStyles();
+  const surfaces = useSurfaceStyles();
+
+  return (
+    <div className={styles.section}>
+      <div className={styles.sectionHead}>
+        <Subtitle2 as="h2" id="persona-title">
+          Two mandates, two lives
+        </Subtitle2>
+        <Caption1 className={styles.muted}>
+          Aggressive growth against conservative income
+        </Caption1>
+      </div>
+      <div className={styles.personaPair} aria-labelledby="persona-title">
+        {FEATURED_PERSONAS.map((persona) => {
+          const name =
+            projection.pre_reads[persona.clientId]?.name ?? persona.clientId;
+          return (
+            <article
+              key={persona.clientId}
+              className={mergeClasses(surfaces.surface, styles.personaCard)}
+            >
+              <div>
+                <Eyebrow>{persona.stance}</Eyebrow>
+                <Body1Strong as="h3" className={styles.personaName}>
+                  {name}
+                </Body1Strong>
+                <Caption1 className={styles.personaDetail}>
+                  {persona.stanceDetail}
+                </Caption1>
+              </div>
+              <DonutChart
+                size={124}
+                slices={persona.allocation}
+                centerValue={persona.totalDisplay}
+                title={`${name} allocation: ${persona.allocation
+                  .map((slice) => `${slice.label} ${slice.pct}%`)
+                  .join(", ")}`}
+              />
+              <Body1 className={styles.personaHook}>{persona.hook}</Body1>
+              <button
+                type="button"
+                className={styles.personaOpen}
+                onClick={() => open(persona.clientId)}
+              >
+                Open brief →
+              </button>
+            </article>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
  * The RM's home screen (PRD 5. "the first screen is clearly an RM dashboard,
  * not a calendar product"): a ranked queue of who to prepare for next, with the
  * compact calendar as a supporting strip rather than the main product. The top
@@ -285,6 +387,11 @@ export function Home({
           selectedClient=""
         />
       </div>
+
+      <PersonaStrip
+        projection={projection}
+        open={(clientId) => navigate(`/clients/${clientId}/pre-read`)}
+      />
 
       <div className={styles.section}>
         <div className={styles.sectionHead}>

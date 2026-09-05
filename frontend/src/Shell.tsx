@@ -306,7 +306,7 @@ export function AppShell({
 }: {
   projection: MondayBriefProjection;
   selectedClient: string | null;
-  route: "list" | "pre-read" | "scenario";
+  route: "list" | "pre-read" | "scenario" | "pitch";
   children: React.ReactNode;
 }) {
   const styles = useStyles();

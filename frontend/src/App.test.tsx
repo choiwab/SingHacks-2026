@@ -382,9 +382,6 @@ describe("Monday Brief", () => {
       "German inheritance tax instalment starts in 36 days.",
     );
     expect(needs).toHaveTextContent("3,400,000");
-    expect(needs).toHaveTextContent(
-      "Private-fund commitments and open follow-ups unavailable",
-    );
     expect(
       screen.getByText(
         /Summary, discussion topics, and suggested questions unavailable/,

@@ -905,9 +905,6 @@ for (const width of [1280, 390]) {
     const commitments = page.getByRole("region", {
       name: "Planned cash needs",
     });
-    await expect(commitments).toContainText(
-      "Private-fund commitments and open follow-ups unavailable.",
-    );
     const description = "German inheritance tax instalment starts in 36 days.";
     await expect(commitments).toContainText(description);
     await expect(commitments).toContainText("3,400,000");
