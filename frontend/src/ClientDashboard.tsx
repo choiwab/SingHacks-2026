@@ -1,6 +1,5 @@
 import {
   Badge,
-  Card,
   Title1,
   Body1,
   Button,
@@ -25,7 +24,7 @@ import { useEffect, useRef } from "react";
 
 import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
-import { WhyButton } from "./shared";
+import { Eyebrow, WhyButton, useSurfaceStyles } from "./shared";
 
 const FACT_GROUP: Record<ProjectionFact["kind"], string> = {
   profile: "Profile",
@@ -92,15 +91,8 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
   },
   card: {
-    display: "flex",
     // Keeps a lone card readable instead of stretching it across the dashboard.
     maxWidth: "34rem",
-    flexDirection: "column",
-    rowGap: tokens.spacingVerticalS,
-    ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   cardMeta: {
     display: "flex",
@@ -115,14 +107,12 @@ const useStyles = makeStyles({
   track: {
     position: "relative",
     blockSize: "0.5rem",
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     backgroundColor: tokens.colorNeutralBackground4,
     // The limit marker sits at limit/scale, which is always inside the track.
     overflow: "hidden",
   },
   fill: {
     blockSize: "100%",
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     backgroundColor: tokens.colorPaletteGreenBackground3,
   },
   fillBreached: {
@@ -136,7 +126,7 @@ const useStyles = makeStyles({
     insetBlockStart: 0,
     insetBlockEnd: 0,
     inlineSize: "2px",
-    backgroundColor: tokens.colorNeutralForeground1,
+    backgroundColor: tokens.colorBrandStroke1,
   },
   numbers: {
     display: "grid",
@@ -198,7 +188,6 @@ const useStyles = makeStyles({
   mark: {
     backgroundColor: tokens.colorBrandBackground2,
     color: tokens.colorBrandForeground2,
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     ...shorthands.padding(0, "0.1em"),
     fontWeight: tokens.fontWeightSemibold,
   },
@@ -223,14 +212,16 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
-    rowGap: "2px",
+    rowGap: tokens.spacingVerticalXXS,
     minWidth: "13rem",
     cursor: "pointer",
     textAlign: "left",
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
     ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     backgroundColor: tokens.colorNeutralBackground1,
+    transitionProperty: "border-color, background-color",
+    transitionDuration: "180ms",
+    transitionTimingFunction: "ease",
     ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover },
   },
   meetingSelected: {
@@ -491,6 +482,7 @@ export function DashboardHeader({
   asOf,
   reviewState,
   onReviewBrief,
+  onOpenPitch,
 }: {
   preRead: ClientPreRead;
   ranked: RankedClient | undefined;
@@ -498,6 +490,7 @@ export function DashboardHeader({
   asOf: string;
   reviewState: Authorship;
   onReviewBrief: () => void;
+  onOpenPitch?: () => void;
 }) {
   const styles = useStyles();
   const profile = facts.find((fact) => fact.kind === "profile");
@@ -508,7 +501,7 @@ export function DashboardHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
-        <Caption1>Decision pre-read · {preRead.client_id}</Caption1>
+        <Eyebrow>Meeting brief · {preRead.client_id}</Eyebrow>
         <Title1 as="h1" id="client-name">
           {preRead.name}
         </Title1>
@@ -537,20 +530,12 @@ export function DashboardHeader({
             : "No meeting booked"}
         </Body1Strong>
         <Caption1>{ranked?.reason ?? "No ranked reason recorded."}</Caption1>
-        <Caption1>Meeting purpose not recorded.</Caption1>
-        <Badge appearance="outline" color="informative">
-          Data health unavailable
-        </Badge>
-        <Caption1>
-          Refresh and insight-generation times are not available.
-        </Caption1>
-        <Caption1>
-          Data as of {asOf} · reporting preference: {preRead.language}
-        </Caption1>
+        <Caption1>Data as of {asOf} · health unavailable</Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
           </Button>
+          {onOpenPitch && <Button onClick={onOpenPitch}>Pitch deck</Button>}
           <Badge appearance="tint" color={AUTHORSHIP[reviewState].color}>
             {AUTHORSHIP[reviewState].label}
           </Badge>
@@ -579,6 +564,7 @@ function FactCard({
   uncertainty?: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const claim = [
     `${clientName} · ${FACT_GROUP[fact.kind]} · ${fact.what}`,
     uncertainty ? `To confirm: ${uncertainty}` : undefined,
@@ -586,11 +572,9 @@ function FactCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <Card role="article" className={styles.card}>
+    <article className={mergeClasses(surfaces.surface, styles.card)}>
       <div className={styles.cardMeta}>
-        <Badge appearance="outline" color="informative">
-          {FACT_GROUP[fact.kind]}
-        </Badge>
+        <Eyebrow>{FACT_GROUP[fact.kind]}</Eyebrow>
       </div>
       <Subtitle2 as="h3">{fact.what}</Subtitle2>
       <MeasureBar fact={fact} />
@@ -604,7 +588,7 @@ function FactCard({
           authorship={authorship}
         />
       </div>
-    </Card>
+    </article>
   );
 }
 
@@ -632,10 +616,7 @@ export function FactPreview({
         <Subtitle2 as="h2" id="client-facts-title">
           Client facts
         </Subtitle2>
-        <Caption1>
-          Shown in source order. Ranked insights, questions, and update status
-          are not yet available.
-        </Caption1>
+        <Caption1>Facts in source order.</Caption1>
       </div>
       {preview.length === 0 ? (
         <Body1 className={styles.empty}>No facts for this client.</Body1>
@@ -682,10 +663,9 @@ export function InsightsPanel({
         <Subtitle2 as="h3" id="also-active-title">
           More client facts
         </Subtitle2>
-        <Caption1>Remaining facts in source order.</Caption1>
         {rest.length === 0 ? (
           <Body1 className={styles.empty}>
-            Every fact for this client is shown above.
+            All client facts are shown above.
           </Body1>
         ) : (
           <div className={styles.cards}>
@@ -719,7 +699,7 @@ export function InsightsPanel({
         </div>
       </section>
       <section className={styles.group} aria-label="Uncertainty">
-        <Subtitle2 as="h3">What we are not sure about</Subtitle2>
+        <Subtitle2 as="h3">Uncertainty</Subtitle2>
         <Body1>{preRead.uncertainty.text}</Body1>
         <div className={styles.action}>
           <WhyButton
@@ -745,13 +725,17 @@ export function PlannedCashNeeds({
   clientName: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const needs = facts.filter((fact) => fact.kind === "deadline");
   if (needs.length === 0)
     return <Body1>No planned cash needs included in this brief.</Body1>;
   return (
     <div className={styles.cards}>
       {needs.map((fact) => (
-        <Card role="article" key={fact.id}>
+        <article
+          className={mergeClasses(surfaces.surface, styles.card)}
+          key={fact.id}
+        >
           <Body1Strong>{fact.what}</Body1Strong>
           <FactNumbers fact={fact} />
           <div className={styles.action}>
@@ -761,7 +745,7 @@ export function PlannedCashNeeds({
               claim={`${clientName} · ${fact.what}`}
             />
           </div>
-        </Card>
+        </article>
       ))}
     </div>
   );
@@ -777,14 +761,11 @@ export function DataPanel({
   clientName: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const kinds = [...new Set(facts.map((fact) => fact.kind))];
 
   return (
     <div className={styles.panel}>
-      <Caption1>
-        Every fact behind this client, with its calculation inputs and source
-        rows.
-      </Caption1>
       {kinds.map((kind) => (
         <section
           className={styles.group}
@@ -796,7 +777,10 @@ export function DataPanel({
             {facts
               .filter((fact) => fact.kind === kind)
               .map((fact) => (
-                <Card role="article" className={styles.card} key={fact.id}>
+                <article
+                  className={mergeClasses(surfaces.surface, styles.card)}
+                  key={fact.id}
+                >
                   <Body1Strong>{fact.what}</Body1Strong>
                   <MeasureBar fact={fact} />
                   <FactNumbers fact={fact} />
@@ -811,7 +795,7 @@ export function DataPanel({
                       claim={`${clientName} · ${fact.what}`}
                     />
                   </div>
-                </Card>
+                </article>
               ))}
           </div>
         </section>
@@ -977,6 +961,7 @@ export function MemoryPanel({
   onQueryChange: (query: string) => void;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const terms = queryTerms(query);
   const notes = Object.values(evidence)
     .filter(
@@ -1003,10 +988,10 @@ export function MemoryPanel({
   return (
     <div className={mergeClasses(styles.panel, styles.memory)}>
       <section className={styles.group} aria-label="Search the client memory">
-        <Subtitle2 as="h3">Ask the notes</Subtitle2>
+        <Subtitle2 as="h3">Search RM notes</Subtitle2>
         <SearchBox
           className={styles.search}
-          placeholder="What did they say about risk?"
+          placeholder="Topic or exact phrase"
           aria-label="Search this client's RM notes"
           dismiss={{ "aria-label": "Clear note search" }}
           value={query}
@@ -1014,7 +999,7 @@ export function MemoryPanel({
           aria-describedby="memory-search-hint"
         />
         <Caption1 id="memory-search-hint">
-          Search by topic, or use double quotes for an exact phrase.
+          Use double quotes for an exact phrase.
         </Caption1>
         <Caption1 role="status">
           {terms.length === 0 &&
@@ -1026,7 +1011,7 @@ export function MemoryPanel({
         </Caption1>
       </section>
       <section className={styles.group} aria-label="Extracted beliefs">
-        <Subtitle2 as="h3">What the client told us</Subtitle2>
+        <Subtitle2 as="h3">Client statements</Subtitle2>
         {matchedBeliefs.length === 0 ? (
           <Body1 className={styles.empty}>
             {preRead.beliefs.length === 0
@@ -1036,7 +1021,10 @@ export function MemoryPanel({
         ) : (
           <div className={styles.cards}>
             {matchedBeliefs.map((belief) => (
-              <Card role="article" className={styles.card} key={belief.id}>
+              <article
+                className={mergeClasses(surfaces.surface, styles.card)}
+                key={belief.id}
+              >
                 <Body1>
                   “<Highlight text={belief.text} terms={terms} />”
                 </Body1>
@@ -1050,7 +1038,7 @@ export function MemoryPanel({
                     claim={`${preRead.name} · Extracted belief: “${belief.text}”`}
                   />
                 </div>
-              </Card>
+              </article>
             ))}
           </div>
         )}

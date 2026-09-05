@@ -20,12 +20,7 @@ for (const width of [1280, 390]) {
     for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
       await page.getByRole("tab", { name: tab, exact: true }).click();
       await expect(
-        page.getByText("Data health unavailable", { exact: true }),
-      ).toBeVisible();
-      await expect(
-        page.getByText(
-          "Refresh and insight-generation times are not available.",
-        ),
+        page.getByText(/Data as of \d{4}-\d{2}-\d{2} · health unavailable/),
       ).toBeVisible();
       await expect(
         page.getByRole("button", { name: "Why this data status?" }),
@@ -34,7 +29,7 @@ for (const width of [1280, 390]) {
     missing = true;
     await page.reload();
     await expect(
-      page.getByText("Data health unavailable", { exact: true }),
+      page.getByText(/Data as of \d{4}-\d{2}-\d{2} · health unavailable/),
     ).toBeVisible();
     await expect(
       page.getByText("No facts for this client.", { exact: true }),
@@ -57,7 +52,7 @@ for (const width of [1280, 390]) {
     const notes = panel.getByRole("region", { name: "RM notes", exact: true });
     const beliefs = panel.getByRole("region", { name: "Extracted beliefs" });
     await expect(search).toHaveAccessibleDescription(
-      "Search by topic, or use double quotes for an exact phrase.",
+      "Use double quotes for an exact phrase.",
     );
     for (const query of [
       '"risk with money"',
@@ -727,7 +722,7 @@ for (const width of [1280, 390]) {
           await expect(
             drawer.getByRole("region", { name: "Generated claim" }),
           ).toHaveText(
-            `Claim on the dashboard${client} · ${scenario}. ${baseline} Precomputed range, not a forecast. ${sector}`,
+            `Claim${client} · ${scenario}. ${baseline} Precomputed range, not a forecast. ${sector}`,
           );
           await expect(drawer).toContainText("data/holdings.csv");
           await expect(drawer).toContainText("data/event_log.csv");
@@ -770,7 +765,7 @@ for (const width of [1280, 390]) {
       const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
       await expect(
         drawer.getByRole("region", { name: "Generated claim" }),
-      ).toHaveText(`Claim on the dashboard${client} · ${headline}`);
+      ).toHaveText(`Claim${client} · ${headline}`);
       await expect(drawer).toContainText("Deterministic fact");
       await expect(drawer).toContainText("Calculation inputs and result");
       await expect(drawer).toContainText("data/holdings.csv · row holdings:");
@@ -884,7 +879,7 @@ for (const width of [1280, 390]) {
     await page.goto("/clients/CL-0003/pre-read");
     await expect(
       page.getByText(
-        /A two-minute summary, discussion topics, and suggested questions are not yet available/,
+        /Summary, discussion topics, and suggested questions unavailable/,
       ),
     ).toBeVisible();
     await expect(
@@ -910,9 +905,6 @@ for (const width of [1280, 390]) {
     const commitments = page.getByRole("region", {
       name: "Planned cash needs",
     });
-    await expect(commitments).toContainText(
-      "Private-fund commitments and open follow-ups are not available in this brief.",
-    );
     const description = "German inheritance tax instalment starts in 36 days.";
     await expect(commitments).toContainText(description);
     await expect(commitments).toContainText("3,400,000");
@@ -923,9 +915,7 @@ for (const width of [1280, 390]) {
     const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
-    ).toHaveText(
-      `Claim on the dashboardMargarethe Voss-Brenner · ${description}`,
-    );
+    ).toHaveText(`ClaimMargarethe Voss-Brenner · ${description}`);
     await expect(drawer).toContainText(
       "data/planned_cash_needs.csv · row planned_cash_needs:CN-004",
     );
@@ -949,7 +939,7 @@ for (const width of [1280, 390]) {
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
     ).toHaveText(
-      "Claim on the dashboardAbdullah Al-Mansoori · Seed capital for Singapore family office entity starts in 128 days.",
+      "ClaimAbdullah Al-Mansoori · Seed capital for Singapore family office entity starts in 128 days.",
     );
     await expect(drawer).toContainText("planned_cash_needs:CN-017");
     await expect(drawer).not.toContainText("Margarethe");
@@ -1123,7 +1113,7 @@ for (const width of [1280, 390]) {
       await expect(
         drawer.getByRole("region", { name: "Generated claim" }),
       ).toHaveText(
-        `Claim on the dashboard${client.name} · Extracted belief: “${client.belief}”`,
+        `Claim${client.name} · Extracted belief: “${client.belief}”`,
       );
       await expect(drawer).toContainText(
         `data/rm_notes.json · row ${client.source}`,
@@ -2304,7 +2294,7 @@ for (const width of [1280, 390]) {
     const main = page.getByRole("main");
     await expect(main).toBeVisible();
     await expect(main).not.toBeFocused();
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     const workspace = page
       .getByRole("navigation", { name: "Workspace navigation" })
       .getByRole("tablist", { name: "Workspace views" });
@@ -2320,7 +2310,7 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0003\/pre-read$/);
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Pre-read | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Pre-read | Aurelis",
     );
     await expect(main).toBeFocused();
     await expect(main).toHaveCSS("outline-style", "solid");
@@ -2336,9 +2326,7 @@ for (const width of [1280, 390]) {
     await meetings.getByRole("button", { name: /Abdullah/ }).focus();
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
-    await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
-    );
+    await expect(page).toHaveTitle("Abdullah Al-Mansoori | Pre-read | Aurelis");
     await expect(main).toBeFocused();
     await expect(main).toHaveJSProperty("scrollTop", 0);
 
@@ -2350,30 +2338,28 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/CL-0019\/scenario$/);
     await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Scenario rehearsal | Wealth Intelligence",
+      "Abdullah Al-Mansoori | Scenario rehearsal | Aurelis",
     );
     await expect(main).toBeFocused();
     await page.goBack();
     await expect(page).toHaveURL(/CL-0019\/pre-read$/);
-    await expect(page).toHaveTitle(
-      "Abdullah Al-Mansoori | Pre-read | Wealth Intelligence",
-    );
+    await expect(page).toHaveTitle("Abdullah Al-Mansoori | Pre-read | Aurelis");
     await expect(main).toBeFocused();
     await main.getByRole("button", { name: /RM dashboard/ }).press("Enter");
     await expect(page).toHaveURL(/\/$/);
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     await expect(main).toBeFocused();
     await page.goto("/clients/CL-0003/scenario");
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Scenario rehearsal | Aurelis",
     );
     await page.reload();
     await expect(page).toHaveTitle(
-      "Margarethe Voss-Brenner | Scenario rehearsal | Wealth Intelligence",
+      "Margarethe Voss-Brenner | Scenario rehearsal | Aurelis",
     );
     await page.goto("/clients/CL-9999/pre-read");
     await expect(page).toHaveURL(/\/$/);
-    await expect(page).toHaveTitle("RM dashboard | Wealth Intelligence");
+    await expect(page).toHaveTitle("RM dashboard | Aurelis");
     await expect(main.getByRole("status")).toContainText(
       "CL-9999 was not found",
     );
@@ -2872,9 +2858,7 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   });
   await expect(page.getByRole("status").last()).toContainText("Approved");
   await expect(opening).toContainText("May I walk you through the gap?");
-  await page
-    .getByRole("button", { name: "Rehearse a Strait scenario →" })
-    .click();
+  await page.getByRole("button", { name: "Strait scenarios →" }).click();
   await page.getByRole("tab", { name: "Pre-read", exact: true }).click();
   await expect(opening).toContainText("May I walk you through the gap?");
   await opening.getByRole("button", { name: "Why?" }).click();
@@ -2939,9 +2923,13 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
     page.getByRole("main").getByText("Abdullah Al-Mansoori", { exact: true }),
   ).toHaveText("Abdullah Al-Mansoori");
   await page.getByRole("button", { name: "Strait escalates" }).click();
-  await expect(page.locator(".scenario-label")).toHaveText("Strait escalates");
+  await expect(
+    page.getByRole("heading", { name: "Strait escalates", level: 2 }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Strait reopens" }).click();
-  await expect(page.locator(".scenario-label")).toHaveText("Strait reopens");
+  await expect(
+    page.getByRole("heading", { name: "Strait reopens", level: 2 }),
+  ).toBeVisible();
 
   await page.goto("/clients/CL-0003/pre-read");
   for (const viewport of [

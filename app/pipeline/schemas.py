@@ -68,6 +68,9 @@ class Fact(ContractModel):
 class FactBundle(Artifact):
     client_id: str
     facts: list[Fact] = Field(default_factory=list)
+    # The engine's own sentence for each measurement, keyed by the leading Fact of the group
+    # it was split into. Agents read this instead of re-deriving prose from the numbers.
+    descriptions: dict[str, str] = Field(default_factory=dict)
 
 
 class Signal(ContractModel):
