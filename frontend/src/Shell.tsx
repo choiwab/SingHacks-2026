@@ -17,11 +17,15 @@ import {
   DataTrending24Regular,
   DocumentBulletList24Filled,
   DocumentBulletList24Regular,
+  Mail24Filled,
+  Mail24Regular,
   bundleIcon,
 } from "@fluentui/react-icons";
 import { useNavigate } from "react-router-dom";
 
-import type { MondayBriefProjection, RankedClient } from "./contracts";
+import { isPreview } from "./api";
+import type { RankedClient } from "./contracts";
+import type { AppProjection } from "./live/adapter";
 import { WORDMARK_FONT } from "./theme";
 
 const CalendarIcon = bundleIcon(CalendarLtr24Filled, CalendarLtr24Regular);
@@ -30,6 +34,7 @@ const PreReadIcon = bundleIcon(
   DocumentBulletList24Regular,
 );
 const ScenarioIcon = bundleIcon(DataTrending24Filled, DataTrending24Regular);
+const ConnectedIcon = bundleIcon(Mail24Filled, Mail24Regular);
 
 import { NARROW, URGENCY } from "./presentation";
 
@@ -198,10 +203,12 @@ function ClientSwitcher({
   ranking,
   selectedClient,
   asOf,
+  health,
 }: {
   ranking: RankedClient[];
   selectedClient: string | null;
   asOf: string;
+  health?: string;
 }) {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -292,7 +299,10 @@ function ClientSwitcher({
       </ul>
       <div className={styles.rmContext}>
         <Caption1>Priscilla Ong · Asia desk</Caption1>
-        <Caption1>Data as of {asOf}</Caption1>
+        <Caption1>
+          Data as of {asOf}
+          {health ? ` · ${health}` : ""}
+        </Caption1>
       </div>
     </nav>
   );
@@ -304,9 +314,9 @@ export function AppShell({
   route,
   children,
 }: {
-  projection: MondayBriefProjection;
+  projection: AppProjection;
   selectedClient: string | null;
-  route: "list" | "pre-read" | "scenario" | "pitch";
+  route: "list" | "pre-read" | "scenario" | "pitch" | "connected";
   children: React.ReactNode;
 }) {
   const styles = useStyles();
@@ -325,6 +335,7 @@ export function AppShell({
           selectedValue={route}
           onTabSelect={(_, data) => {
             if (data.value === "list") navigate("/");
+            else if (data.value === "connected") navigate("/connected");
             else if (selectedClient)
               navigate(`/clients/${selectedClient}/${String(data.value)}`);
           }}
@@ -347,14 +358,26 @@ export function AppShell({
             icon={<ScenarioIcon />}
             aria-label="Scenario rehearsal"
             title="Scenario rehearsal"
-            disabled={!selectedClient}
+            disabled={
+              !selectedClient ||
+              (!isPreview && !projection.scenarios[selectedClient])
+            }
           />
+          {!isPreview && (
+            <Tab
+              value="connected"
+              icon={<ConnectedIcon />}
+              aria-label="Calendar and inbox"
+              title="Calendar and inbox"
+            />
+          )}
         </TabList>
       </nav>
       <ClientSwitcher
         ranking={projection.ranking}
         selectedClient={selectedClient}
         asOf={projection.as_of}
+        health={projection.live?.dataHealth}
       />
       <main id="main" tabIndex={-1} className={styles.main}>
         {children}

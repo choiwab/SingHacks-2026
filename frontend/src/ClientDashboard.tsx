@@ -480,6 +480,7 @@ export function DashboardHeader({
   ranked,
   facts,
   asOf,
+  health,
   reviewState,
   onReviewBrief,
   onOpenPitch,
@@ -488,6 +489,7 @@ export function DashboardHeader({
   ranked: RankedClient | undefined;
   facts: ProjectionFact[];
   asOf: string;
+  health?: string;
   reviewState: Authorship;
   onReviewBrief: () => void;
   onOpenPitch?: () => void;
@@ -530,7 +532,9 @@ export function DashboardHeader({
             : "No meeting booked"}
         </Body1Strong>
         <Caption1>{ranked?.reason ?? "No ranked reason recorded."}</Caption1>
-        <Caption1>Data as of {asOf} · health unavailable</Caption1>
+        <Caption1>
+          Data as of {asOf} · {health ?? "health unavailable"}
+        </Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
@@ -963,10 +967,20 @@ export function MemoryPanel({
   const styles = useStyles();
   const surfaces = useSurfaceStyles();
   const terms = queryTerms(query);
+  // The live adapter emits connected-memory records (mail, calendar) alongside
+  // dataset notes; the fixture only ever contains "RM note".
+  const memoryKinds = new Set([
+    "RM note",
+    "Gmail message",
+    "Outlook message",
+    "Calendar event",
+    "Teams message",
+  ]);
   const notes = Object.values(evidence)
     .filter(
       (item) =>
-        item.kind === "RM note" && item.record.client_id === preRead.client_id,
+        memoryKinds.has(item.kind) &&
+        item.record.client_id === preRead.client_id,
     )
     .sort((a, b) =>
       String(a.record.note_date).localeCompare(String(b.record.note_date)),

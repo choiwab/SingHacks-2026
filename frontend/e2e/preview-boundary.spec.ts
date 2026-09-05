@@ -23,7 +23,7 @@ test("preview is disclosed and review actions never reach the live ledger", asyn
   expect(liveReviews).toEqual([]);
 });
 
-test("normal runtime reports the missing live API without substituting a fixture", async ({
+test("normal runtime renders the live backend without touching the fixture", async ({
   page,
 }) => {
   const previewRequests: string[] = [];
@@ -32,16 +32,16 @@ test("normal runtime reports the missing live API without substituting a fixture
       previewRequests.push(request.url());
   });
   await page.goto("http://127.0.0.1:4174/");
-  await expect(page.getByRole("alert")).toContainText(
-    "The dashboard API is not available yet.",
-  );
+  await expect(
+    page.getByRole("heading", { name: "Who needs you this week" }),
+  ).toBeVisible();
   await expect(page.getByRole("note", { name: "Fixture preview" })).toHaveCount(
     0,
   );
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "The dashboard API is not available yet.",
-  );
+  // The pipeline controls only exist against the live backend.
+  await expect(
+    page.getByRole("button", { name: "Run pipeline", exact: true }),
+  ).toBeVisible();
   expect(previewRequests).toEqual([]);
   const oldApi = await page.request.get(
     "http://127.0.0.1:4174/api/monday-brief",

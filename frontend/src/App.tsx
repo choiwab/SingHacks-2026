@@ -16,27 +16,30 @@ import {
   useParams,
 } from "react-router-dom";
 
-import { getMondayBrief, isPreview } from "./api";
+import { getMondayBrief, isPreview, runPipeline } from "./api";
 import { aurelisTheme } from "./theme";
 import { AppShell } from "./Shell";
+import { Connected } from "./Connected";
 import { EvidenceProvider } from "./evidence";
 import type { Authorship } from "./evidence";
-import type { MondayBriefProjection } from "./contracts";
+import type { AppProjection } from "./live/adapter";
 import { Home } from "./Home";
 import { PitchDeck } from "./PitchDeck";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";
 
-function useRoute(projection: MondayBriefProjection) {
+function useRoute(projection: AppProjection) {
   const { pathname } = useLocation();
   const previousPath = useRef(pathname);
   const route = pathname.endsWith("/scenario")
     ? "scenario"
     : pathname.endsWith("/pitch")
       ? "pitch"
-      : pathname.endsWith("/pre-read")
-        ? "pre-read"
-        : "list";
+      : pathname === "/connected"
+        ? "connected"
+        : pathname.endsWith("/pre-read")
+          ? "pre-read"
+          : "list";
   const clientId = pathname.match(/^\/clients\/([^/]+)\//)?.[1];
   const selectedClient =
     clientId && projection.pre_reads[clientId] ? clientId : null;
@@ -50,6 +53,7 @@ function useRoute(projection: MondayBriefProjection) {
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
       pitch: "Pitch deck",
+      connected: "Calendar & inbox",
     };
     document.title = [clientName, titles[route], "Aurelis"]
       .filter(Boolean)
@@ -73,7 +77,7 @@ function useRoute(projection: MondayBriefProjection) {
  * being shown under the next client's name.
  */
 function PreReadRoute(props: {
-  projection: MondayBriefProjection;
+  projection: AppProjection;
   reviews: Record<string, Authorship>;
   savedOpenings: Record<string, string>;
   onReviewed: (clientId: string, state: Authorship, text: string) => void;
@@ -82,7 +86,13 @@ function PreReadRoute(props: {
   return <PreRead key={clientId} {...props} />;
 }
 
-function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
+function RoutedApp({
+  projection,
+  onProjection,
+}: {
+  projection: AppProjection;
+  onProjection: (next: AppProjection) => void;
+}) {
   const { route, selectedClient } = useRoute(projection);
   // The RM's review decisions live above the routes so the compact calendar and
   // the dashboard header agree on which briefs are ready.
@@ -90,6 +100,25 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
   const [savedOpenings, setSavedOpenings] = useState<Record<string, string>>(
     {},
   );
+  const [pipelineBusy, setPipelineBusy] = useState(false);
+  const [pipelineError, setPipelineError] = useState("");
+
+  const onRunPipeline = projection.live
+    ? (action: "apply" | "reset") => {
+        setPipelineBusy(true);
+        setPipelineError("");
+        runPipeline(action)
+          .then((next) => onProjection(next))
+          .catch((reason: unknown) => {
+            setPipelineError(
+              reason instanceof Error
+                ? reason.message
+                : "The pipeline run failed.",
+            );
+          })
+          .finally(() => setPipelineBusy(false));
+      }
+    : undefined;
 
   return (
     <EvidenceProvider projection={projection}>
@@ -113,8 +142,17 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
         <Routes>
           <Route
             path="/"
-            element={<Home projection={projection} reviews={reviews} />}
+            element={
+              <Home
+                projection={projection}
+                reviews={reviews}
+                onRunPipeline={onRunPipeline}
+                pipelineBusy={pipelineBusy}
+                pipelineError={pipelineError}
+              />
+            }
           />
+          <Route path="/connected" element={<Connected />} />
           <Route
             path="/clients/:clientId/pre-read"
             element={
@@ -159,9 +197,7 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
 }
 
 export function App() {
-  const [projection, setProjection] = useState<MondayBriefProjection | null>(
-    null,
-  );
+  const [projection, setProjection] = useState<AppProjection | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const statusRef = useRef<HTMLElement>(null);
@@ -231,7 +267,7 @@ export function App() {
   return (
     <FluentProvider theme={aurelisTheme} className="fluent-root">
       {projection ? (
-        <RoutedApp projection={projection} />
+        <RoutedApp projection={projection} onProjection={setProjection} />
       ) : (
         <main className="app-status" ref={statusRef} tabIndex={-1}>
           {status}

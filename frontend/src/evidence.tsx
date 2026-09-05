@@ -144,7 +144,23 @@ function expandCitations(
     if (!citation || seen.has(citation)) continue;
     seen.add(citation);
 
-    const fact = factMap.get(citation);
+    // Live citations may address one numeric field of a fact concept
+    // (…:mandate-gap:actual_pct) while the adapter keeps a single fact per
+    // concept. Same concept, different final field segment: resolve to that
+    // fact. Preview ids are shorter, so they never enter this fallback.
+    const segments = citation.split(":");
+    const fact =
+      factMap.get(citation) ??
+      (segments.length >= 4
+        ? [...factMap.values()].find((candidate) => {
+            const candidateSegments = candidate.id.split(":");
+            return (
+              candidateSegments.length === segments.length &&
+              candidateSegments.slice(0, -1).join(":") ===
+                segments.slice(0, -1).join(":")
+            );
+          })
+        : undefined);
     if (fact) {
       records.push({ type: "fact", value: fact });
       queue.push(...fact.source_rows, ...fact.event_ids);
