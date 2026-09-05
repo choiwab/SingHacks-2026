@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import re
 from datetime import date
 from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
 
-from app.pipeline.schemas import ContractModel, Evidence, Fact
+from app.pipeline.schemas import ContractModel, DataQualityFinding, Evidence, Fact
 
 
 def fingerprint(value: Any) -> str:
@@ -22,9 +24,19 @@ class Signal(ContractModel):
     id: str
     topic: str
     fact_ids: list[str] = Field(min_length=1)
-    score: int = Field(ge=0, le=100)
-    components: dict[str, int]
+    score: float = Field(ge=0, le=100, allow_inf_nan=False)
+    components: dict[str, float]
     uncertainty: str
+    kind: str = ""
+    severity: str = ""
+    evidence_ids: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def finite_components(self) -> Self:
+        if any(not math.isfinite(value) for value in self.components.values()):
+            raise ValueError("Signal components must be finite")
+        return self
 
 
 class ChangeReport(ContractModel):
@@ -45,6 +57,8 @@ class CuratedClientBundle(ContractModel):
     signals: list[Signal]
     evidence: dict[str, Evidence]
     quality_issues: list[str] = Field(default_factory=list)
+    quality_findings: list[DataQualityFinding] = Field(default_factory=list)
+    pipeline_run_id: str | None = None
     change_report: ChangeReport = Field(default_factory=ChangeReport)
 
     @model_validator(mode="after")
@@ -64,14 +78,56 @@ class CuratedClientBundle(ContractModel):
             raise ValueError("Signal references missing facts")
         if any(key != item.id for key, item in self.evidence.items()):
             raise ValueError("Evidence key does not match evidence ID")
+        for entry in self.evidence.values():
+            if entry.record.get("client_id") not in (None, self.client_id):
+                raise ValueError("Evidence belongs to another Client")
+            for key, value in entry.record.items():
+                if (
+                    key
+                    in {
+                        "snapshot_date",
+                        "event_date",
+                        "note_date",
+                        "trade_date",
+                        "settlement_date",
+                        "valuation_date",
+                        "acquired_date",
+                    }
+                    and value
+                    and date.fromisoformat(str(value)) > self.as_of
+                ):
+                    raise ValueError("Evidence contains a future observation")
+                observed = re.search(r"_(\d{4}-\d{2}-\d{2})$", key)
+                if observed and date.fromisoformat(observed[1]) > self.as_of:
+                    raise ValueError("Evidence contains a future observation column")
         for fact in self.facts:
             if not fact.evidence_ids or not set(fact.evidence_ids) <= self.evidence.keys():
                 raise ValueError(f"Unresolved evidence for {fact.id}")
+        for signal in self.signals:
+            if set(signal.evidence_ids) - self.evidence.keys():
+                raise ValueError(f"Unresolved signal evidence for {signal.id}")
+        for finding in self.quality_findings:
+            if finding.client_id not in (None, self.client_id):
+                raise ValueError("Data Quality Finding belongs to another Client")
+            if not finding.evidence_ids or set(finding.evidence_ids) - self.evidence.keys():
+                raise ValueError(f"Unresolved quality evidence for {finding.code}")
         return self
 
     def content_version(self) -> str:
         # The data team's version must cover facts, quality, signals and evidence.
-        return fingerprint(self.model_dump(mode="json", exclude={"change_report"}))
+        payload = self.model_dump(mode="json", exclude={"change_report", "pipeline_run_id"})
+        if self.pipeline_run_id:
+            referenced = (
+                {key for fact in self.facts for key in fact.evidence_ids}
+                | {key for signal in self.signals for key in signal.evidence_ids}
+                | {key for finding in self.quality_findings for key in finding.evidence_ids}
+            )
+            payload["evidence"] = {
+                key: value
+                for key, value in payload["evidence"].items()
+                if key in referenced or self.evidence[key].kind != "rm_notes"
+            }
+        return fingerprint(payload)
 
 
 class Claim(ContractModel):
@@ -84,8 +140,8 @@ class Claim(ContractModel):
 
 class Insight(ContractModel):
     signal_id: str
-    score: int
-    components: dict[str, int]
+    score: float = Field(ge=0, le=100, allow_inf_nan=False)
+    components: dict[str, float]
     facts: list[Claim]
     why_it_matters: Claim
 
@@ -112,6 +168,15 @@ class ClientMemoryCard(ContractModel):
     advice_notes: MemorySection
 
 
+class InformationRequest(ContractModel):
+    id: str
+    code: str
+    request: Claim
+    reason: Claim
+    owner: str
+    blocked_conclusions: list[str] = Field(default_factory=list)
+
+
 class MeetingPack(ContractModel):
     client_id: str
     as_of: date
@@ -120,12 +185,15 @@ class MeetingPack(ContractModel):
     brief: MeetingBrief
     memory_card: ClientMemoryCard
     generation_mode: Literal["deterministic", "openai"] = "deterministic"
+    information_requests: list[InformationRequest] = Field(default_factory=list)
 
     @model_validator(mode="after")
     def unique_claims(self) -> Self:
         claims = self.claims()
         if len({c.id for c in claims}) != len(claims):
             raise ValueError("Meeting pack claim IDs must be unique")
+        if len({item.id for item in self.information_requests}) != len(self.information_requests):
+            raise ValueError("Information Request IDs must be unique")
         return self
 
     @property
@@ -144,6 +212,8 @@ class MeetingPack(ContractModel):
             result.extend([*insight.facts, insight.why_it_matters])
         for name in ClientMemoryCard.model_fields:
             result.extend(getattr(self.memory_card, name).claims)
+        for request in self.information_requests:
+            result.extend([request.request, request.reason])
         return result
 
 
@@ -154,7 +224,7 @@ class VerificationIssue(ContractModel):
 
 class VerificationReport(ContractModel):
     pack_version: str
-    passed: bool
+    passed: bool = Field(strict=True)
     issues: list[VerificationIssue] = Field(default_factory=list)
 
     @model_validator(mode="after")

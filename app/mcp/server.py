@@ -35,16 +35,20 @@ def create_server(source_dir: Path, memory_db: Path, clients: set[str], port: in
             raise ValueError("Client is not enabled on this demo server")
 
     @server.tool(annotations=readonly)
-    def get_client_bundle(client_id: str, as_of: date) -> CuratedClientBundle:
+    def get_client_bundle(
+        client_id: str, as_of: date, revision: str = "current"
+    ) -> CuratedClientBundle:
         """Compute dated, client-scoped Facts, Signals and Evidence from the local dataset."""
         check_client(client_id)
-        return load_curated_bundle(source_dir, client_id, as_of)
+        return load_curated_bundle(source_dir, client_id, as_of, revision)
 
     @server.tool(annotations=readonly)
-    def get_client_context(client_id: str, as_of: AwareDatetime) -> ConnectedContext:
+    def get_client_context(
+        client_id: str, as_of: AwareDatetime, revision: str = "current"
+    ) -> ConnectedContext:
         """Read original RM notes and latest durable records available by the cutoff."""
         check_client(client_id)
-        return load_memory(source_dir, store, client_id, as_of)
+        return load_memory(source_dir, store, client_id, as_of, revision)
 
     @server.tool(annotations=readonly)
     def search_client_memory(

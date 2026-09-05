@@ -131,12 +131,17 @@ def load_legacy_curated_bundle(
 def load_curated_bundle(
     source_dir: Path, client_id: str, as_of: date, revision: str = "current"
 ) -> CuratedClientBundle:
-    """Load content-addressed Phase A artifacts; revision labels cannot alter source facts."""
+    """Build current Phase A artifacts or read an explicitly pinned immutable run."""
     from app.pipeline.agent_projection import project_agent_bundle
     from app.pipeline.loaders import ArtifactStore
     from app.pipeline.runner import run_pipeline
 
     root = source_dir / "generated/curated"
+    if re.fullmatch(r"[a-f0-9]{12}", revision):
+        store = ArtifactStore(root)
+        if store.load_manifest(revision).as_of != as_of:
+            raise ValueError("Pinned bundle As-of Date mismatch")
+        return project_agent_bundle(store, client_id, revision)
     manifest = run_pipeline(source_dir=source_dir, as_of=as_of, curated_dir=root, activate=False)
     return project_agent_bundle(ArtifactStore(root), client_id, manifest.run_id)
 
@@ -165,9 +170,48 @@ def load_dataset_notes(
     """Preserve verbatim note text and dates; never relabel a note as email or Teams."""
     if as_of.tzinfo is None or as_of.utcoffset() is None:
         raise ValueError("Dataset notes require an aware as-of timestamp")
+    if re.fullmatch(r"[a-f0-9]{12}", revision):
+        from app.pipeline.loaders import ArtifactStore
+
+        return load_pinned_notes(
+            ArtifactStore(source_dir / "generated/curated"), client_id, as_of, revision
+        )
     tables, notes = load_sources(source_dir, as_of=AS_OF)
     if client_id not in set(tables["clients"]["client_id"]):
         raise ValueError(f"Unknown client: {client_id}")
+    return _notes_context(notes, client_id, as_of)
+
+
+def load_pinned_notes(store, client_id: str, as_of: datetime, run_id: str) -> ConnectedContext:
+    """Read the exact notes published with the financial inputs, never reopen mutable raw files."""
+    if as_of.tzinfo is None or as_of.utcoffset() is None:
+        raise ValueError("Dataset notes require an aware as-of timestamp")
+    manifest = store.load_manifest(run_id)
+    if manifest.as_of != as_of.date() or client_id not in manifest.client_ids:
+        raise ValueError("Pinned notes Client or As-of Date mismatch")
+    evidence = store.load_evidence_map(run_id=run_id)
+    notes = [
+        entry.record
+        for entry in evidence.entries.values()
+        if entry.kind == "rm_notes" and entry.record.get("client_id") == client_id
+    ]
+    note_sources = {
+        str(entry.record["note_id"]): entry.source
+        for entry in evidence.entries.values()
+        if entry.kind == "rm_notes" and entry.record.get("client_id") == client_id
+    }
+    context = _notes_context(notes, client_id, as_of, note_sources=note_sources)
+    context.retrieval_log[0].update(mode="pipeline_run_notes", pipeline_run_id=run_id)
+    return context
+
+
+def _notes_context(
+    notes: list[dict],
+    client_id: str,
+    as_of: datetime,
+    *,
+    note_sources: dict[str, str] | None = None,
+) -> ConnectedContext:
     records = []
     for note in notes:
         if note["client_id"] != client_id:
@@ -194,7 +238,10 @@ def load_dataset_notes(
                     "topics": _note_topics(str(note["note"])),
                     "provenance": "dataset",
                     "availability": "Cached",
-                    "based_on": [f"data/rm_notes.json:{note['note_id']}"],
+                    "based_on": [
+                        f"{(note_sources or {}).get(note['note_id'], 'data/rm_notes.json')}:"
+                        f"{note['note_id']}"
+                    ],
                 }
             )
         )

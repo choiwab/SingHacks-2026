@@ -206,3 +206,8 @@ canonical pack hash and projections, and synchronously verifies the complete edi
 and persisted communication context. Prior brief versions remain in the ledger.
 The existing lifecycle caches by financial run; independent communication refresh still
 requires additional integration.
+
+## Reviewed pipeline integration
+
+See [`docs/AGENT_PIPELINE_HANDOFF.md`](../../docs/AGENT_PIPELINE_HANDOFF.md) for the Phase A
+agent contract, strict verification, missing-information requests, dry runs and artifact-runtime wiring.

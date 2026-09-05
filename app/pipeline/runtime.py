@@ -109,15 +109,29 @@ class PipelineRuntime:
                 is_seed=seed,
             )
         for client_id in manifest.client_ids:
-            if self.ledger.get_brief(client_id, manifest.run_id) is not None:
-                continue
+            existing = self.ledger.get_brief(client_id, manifest.run_id)
+            strict_generation = bool(self.agents and self.agents.generator and self.agents.verifier)
+            if existing is not None:
+                if not strict_generation:
+                    continue
+                checked = verify_brief(
+                    self.store,
+                    client_id,
+                    manifest.run_id,
+                    existing.body,
+                    verifier=self.agents.verifier,
+                    brief_version=existing.brief_version,
+                )
+                if verification_passed(checked):
+                    continue
+            version = existing.brief_version + 1 if existing else 1
             report = self.store.load_change_report(client_id, run_id=manifest.run_id)
             previous_brief = (
                 self.ledger.get_brief(client_id, report.prior_run_id)
                 if report.prior_run_id
                 else None
             )
-            if report.processing_mode == "no_material_change" and previous_brief:
+            if report.processing_mode == "no_material_change" and previous_brief and not existing:
                 body = deepcopy(previous_brief.body)
                 verification = verify_brief(
                     self.store,
@@ -125,18 +139,26 @@ class PipelineRuntime:
                     manifest.run_id,
                     body,
                     verifier=self.agents.verifier if self.agents else None,
-                    brief_version=1,
+                    brief_version=version,
                 )
+                if strict_generation and not verification_passed(verification):
+                    output = execute_client(
+                        self.store, client_id, manifest.run_id, agents=self.agents
+                    )
+                    body = {
+                        key: value for key, value in output.items() if key != "verification_report"
+                    }
+                    verification = {**output["verification_report"], "brief_version": version}
             else:
                 output = execute_client(self.store, client_id, manifest.run_id, agents=self.agents)
                 body = {key: value for key, value in output.items() if key != "verification_report"}
-                verification = {**output["verification_report"], "brief_version": 1}
+                verification = {**output["verification_report"], "brief_version": version}
             self.ledger.store_brief(
                 client_id=client_id,
                 run_id=manifest.run_id,
                 body=body,
                 verification_report=verification,
-                brief_version=1,
+                brief_version=version,
             )
 
     def review(self, request: ReviewRequest) -> dict[str, Any]:
@@ -197,8 +219,17 @@ class PipelineRuntime:
                     origin="rm_edited",
                     brief_version=version,
                 )
-            elif request.action == "Approve" and not verification_passed(report):
-                raise ValueError("Meeting Brief has not passed verification")
+            elif request.action == "Approve":
+                report = verify_brief(
+                    self.store,
+                    request.client_id,
+                    latest.run_id,
+                    current.body,
+                    verifier=self.agents.verifier if self.agents else None,
+                    brief_version=version,
+                )
+                if not verification_passed(report):
+                    raise ValueError("Meeting Brief has not passed verification")
             recorded = request.model_copy(update={"brief_version": version})
             review = self.ledger.append(
                 recorded,

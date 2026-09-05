@@ -13,6 +13,12 @@ from app.agents.contracts import (
     fingerprint,
 )
 from app.agents.generation import generate
+from app.agents.policy import (
+    discussion_point,
+    discussion_question,
+    expected_disclosures,
+    expected_information_requests,
+)
 from app.agents.state import AgentState
 from app.agents.wording import DISCUSSION_QUESTIONS, OPENING, PRIORITIES_QUESTION
 from app.mcp.records import ConnectedContext
@@ -62,10 +68,11 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         )
 
     references = [insight.facts[0].citations[0] for insight in insights] or [bundle.facts[0].id]
+    signals = {signal.id: signal for signal in bundle.signals}
     talking_points = [
         Claim(
             id=f"talking_point:{item.signal_id}",
-            text=f"Discuss: {item.facts[0].text}",
+            text=discussion_point(signals[item.signal_id], item.facts[0].text),
             citations=item.facts[0].citations,
             kind="suggestion",
         )
@@ -79,20 +86,23 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
             kind="suggestion",
         )
     ]
-    if any(record.provenance == "dataset" for record in connected.records):
-        facts = {fact.id: fact for fact in bundle.facts}
-        for insight in insights:
-            fact_id = insight.facts[0].citations[0]
+    facts = {fact.id: fact for fact in bundle.facts}
+    for insight in insights:
+        fact_id = insight.facts[0].citations[0]
+        question = discussion_question(signals[insight.signal_id])
+        if not question and any(record.provenance == "dataset" for record in connected.records):
             question = DISCUSSION_QUESTIONS.get(facts[fact_id].kind.split(".")[0])
-            if question:
-                questions.append(
-                    Claim(
-                        id=f"question:{insight.signal_id}",
-                        text=question,
-                        citations=[fact_id],
-                        kind="suggestion",
-                    )
+        if question:
+            questions.append(
+                Claim(
+                    id=f"question:{insight.signal_id}",
+                    text=question,
+                    citations=signals[insight.signal_id].fact_ids
+                    if signals[insight.signal_id].kind
+                    else [fact_id],
+                    kind="suggestion",
                 )
+            )
     uncertainty = [
         Claim(
             id=f"uncertainty:{signal.id}",
@@ -103,6 +113,7 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         for signal in bundle.signals
         if signal.id in {i.signal_id for i in insights}
     ]
+    uncertainty.extend(expected_disclosures(bundle))
     if any(record.provenance == "dataset" for record in connected.records):
         selected_fact_ids = {
             citation for item in insights for f in item.facts for citation in f.citations
@@ -164,6 +175,7 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         as_of=bundle.as_of,
         input_versions=state.get("input_versions", {}),
         insights=insights,
+        information_requests=expected_information_requests(bundle),
         brief=MeetingBrief(
             summary=[
                 claim.model_copy(update={"id": f"summary:{claim.id}"})

@@ -19,9 +19,13 @@ def phase_a_signal(signal: ArtifactSignal) -> Signal:
         id=signal.id,
         topic=signal.kind.replace("_", " ").replace(".", " "),
         fact_ids=signal.fact_ids,
-        score=round(signal.priority_score),
-        components={key: round(value) for key, value in signal.score_components.items()},
+        score=signal.priority_score,
+        components=signal.score_components,
         uncertainty=LIMITATIONS,
+        kind=signal.kind,
+        severity=signal.severity,
+        evidence_ids=signal.evidence_ids,
+        metadata=signal.threshold if isinstance(signal.threshold, dict) else {},
     )
 
 

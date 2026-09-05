@@ -22,15 +22,20 @@ def context_agent(
     generation_policy: str,
 ) -> dict[str, Any]:
     prior_pack = state.get("pack")
-    if prior_pack and prior_pack["client_id"] != state["client_id"]:
+    if prior_pack and prior_pack.get("client_id") and prior_pack["client_id"] != state["client_id"]:
         # A checkpoint/thread is bound to one client. Reject before any retrieval or review.
         raise ValueError("Use a separate graph thread for each client")
     try:
+        if prior_pack and not prior_pack.get("client_id"):
+            raise ValueError("Stored pack has no Client identity")
         as_of = date.fromisoformat(state["as_of"])
         cutoff = datetime.combine(as_of, time.max, UTC)
         client_id = state["client_id"]
         revision = state.get("revision", "initial")
-        bundle = CuratedClientBundle.model_validate(load_bundle(client_id, as_of, revision))
+        loaded = load_bundle(client_id, as_of, revision)
+        bundle = CuratedClientBundle.model_validate(
+            loaded.model_dump(mode="json") if isinstance(loaded, CuratedClientBundle) else loaded
+        )
         if bundle.client_id != client_id or bundle.as_of != as_of:
             raise ValueError("Curated bundle client/date mismatch")
         if bundle.quality_issues:
@@ -40,8 +45,11 @@ def context_agent(
                 "status": "needs_confirmation",
                 "trace": [{"node": "context", "result": "data_quality_failure"}],
             }
+        loaded_context = load_communications(client_id, cutoff, bundle.pipeline_run_id or revision)
         connected = ConnectedContext.model_validate(
-            load_communications(client_id, cutoff, revision)
+            loaded_context.model_dump(mode="json")
+            if isinstance(loaded_context, ConnectedContext)
+            else loaded_context
         )
         # Scope before exposing records to any agent, even for a custom connector callback.
         if any(r.client_id != client_id or r.occurred_at > cutoff for r in connected.records):

@@ -16,12 +16,17 @@ from app.agents.contracts import ReviewAction
 from app.agents.graph import build_agent_flow
 from app.agents.runtime import persistent_data_flow
 from app.agents.verification import verify_meeting_pack
+from app.agents.versioning import generation_policy_version
 from app.pipeline.agent_inputs import load_curated_bundle, load_dataset_notes
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def build_data_flow(source_dir: Path, **kwargs: Any):
+    kwargs.setdefault(
+        "generation_policy",
+        generation_policy_version(live_generation=bool(kwargs.get("live_generation"))),
+    )
     return build_agent_flow(
         load_bundle=partial(load_curated_bundle, source_dir),
         load_communications=partial(load_dataset_notes, source_dir),

@@ -39,6 +39,7 @@ def project_pack(pack: MeetingPack) -> dict[str, Any]:
         "meeting_brief": {"sections": deepcopy(content["brief"])},
         "insights": deepcopy(content["insights"]),
         "memory_card": deepcopy(content["memory_card"]),
+        "information_requests": deepcopy(content["information_requests"]),
     }
 
 
@@ -92,7 +93,11 @@ def member2_hooks(
                 version=revision,
                 facts=facts.facts,
                 signals=mapped,
-                evidence=evidence.entries,
+                evidence={
+                    key: entry
+                    for key, entry in evidence.entries.items()
+                    if entry.record.get("client_id") in (None, client)
+                },
                 quality_issues=[f.message for f in quality.findings if f.severity == "error"],
             )
 

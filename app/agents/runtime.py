@@ -8,6 +8,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from app.agents.graph import build_agent_flow
 from app.agents.verification import verify_meeting_pack
+from app.agents.versioning import generation_policy_version
 from app.mcp.client import MCPClient
 from app.mcp.service import load_memory
 from app.mcp.store import MemoryStore
@@ -30,4 +31,5 @@ def persistent_data_flow(source_dir: Path, memory_dir: Path, *, mcp_url: str | N
             verify_pack=verify_meeting_pack,
             checkpointer=saver,
             record_review=store.record_review,
+            generation_policy=generation_policy_version(),
         )
