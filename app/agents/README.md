@@ -163,8 +163,7 @@ opt-in generation connection, not a complete meeting-ready integration: M4's fin
 mapping and verifier remain required. Nonempty Signals require an explicitly supplied
 `signal_adapter`; this adapter never invents scores, topics or uncertainty wording.
 
-With current legacy analytics, 16 clients produce deterministic candidate packs and four
-(CL-0009, CL-0010, CL-0013, CL-0015) fail context validation because legacy deadline Facts
-lack evidence. All 20 remain unverified. The existing lifecycle caches by financial run;
+With current legacy analytics, all 20 clients produce deterministic candidate packs.
+All 20 remain unverified. The existing lifecycle caches by financial run;
 independent communication refresh and pack-aware review edits require additional integration
 before enabling full interactive reviews.

@@ -40,14 +40,6 @@ def test_real_offline_seed_update_persists_generation_without_approving_unverifi
     for client in seed.client_ids:
         brief = ledger.get_brief(client, seed.run_id)
         assert brief is not None
-        if client in {"CL-0009", "CL-0010", "CL-0013", "CL-0015"}:
-            # Existing legacy deadline facts have no provenance; never invent it.
-            assert "pack" not in brief.body
-            assert brief.verification_report["passed"] is False
-            assert (
-                "Context unavailable or invalid (ValidationError)" in brief.body["context_issues"]
-            )
-            continue
         assert brief.body["pack"]["client_id"] == client
         assert brief.body["pack"]["generation_mode"] == "deterministic"
         assert brief.body["pack_version"]
