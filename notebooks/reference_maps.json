@@ -1,0 +1,436 @@
+{
+  "schema_version": "1.0",
+  "mapping_version": "phase-a-rm-review-v1",
+  "effective_as_of": "2026-08-26",
+  "review_basis": "notebooks/RM_REVIEW.md, required changes 5, 17-22 and 28-30; data/instruments.csv underlying_reference and data/event_log.csv",
+  "review_status": "Draft curated implementation of the written RM review. External RM signoff of individual mappings is still required before client use.",
+  "human_approval": {
+    "status": "pending",
+    "reviewer": null,
+    "approved_at": null
+  },
+  "threshold_policy": {
+    "event_exposure_pct": 15,
+    "hidden_issuer_pct": 10,
+    "fragile_cure_recovery_share_pct": 50,
+    "non_base_currency_pct": 40
+  },
+  "lookthrough": {
+    "SYN-SP-0501": {
+      "underlying_ids": [
+        "SYN-EQ-0008",
+        "SYN-ST-0103"
+      ],
+      "missing_underlyings": [
+        "Gulf Marine Services"
+      ],
+      "product_type": "worst-of basket",
+      "disclosure": "Global Energy Majors ADR approximated by diversified Global Energy Majors Equity Fund SYN-EQ-0008. Gulf Marine Services absent from instrument universe."
+    },
+    "SYN-SP-0502": {
+      "underlying_ids": [
+        "SYN-ST-0103"
+      ],
+      "missing_underlyings": [],
+      "product_type": "single-underlying equity-linked note",
+      "disclosure": "Full market value is an exposure screen, not delta-adjusted risk or maximum loss."
+    },
+    "SYN-SP-0503": {
+      "underlying_ids": [
+        "SYN-ST-0106"
+      ],
+      "missing_underlyings": [],
+      "product_type": "daily accumulator",
+      "disclosure": "Market-value attribution understates forward exposure: daily accumulation at HKD 17.20, double-up below strike; request remaining accumulation notional from the term sheet."
+    },
+    "SYN-SP-0504": {
+      "underlying_ids": [
+        "SYN-CM-0401"
+      ],
+      "missing_underlyings": [],
+      "product_type": "capital-protected gold participation",
+      "disclosure": "70% participation and capital protection at maturity mean full current market value is not a delta or loss estimate."
+    },
+    "SYN-SP-0505": {
+      "underlying_ids": [
+        "SYN-ST-0104",
+        "SYN-EQ-0008",
+        "SYN-ST-0101"
+      ],
+      "missing_underlyings": [],
+      "product_type": "worst-of basket",
+      "disclosure": "Global Energy Majors ADR approximated by diversified Global Energy Majors Equity Fund SYN-EQ-0008."
+    },
+    "SYN-SP-0506": {
+      "underlying_ids": [],
+      "missing_underlyings": [
+        "Unnamed Asian banking major 1",
+        "Unnamed Asian banking major 2",
+        "Unnamed Asian banking major 3"
+      ],
+      "product_type": "worst-of autocallable",
+      "disclosure": "Three Asian banking majors are unnamed and unscreenable. Missing look-through is not zero exposure; request the term sheet."
+    }
+  },
+  "issuer_overrides": {
+    "SYN-ST-0106": "Golden Harbour Properties",
+    "SYN-FI-0207": "Golden Harbour Properties",
+    "SYN-SP-0503": "Golden Harbour Properties",
+    "SYN-ST-0103": "Helios Cloud Systems",
+    "SYN-SP-0502": "Helios Cloud Systems",
+    "SYN-ST-0101": "Bara Nusantara Energy",
+    "SYN-ST-0104": "Pacific Orient Shipping",
+    "SYN-FI-0206": "Pacific Rim Bank"
+  },
+  "currency_objective_overrides": {
+    "CL-0016": {
+      "objective": "JPY-denominated retirement income",
+      "currency": "JPY",
+      "evidence_ids": [
+        "clients:CL-0016",
+        "rm_notes:N-021"
+      ]
+    },
+    "CL-0012": {
+      "objective": "USD living-cost decumulation",
+      "currency": "USD",
+      "evidence_ids": [
+        "clients:CL-0012",
+        "planned_cash_needs:CN-012"
+      ]
+    },
+    "CL-0004": {
+      "objective": "USD retirement income from Q2 2027",
+      "currency": "USD",
+      "evidence_ids": [
+        "clients:CL-0004",
+        "planned_cash_needs:CN-005"
+      ]
+    },
+    "CL-0011": {
+      "objective": "Lifestyle income, currency inferred from SGD reporting base; confirm with RM",
+      "currency": "SGD",
+      "evidence_ids": [
+        "clients:CL-0011"
+      ],
+      "currency_inferred": true
+    },
+    "CL-0003": {
+      "objective": "Stable income, currency inferred from EUR reporting base; confirm with RM",
+      "currency": "EUR",
+      "evidence_ids": [
+        "clients:CL-0003"
+      ],
+      "currency_inferred": true
+    }
+  },
+  "channels": {
+    "energy": {
+      "instrument_ids": [
+        "SYN-EQ-0008",
+        "SYN-ST-0101",
+        "SYN-CM-0403"
+      ],
+      "direction": "Loss on Strait reopening / energy risk-premium reversal; possible benefit on escalation.",
+      "scenario": "Strait reopening",
+      "disclosure": "Broad Commodity Index is attributed at full market value although only part is energy; issuer sensitivities and shock sizes are not calibrated."
+    },
+    "shipping": {
+      "instrument_ids": [
+        "SYN-EQ-0025",
+        "SYN-ST-0104"
+      ],
+      "direction": "Loss on reopening if exceptional freight premiums unwind; escalation can also disrupt operations.",
+      "scenario": "Strait reopening",
+      "disclosure": "Qualitative exposure direction, not a forecast; business and freight-rate effects can differ."
+    },
+    "defence": {
+      "instrument_ids": [
+        "SYN-EQ-0007"
+      ],
+      "direction": "Potential loss on de-escalation / risk-premium reversal.",
+      "scenario": "Geopolitical de-escalation",
+      "disclosure": "Qualitative sector proxy; not a calibrated price shock."
+    },
+    "gold": {
+      "instrument_ids": [
+        "SYN-CM-0401",
+        "SYN-CM-0402"
+      ],
+      "direction": "Loss on gold-price reversal; escalation may support safe-haven demand.",
+      "scenario": "Gold reversal",
+      "disclosure": "Gold-linked note is counted at full market value for screening despite 70% participation and maturity protection."
+    },
+    "inflation_linked": {
+      "instrument_ids": [
+        "SYN-FI-0212"
+      ],
+      "direction": "Inflation protection may benefit, but rising real yields can reduce market value.",
+      "scenario": "Inflation / real-yield shock",
+      "disclosure": "Direction is mixed without real-rate and breakeven decomposition."
+    },
+    "duration_credit": {
+      "instrument_ids": [
+        "SYN-FI-0201",
+        "SYN-FI-0202",
+        "SYN-FI-0203",
+        "SYN-FI-0204",
+        "SYN-FI-0205",
+        "SYN-FI-0206",
+        "SYN-FI-0207",
+        "SYN-FI-0208",
+        "SYN-FI-0209",
+        "SYN-FI-0210",
+        "SYN-FI-0211",
+        "SYN-FI-0212"
+      ],
+      "direction": "Loss on rising yields / inflation escalation; lower yields may support prices.",
+      "scenario": "Higher yields",
+      "disclosure": "Full market value is a rate-exposure screen; durations and spreads are unavailable, so it is not a stress-loss estimate."
+    },
+    "long_duration": {
+      "instrument_ids": [
+        "SYN-FI-0201",
+        "SYN-FI-0206",
+        "SYN-FI-0207",
+        "SYN-FI-0211"
+      ],
+      "direction": "Loss on further yield rises, potentially amplified in long-dated bonds and perpetuals.",
+      "scenario": "Higher long-term yields",
+      "disclosure": "Maturity/perpetual classification is a duration proxy; call dates and effective duration are not available."
+    },
+    "eur_rates": {
+      "instrument_ids": [
+        "SYN-FI-0209"
+      ],
+      "direction": "Loss on higher EUR yields.",
+      "scenario": "EUR rate increase",
+      "disclosure": "EUR bond fund proxy; no duration-based stress estimate."
+    },
+    "eur_assets": {
+      "instrument_ids": [],
+      "instrument_currency": "EUR",
+      "direction": "USD translation may benefit from EUR appreciation; EUR-base clients have no corresponding base-currency translation gain.",
+      "scenario": "EUR currency repricing",
+      "disclosure": "Currency of denomination is a proxy; hedges and underlying currency exposures are unknown."
+    },
+    "usd_assets": {
+      "instrument_ids": [],
+      "instrument_currency": "USD",
+      "direction": "USD appreciation may benefit non-USD-base clients; USD weakness reverses that effect.",
+      "scenario": "USD currency repricing",
+      "disclosure": "Direction depends on exchange rates and the client's base currency; no FX forecast is made."
+    },
+    "technology": {
+      "instrument_ids": [
+        "SYN-EQ-0003",
+        "SYN-ST-0102",
+        "SYN-ST-0103",
+        "SYN-AL-0308"
+      ],
+      "direction": "Loss on technology repricing / higher discount rates; pledged positions also reduce collateral support.",
+      "scenario": "Technology drawdown",
+      "disclosure": "The unlisted Aranya mark is stale; quoted-market contagion need not be reflected in its reported value."
+    },
+    "em_credit": {
+      "instrument_ids": [
+        "SYN-FI-0210"
+      ],
+      "direction": "Loss on escalation / spread widening; issuer-level Gulf exposure is unknown.",
+      "scenario": "Geopolitical credit stress",
+      "disclosure": "EM sovereign fund is a broad proxy, not verified Gulf-country exposure."
+    },
+    "private_credit": {
+      "instrument_ids": [
+        "SYN-AL-0302"
+      ],
+      "direction": "Reduced liquidity on redemption stress; carrying value may not reflect exit value.",
+      "scenario": "Private-credit redemption stress",
+      "disclosure": "Quarterly gate and redemption stress are liquidity risks, not a priced loss estimate."
+    }
+  },
+  "transmission_map": {
+    "Gold, precious metals miners, inflation hedges": {
+      "channels": [
+        "gold",
+        "inflation_linked"
+      ],
+      "unmapped_components": [
+        "Precious-metals miners are not separately identifiable."
+      ]
+    },
+    "Gold, precious metals": {
+      "channels": [
+        "gold"
+      ],
+      "unmapped_components": [
+        "Non-gold precious-metals exposure is not separately identifiable."
+      ]
+    },
+    "Energy, defence, airlines, EM credit, safe havens": {
+      "channels": [
+        "energy",
+        "defence",
+        "em_credit",
+        "gold"
+      ],
+      "unmapped_components": [
+        "No named airline instrument; safe havens represented by gold only."
+      ]
+    },
+    "Energy, transport, shipping": {
+      "channels": [
+        "energy",
+        "shipping"
+      ],
+      "unmapped_components": [
+        "Transport cost losers are not separately identifiable."
+      ]
+    },
+    "Energy, LNG, shipping, Gulf credit, airlines": {
+      "channels": [
+        "energy",
+        "shipping",
+        "em_credit"
+      ],
+      "unmapped_components": [
+        "No dedicated LNG, Gulf credit or airline instrument; EM credit is explicitly only a proxy."
+      ]
+    },
+    "Energy, oil-linked structured products": {
+      "channels": [
+        "energy"
+      ],
+      "unmapped_components": []
+    },
+    "Energy, inflation-sensitive assets": {
+      "channels": [
+        "energy",
+        "duration_credit",
+        "inflation_linked"
+      ],
+      "unmapped_components": []
+    },
+    "European fixed income, EUR assets": {
+      "channels": [
+        "eur_rates",
+        "eur_assets"
+      ],
+      "unmapped_components": []
+    },
+    "Energy, transport": {
+      "channels": [
+        "energy",
+        "shipping"
+      ],
+      "unmapped_components": [
+        "Transport cost losers are not separately identifiable."
+      ]
+    },
+    "US technology, concentrated equity, collateralised lending": {
+      "channels": [
+        "technology"
+      ],
+      "unmapped_components": [
+        "Collateral implication is evaluated only for mapped technology positions in pledged portfolios, not every concentrated equity."
+      ]
+    },
+    "Duration, rate-sensitive credit, USD": {
+      "channels": [
+        "duration_credit",
+        "usd_assets"
+      ],
+      "unmapped_components": []
+    },
+    "Long-duration fixed income": {
+      "channels": [
+        "long_duration"
+      ],
+      "unmapped_components": []
+    },
+    "Private credit, semi-liquid alternatives": {
+      "channels": [
+        "private_credit"
+      ],
+      "unmapped_components": [
+        "Stress is documented for private credit; no assumption that every semi-liquid alternative is gated."
+      ]
+    },
+    "Duration, growth equity valuations": {
+      "channels": [
+        "duration_credit",
+        "technology"
+      ],
+      "unmapped_components": [
+        "Technology is a growth-equity proxy; no complete growth-factor classification is supplied."
+      ]
+    },
+    "Energy, shipping, insurance, Gulf exposure": {
+      "channels": [
+        "energy",
+        "shipping",
+        "em_credit"
+      ],
+      "unmapped_components": [
+        "No separately identifiable insurance holdings or complete Gulf business exposures; EM credit is only a proxy."
+      ]
+    }
+  },
+  "unresolved_event_context": {
+    "channels": [
+      "energy",
+      "shipping",
+      "defence"
+    ],
+    "supporting_event_dates": [
+      "2026-03-04",
+      "2026-08-05"
+    ],
+    "as_of": "2026-08-26",
+    "basis": "Closure followed by renewed blockade in supplied event log; no subsequent reopening record as of dataset today."
+  },
+  "strait_screen": {
+    "channels": [
+      "energy",
+      "shipping",
+      "defence"
+    ],
+    "disclosure": "Broad Commodity Index full-weight approximation; each held product counted once per household channel union. Reopening is a scenario, not a forecast."
+  },
+  "wealth_channel_overrides": {
+    "CL-0001": {
+      "channels": [
+        "energy"
+      ],
+      "basis": "Family coal mining and energy source of wealth; N-001 says bank wealth should not be tied to the mine, N-002 requests more coal/gas exposure.",
+      "evidence_ids": [
+        "clients:CL-0001",
+        "rm_notes:N-001",
+        "rm_notes:N-002"
+      ]
+    },
+    "CL-0002": {
+      "channels": [
+        "technology"
+      ],
+      "basis": "Enterprise software founder wealth; technology drawdown and collateral effect documented in N-004.",
+      "evidence_ids": [
+        "clients:CL-0002",
+        "rm_notes:N-004"
+      ]
+    },
+    "CL-0019": {
+      "channels": [
+        "energy",
+        "shipping"
+      ],
+      "basis": "Gulf logistics and marine chartering; N-025 explicitly links operating business benefits to the same elevated charter-rate conditions as the portfolio FCN.",
+      "evidence_ids": [
+        "clients:CL-0019",
+        "rm_notes:N-025",
+        "rm_notes:N-026"
+      ]
+    }
+  },
+  "wealth_channel_policy": "Only these source-supported client-channel overlaps are asserted. False means no curated overlap has been established, not economic independence. Property/luxury themes in N-018/N-024 remain separate from this event taxonomy. External human approval remains pending."
+}
