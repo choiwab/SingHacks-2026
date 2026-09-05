@@ -216,3 +216,31 @@ it("keeps keyboard focus within presentation controls", async () => {
     screen.getByRole("button", { name: "Back to preparation" }),
   ).toHaveFocus();
 });
+
+it("carries Connected Record availability and provenance into the document", () => {
+  render(
+    <MeetingPresentation
+      client={client}
+      model={{
+        ...model,
+        evidence: {},
+        connected_evidence: {
+          source1: {
+            client_id: "c1",
+            source: "notes",
+            availability: "Cached",
+            occurred_at: "2026-07-31",
+            retrieved_at: "2026-08-01",
+            provenance: "synthetic_fixture",
+          },
+        },
+      }}
+      onClose={() => {}}
+    />,
+  );
+  expect(
+    screen.getByText(
+      /Connected Record · notes · Cached · Recorded 2026-07-31 · Retrieved 2026-08-01 · synthetic_fixture/,
+    ),
+  ).toBeVisible();
+});

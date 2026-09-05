@@ -139,9 +139,27 @@ export function MeetingPresentation({
     if (evidence)
       return `${evidence.title} · ${evidence.source_file || evidence.source}${evidence.row_index == null ? "" : ` · row ${evidence.row_index}`}`;
     const connected = object(model.connected_evidence?.[id]);
-    const record = object(connected.record);
-    if (Object.keys(connected).length)
-      return `Connected Record · ${text(record.connector) || text(connected.connector) || "Connector unspecified"} · ${text(record.state) || text(connected.state) || "Availability unspecified"}`;
+    const record = object(connected.record ?? connected);
+    if (
+      Object.keys(connected).length &&
+      (!record.client_id || record.client_id === client.header.client_id)
+    )
+      return [
+        "Connected Record",
+        text(record.source) ||
+          text(record.connector) ||
+          "Connector unspecified",
+        text(record.availability) || "Availability unspecified",
+        text(record.occurred_at)
+          ? `Recorded ${text(record.occurred_at)}`
+          : "Record date unavailable",
+        text(record.retrieved_at)
+          ? `Retrieved ${text(record.retrieved_at)}`
+          : "Retrieval time unavailable",
+        text(record.provenance),
+      ]
+        .filter(Boolean)
+        .join(" · ");
     return "Source detail unavailable in this view";
   }
   return createPortal(
@@ -212,8 +230,7 @@ export function MeetingPresentation({
             </div>
           </dl>
           <p className="meeting-document-notice">
-            Generated preparation. Review does not authorise client
-            distribution. Requested reporting language:{" "}
+            Generated preparation. Requested reporting language:{" "}
             {client.header.reporting_language}. No translation is applied in
             this view.
           </p>
