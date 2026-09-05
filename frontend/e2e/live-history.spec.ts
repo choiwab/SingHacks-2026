@@ -72,7 +72,5 @@ test("approved seed Brief stays historical after a Controlled Update and reset r
   await expect(
     page.getByRole("article", { name: "Current Meeting Brief", exact: true }),
   ).toContainText(seeded.run_id);
-  await expect(
-    page.getByText("No previous Meeting Brief is available."),
-  ).toBeVisible();
+  await expect(current).not.toContainText(updated.run_id);
 });
