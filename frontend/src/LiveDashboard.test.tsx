@@ -92,6 +92,71 @@ function start() {
   );
 }
 describe("live Meeting Brief", () => {
+  it.each([false, true])(
+    "requires a prior Pipeline Run before showing a changed Fact: %s",
+    async (hasPrior) => {
+      const data = model();
+      data.clients["CL-0003"].data_tab.allocation = [
+        {
+          id: "fact:one",
+          client_id: "CL-0003",
+          kind: "allocation.value",
+          value: 12.5,
+          unit: "percent",
+          formula_id: "allocation",
+          as_of: "2026-08-26",
+          confidence: 1,
+        },
+      ];
+      data.clients["CL-0003"].change_report.changed_fact_ids = ["fact:one"];
+      if (hasPrior)
+        data.clients["CL-0003"].change_report.prior_run_id = "000000000001";
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify(data))),
+      );
+      start();
+      await screen.findByRole("heading", { name: "Margarethe" });
+      expect(
+        screen.getByRole("heading", {
+          name: hasPrior ? "Changed Fact" : "Change not established",
+        }),
+      ).toBeVisible();
+    },
+  );
+
+  it.each(["context", "quality"])(
+    "keeps approval blocked by unresolved %s issues",
+    async (kind) => {
+      const data = model();
+      if (kind === "context")
+        data.clients["CL-0003"].context_issues = [
+          "Source context needs confirmation.",
+        ];
+      else
+        data.clients["CL-0003"].quality_findings = [
+          {
+            code: "missing_source",
+            severity: "error",
+            message: "Source is missing.",
+          },
+        ];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(new Response(JSON.stringify(data))),
+      );
+      start();
+      await screen.findByRole("heading", { name: "Margarethe" });
+      expect(
+        screen.getByRole("button", { name: "Approve Meeting Brief" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "Reject Meeting Brief" }),
+      ).toBeEnabled();
+      expect(screen.getByText(/Approval is unavailable until/)).toBeVisible();
+    },
+  );
+
   it("opens booked client, resolves exact Evidence, and binds review to current run/version", async () => {
     const data = model();
     data.clients["CL-0003"].meeting_brief = {

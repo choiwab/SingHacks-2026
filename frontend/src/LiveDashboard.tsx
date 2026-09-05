@@ -16,6 +16,8 @@ import {
   claims,
   clientFacts,
   factValue,
+  displayDate,
+  factLabel,
   record,
   text,
   type Claim,
@@ -88,7 +90,9 @@ function Continuity({
     promiseRecord.occurred_at ?? promiseRecord.note_date ?? promiseRecord.date,
   );
   const changedIds = new Set(client.change_report.changed_fact_ids ?? []);
-  const fact = clientFacts(client).find((item) => changedIds.has(item.id));
+  const fact = client.change_report.prior_run_id
+    ? clientFacts(client).find((item) => changedIds.has(item.id))
+    : undefined;
   const questions = claims(briefSections(client).questions);
   return (
     <section className="live-continuity" aria-labelledby="continuity-title">
@@ -102,7 +106,7 @@ function Continuity({
           {last ? (
             <>
               <p className="live-date">
-                {text(last.occurred_at ?? last.note_date ?? last.date)}
+                {displayDate(last.occurred_at ?? last.note_date ?? last.date)}
               </p>
               <p className="live-source-excerpt">
                 {text(
@@ -134,7 +138,9 @@ function Continuity({
           {promises[0] ? (
             <>
               <p className="live-date">
-                {promiseDate || "Source date unavailable"}
+                {promiseDate
+                  ? displayDate(promiseDate)
+                  : "Source date unavailable"}
               </p>
               <ClaimText value={promises[0]} model={model} client={client} />
             </>
@@ -149,7 +155,7 @@ function Continuity({
           <h3>{fact ? "Changed Fact" : "Change not established"}</h3>
           {fact ? (
             <>
-              <p>{fact.kind}</p>
+              <p>{factLabel(fact)}</p>
               <p className="live-fact-value">{factValue(fact)}</p>
               <small>
                 As-of Date {fact.as_of}. Compared with the prior Pipeline Run,
@@ -229,6 +235,11 @@ function ClientWorkspace({
   }
   const canReview =
     client.meeting_brief != null && client.brief_version != null;
+  const approvalBlocked =
+    Boolean(client.context_issues?.length) ||
+    Boolean(
+      client.quality_findings?.some((finding) => finding.severity === "error"),
+    );
   const currentReviews = (model.reviews ?? []).filter(
     (item) =>
       item.client_id === client.header.client_id &&
@@ -358,10 +369,16 @@ function ClientWorkspace({
             </Button>
           </div>
         )}
+        {approvalBlocked && (
+          <p>
+            Approval is unavailable until blocking Data Quality Findings and
+            context issues are resolved.
+          </p>
+        )}
         <div className="live-actions">
           <Button
             appearance="primary"
-            disabled={busy || !canReview || editing}
+            disabled={busy || !canReview || editing || approvalBlocked}
             onClick={() => void review("Approve")}
           >
             Approve Meeting Brief
@@ -382,8 +399,8 @@ function ClientWorkspace({
       </section>
       <section className="live-details" aria-label="Data health and Evidence">
         <h2>Data health and Evidence</h2>
-        {(client.context_issues ?? []).map((issue) => (
-          <p key={issue}>{issue}</p>
+        {(client.context_issues ?? []).map((issue, index) => (
+          <p key={`${index}:${issue}`}>{issue}</p>
         ))}
         {(client.quality_findings ?? []).map((finding, i) => (
           <article key={`${finding.code}-${i}`}>
@@ -405,7 +422,7 @@ function ClientWorkspace({
             <summary>{group.replaceAll("_", " ")}</summary>
             {facts?.map((fact) => (
               <article key={fact.id}>
-                <h3>{fact.kind}</h3>
+                <h3>{factLabel(fact)}</h3>
                 <p>{factValue(fact)}</p>
                 <EvidenceButton id={fact.id} model={model} client={client} />
               </article>
@@ -518,7 +535,7 @@ export function LiveDashboard() {
                   {model.clients[text(meeting.client_id)]?.header.client_name ??
                     "Unknown client"}{" "}
                   ·{" "}
-                  {text(
+                  {displayDate(
                     meeting.scheduled_at ??
                       meeting.start_time ??
                       meeting.occurred_at,

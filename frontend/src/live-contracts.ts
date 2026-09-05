@@ -43,3 +43,21 @@ export function factValue(fact: Fact): string {
 export function briefSections(client: ClientView): Record<string, unknown> {
   return record(client.meeting_brief?.sections ?? client.meeting_brief);
 }
+
+export function displayDate(value: unknown): string {
+  const source = text(value);
+  if (!source) return "Date unavailable";
+  const parsed = new Date(source);
+  if (Number.isNaN(parsed.getTime())) return source;
+  return (
+    new Intl.DateTimeFormat("en-SG", {
+      dateStyle: "medium",
+      ...(source.includes("T")
+        ? { timeStyle: "short" as const, timeZone: "Asia/Singapore" }
+        : { timeZone: "UTC" }),
+    }).format(parsed) + (source.includes("T") ? " SGT" : "")
+  );
+}
+export function factLabel(fact: Fact): string {
+  return fact.kind.replaceAll(/[._]/g, " ");
+}

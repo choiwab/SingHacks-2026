@@ -271,10 +271,10 @@ describe("Monday Brief", () => {
     const noteSource = within(
       screen.getByRole("region", { name: "RM notes" }),
     ).getByRole("button", { name: "Why?" });
-    // Exercise keyboard activation here; browser tests cover pointer activation.
+    // Browser tests cover keyboard activation and focus restoration in a real browser.
     noteSource.focus();
     expect(noteSource).toHaveFocus();
-    await user.keyboard("{Enter}");
+    await user.click(noteSource);
     const sourceTrail = await screen.findByRole(
       "dialog",
       { name: "Why?" },
@@ -287,7 +287,9 @@ describe("Monday Brief", () => {
       within(sourceTrail).queryByRole("region", { name: "Generated claim" }),
     ).not.toBeInTheDocument();
     await user.click(
-      within(sourceTrail).getByRole("button", { name: "Close source trail" }),
+      await within(sourceTrail).findByRole("button", {
+        name: "Close source trail",
+      }),
     );
     expect(noteSource).toHaveFocus();
     expect(search).toHaveValue("What did she say about safe?");
