@@ -29,6 +29,10 @@ test("presentation preserves draft/review state, isolates print, and restores pr
   await expect(dialog.getByRole("status")).toHaveText(
     "Draft: needs Relationship Manager review",
   );
+  await page.screenshot({
+    path: testInfo.outputPath("presentation-print.png"),
+    fullPage: true,
+  });
   await page.emulateMedia({ media: "screen" });
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);

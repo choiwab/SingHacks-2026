@@ -28,8 +28,8 @@ body.presenting-meeting {
 }
 .meeting-document {
   max-width: 64rem;
-  margin: 2rem auto;
-  padding: 4rem 5rem;
+  margin: 1.5rem auto;
+  padding: 2rem 4rem;
   background: white;
 }
 .meeting-document-brand {
@@ -44,11 +44,11 @@ body.presenting-meeting {
   font-weight: 600;
 }
 .meeting-document h1 {
-  font-size: clamp(2.3rem, 5vw, 3.7rem);
+  font-size: clamp(2.3rem, 4vw, 3rem);
   letter-spacing: -0.04em;
   line-height: 1.12;
   font-weight: 600;
-  margin: 1.5rem 0;
+  margin: 1rem 0;
   text-wrap: balance;
 }
 .meeting-document-intro {
@@ -58,7 +58,7 @@ body.presenting-meeting {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.2rem;
-  padding-block: 1.5rem;
+  padding-block: 1rem;
   border-block: 1px solid #d9e0e5;
 }
 .meeting-document dt {
