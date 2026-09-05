@@ -204,7 +204,7 @@ The persistent client switcher searches all 20 clients by name or ID.
 Each selected client has a profile, a preview of three facts in source order, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
 The meeting brief leads from the client's statements and portfolio facts to an RM review checkpoint.
 An optional scenario rehearsal shows two precomputed Strait scenario ranges with their snapshot context and uncertainty.
-The dashboard currently runs against a frozen synthetic fixture while the replacement Demo View Model API is being implemented.
+The dashboard currently runs against a frozen synthetic fixture while the frontend integration with the versioned Demo View Model API is being completed.
 The preview is explicitly labeled, and Approve, Edit, and Reject only simulate decisions for the current page session.
 No preview decisions are written to the real review ledger.
 See [the preview boundary and fixture provenance](frontend/preview/README.md).
@@ -235,7 +235,7 @@ Saved wording and review status survive navigation between clients and screens i
 The calendar labels saved edits and approvals **Ready**, while the authorship badge distinguishes **Edited by the RM** from **Approved by the RM**.
 Reloading resets these visible states; preview decisions are never persisted.
 
-The controlled incremental-update demonstration in the PRD still requires Member 3's API and versioned Demo View Model.
+The controlled incremental-update demonstration in the PRD still requires frontend integration with Member 3's API and versioned Demo View Model.
 **Planned cash needs** renders the supplied deadline facts in their original order.
 Private-fund commitments and open follow-ups are not available.
 Ranked insights, per-insight questions and update states, the two-minute summary, discussion topics, data health, refresh and generation timestamps, and meeting purposes require upstream projection fields.
@@ -261,15 +261,22 @@ pnpm test:e2e
 
 ### Demo architecture
 
+The Member 2 agent workflow lives in `app/agents` and `app/mcp`. Run
+`uv run python -m scripts.member_2_demo --update` for the offline meeting-pack example, or read
+[its integration guide](app/agents/README.md) for curated-input contracts and versioned review.
+The example uses synthetic communications and a fixture-only verifier. The optional pipeline
+bridge persists generated packs and edits; Member 4's full verifier is still required for approval.
+
 [ADR 0002](docs/adr/0002-split-pipeline-along-data-team-seam.md) splits analytics, pipeline plumbing, and agent-generated prose between their owners.
 The old `GET /api/monday-brief` endpoint and generated projection models have been removed.
-The replacement `GET /api/app` endpoint is not implemented yet, so `pnpm dev` and the normal `pnpm build` correctly show an unavailable dashboard instead of silently substituting fixture data.
-The real `POST /api/reviews` endpoint and SQLite ledger remain available independently.
-Generated TypeScript types describe those live API contracts only.
+The pipeline now exposes `GET /api/app`, `POST /api/reviews`, and a SQLite ledger through the
+versioned Demo View Model and review-action contracts. The frontend still needs to migrate
+from its historical preview model to those live contracts.
+Generated TypeScript types describe the live API; preview types describe the frozen fixture.
 
 React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and scenario rehearsal inside a shared Fluent UI shell.
 `pnpm dev:preview` explicitly enables a Vite fixture server at `/preview/dashboard` and a non-persistent simulated review endpoint at `/preview/reviews`.
-The handwritten preview types preserve the historical UI shape until the backend publishes its replacement contract.
+The handwritten preview types preserve the historical UI shape until the frontend consumes the published replacement contract.
 The frontend does not recalculate or generate financial content.
 Browser tests exercise this fixture preview and separately verify the live API's unavailable state.
 

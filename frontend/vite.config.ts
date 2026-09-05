@@ -1,5 +1,5 @@
 import react from "@vitejs/plugin-react";
-import { fixturePreview } from "./preview/server.ts";
+import { fixturePreview } from "./preview/server";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig(({ mode }) => ({

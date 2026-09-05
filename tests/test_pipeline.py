@@ -11,6 +11,8 @@ import pytest
 from app.analytics.facts import fact_engine
 from app.analytics.scoring import build_priority
 from app.pipeline import SourceValidationError, evidence_id, load_sources
+from app.pipeline.client_artifacts import build_client_artifacts
+from app.pipeline.legacy_verification import evidence_gate
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -175,7 +177,24 @@ def test_market_evidence_ids_use_series_id() -> None:
     assert evidence_id("market_context", row) == "market_context:2026-08-26:USDSGD"
 
 
+def test_migrated_artifacts_and_legacy_gate_share_pipeline_evidence() -> None:
+    artifacts = build_client_artifacts(DATA, client_id="CL-0003", as_of=AS_OF)
+    assert artifacts["ranked_insights"] == []
+    assert artifacts["draft_brief"]["sections"] == {}
+    fact = artifacts["fact_bundle"][0]
+    claim = {"text": fact["what"], "citations": [fact["id"]]}
+    state = {
+        **artifacts,
+        "as_of": AS_OF.isoformat(),
+        "meeting_brief": {"sections": {"summary": [claim]}},
+    }
+    assert evidence_gate(state)["verification_report"]["passed"]
+    claim["citations"] = ["missing:evidence"]
+    assert not evidence_gate(state)["verification_report"]["passed"]
+
+
 def test_pipeline_cli_publishes_without_mutating_source_files(tmp_path) -> None:
+
     source = tmp_path / "data"
     shutil.copytree(DATA, source, ignore=shutil.ignore_patterns("generated"))
     before = {path.name: path.read_bytes() for path in source.iterdir() if path.is_file()}

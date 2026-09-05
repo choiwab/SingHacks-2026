@@ -9,13 +9,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, NotRequired
+from typing import Any, NotRequired, cast
 
 from langgraph.graph import END, START, StateGraph
 
-from app.client_flow.agents.briefing import rm_briefing_agent
-from app.client_flow.nodes.verification import evidence_gate
-from app.client_flow.state import ClientFlowState
+from app.pipeline.generation_state import ClientFlowState
+from app.pipeline.legacy_verification import evidence_gate
 from app.pipeline.loaders import ArtifactStore
 
 Node = Callable[[ClientFlowState], dict[str, Any]]
@@ -27,6 +26,22 @@ class ArtifactFlowState(ClientFlowState):
     memory_card: NotRequired[dict[str, Any] | None]
 
 
+def rm_briefing_agent(state: ClientFlowState) -> dict[str, Any]:
+    """Publish the existing injected draft without generating new claims."""
+    draft = state.get("draft_brief")
+    if not draft:
+        return {
+            "context_issues": ["RM briefing received no draft"],
+            "status": "needs_confirmation",
+            "trace": ["rm_briefing_agent:failed"],
+        }
+    return {
+        "meeting_brief": draft,
+        "status": "brief_ready",
+        "trace": ["rm_briefing_agent:complete"],
+    }
+
+
 @dataclass(frozen=True)
 class AgentHooks:
     """Dependency seam for Member 2 agents and Member 4's complete verifier."""
@@ -35,6 +50,8 @@ class AgentHooks:
     wealth: Node | None = None
     briefing: Node = rm_briefing_agent
     verifier: Node | None = None
+    generator: Node | None = None
+    edit: Callable[[dict[str, Any], str, str], dict[str, Any]] | None = None
 
 
 def _state(store: ArtifactStore, client_id: str, run_id: str) -> ArtifactFlowState:
@@ -75,7 +92,7 @@ def _verify(state: ClientFlowState, verifier: Node | None) -> dict[str, Any]:
             for fact in state.get("fact_bundle", [])
         ],
     }
-    result = (verifier or evidence_gate)(gate_state)
+    result = verifier(gate_state) if verifier else evidence_gate(dict(gate_state))
     report = dict(result.get("verification_report", {}))
     if verifier is None:
         report["citation_check_passed"] = bool(report.get("passed"))
@@ -100,6 +117,25 @@ def verify_brief(
 ) -> dict[str, Any]:
     """Synchronously reverify a complete brief or generation envelope after an edit."""
     state = _state(store, client_id, run_id)
+    # Preserve the full persisted generation envelope, while pinning source artifacts above.
+    state.update(
+        cast(
+            ArtifactFlowState,
+            {
+                key: deepcopy(brief[key])
+                for key in (
+                    "pack",
+                    "pack_version",
+                    "memory_index",
+                    "section_versions",
+                    "input_versions",
+                    "connected_sources",
+                    "retrieval_log",
+                )
+                if key in brief
+            },
+        )
+    )
     state["meeting_brief"] = deepcopy(brief.get("meeting_brief", brief))
     if "meeting_brief" in brief:
         state["connected_context"] = deepcopy(brief.get("connected_context", []))
@@ -121,6 +157,18 @@ def execute_client(
     """Execute generation and verification, stopping before the review-ledger boundary."""
     hooks = agents or AgentHooks()
     initial = _state(store, client_id, run_id)
+    if hooks.generator is not None:
+        output = hooks.generator(initial)
+        verification_state = {**initial, **output, "ranked_insights": output.get("insights", [])}
+        return {
+            **output,
+            "verification_report": {
+                **_verify(cast(ClientFlowState, verification_state), hooks.verifier)[
+                    "verification_report"
+                ],
+                "brief_version": 1,
+            },
+        }
 
     def context(state: ArtifactFlowState) -> dict[str, Any]:
         if hooks.context is not None:

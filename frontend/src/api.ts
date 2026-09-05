@@ -28,18 +28,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function getMondayBrief(): Promise<MondayBriefProjection> {
-  return request<MondayBriefProjection>(
+export async function getMondayBrief(): Promise<MondayBriefProjection> {
+  const projection = await request<MondayBriefProjection>(
     isPreview ? "/preview/dashboard" : "/api/app",
   );
+  // The current live API returns DemoViewModel, which these preview screens
+  // cannot render. Keep the unavailable state until that consumer is migrated.
+  if (
+    !projection ||
+    !Array.isArray(projection.ranking) ||
+    !projection.pre_reads ||
+    !projection.facts ||
+    !projection.scenarios ||
+    !projection.evidence
+  ) {
+    throw new Error("The dashboard API is not available yet.");
+  }
+  return projection;
 }
 
-export function saveReview(review: ReviewRequest): Promise<ReviewResponse> {
-  return request<ReviewResponse>(
-    isPreview ? "/preview/reviews" : "/api/reviews",
-    {
-      method: "POST",
-      body: JSON.stringify(review),
-    },
-  );
+export async function saveReview(
+  review: ReviewRequest,
+): Promise<ReviewResponse> {
+  if (!isPreview) {
+    throw new Error("Review actions are not available in this dashboard yet.");
+  }
+  return request<ReviewResponse>("/preview/reviews", {
+    method: "POST",
+    body: JSON.stringify(review),
+  });
 }

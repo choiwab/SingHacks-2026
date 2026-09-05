@@ -1,8 +1,6 @@
 import type { components } from "./generated/openapi";
-
-type Schemas = components["schemas"];
-
 import type { MondayBriefProjection, ScenarioPair } from "./preview-contracts";
+
 export type {
   MondayBriefProjection,
   RankedClient,
@@ -13,8 +11,25 @@ export type {
 } from "./preview-contracts";
 
 export type ScenarioKey = keyof ScenarioPair;
-export type ReviewRequest = Schemas["ReviewRequest"];
-export type ReviewResponse = Schemas["ReviewResponse"];
-export type ReviewAction = ReviewRequest["action"];
-export type CitationId = string;
 export type ProjectionFact = MondayBriefProjection["facts"][string][number];
+export type CitationId = keyof MondayBriefProjection["evidence"];
+
+// The live review API requires a persisted run and brief version.
+type Schemas = components["schemas"];
+export type ReviewActionRequest = Schemas["ReviewActionRequest"];
+export type ReviewActionResponse = Schemas["ReviewActionResponse"];
+
+// The preview server only echoes simulated receipts, without a persisted run.
+export interface ReviewRequest {
+  client_id: string;
+  action: "Approve" | "Edit" | "Reject";
+  text: string;
+}
+export interface ReviewResponse {
+  review: ReviewRequest & {
+    review_id: string;
+    timestamp: string;
+    rm: string;
+  };
+}
+export type ReviewAction = ReviewRequest["action"];

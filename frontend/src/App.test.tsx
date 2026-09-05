@@ -14,6 +14,9 @@ import { measure } from "./ClientDashboard";
 import type { ProjectionFact, ReviewRequest } from "./contracts";
 import { projectionFixture } from "./test/fixture";
 
+// These component tests exercise the explicit fixture preview.
+vi.hoisted(() => vi.stubEnv("MODE", "preview"));
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -516,7 +519,7 @@ describe("Monday Brief", () => {
       "fetch",
       vi.fn((input: RequestInfo | URL) =>
         Promise.resolve(
-          String(input).endsWith("/api/reviews")
+          String(input).endsWith("/preview/reviews")
             ? new Response(
                 JSON.stringify({
                   review: {
@@ -578,7 +581,7 @@ describe("Monday Brief", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-        if (!String(input).endsWith("/api/reviews")) {
+        if (!String(input).endsWith("/preview/reviews")) {
           return Promise.resolve(projectionResponse());
         }
         const request = JSON.parse(String(init?.body)) as ReviewRequest;
@@ -688,7 +691,7 @@ describe("Monday Brief", () => {
 
   it("surfaces review failures without leaving the pre-read", async () => {
     const fetch = vi.fn((input: RequestInfo | URL) => {
-      if (String(input).endsWith("/api/reviews")) {
+      if (String(input).endsWith("/preview/reviews")) {
         return Promise.resolve(
           new Response(
             JSON.stringify({ detail: "Review ledger unavailable" }),

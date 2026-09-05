@@ -152,17 +152,24 @@ class PipelineRuntime:
             report = current.verification_report
             if request.action == "Edit":
                 body = deepcopy(current.body)
-                brief = body.get("meeting_brief") or {}
-                sections = brief.get("sections") or {}
-                if not request.section or request.section not in sections:
-                    raise KeyError("Meeting Brief section not found")
                 if not request.text.strip():
                     raise ValueError("Edit requires replacement text")
-                original = sections[request.section]
-                if isinstance(original, dict):
-                    sections[request.section] = {**original, "text": request.text}
+                if self.agents and self.agents.edit:
+                    if not request.section:
+                        raise KeyError("Meeting Brief claim not found")
+                    body = self.agents.edit(body, request.section, request.text)
+                elif body.get("pack") is not None:
+                    raise ValueError("Meeting pack editing requires the configured agent adapter")
                 else:
-                    sections[request.section] = {"text": request.text}
+                    brief = body.get("meeting_brief") or {}
+                    sections = brief.get("sections") or {}
+                    if not request.section or request.section not in sections:
+                        raise KeyError("Meeting Brief section not found")
+                    original = sections[request.section]
+                    if isinstance(original, dict):
+                        sections[request.section] = {**original, "text": request.text}
+                    else:
+                        sections[request.section] = {"text": request.text}
                 version += 1
                 report = verify_brief(
                     self.store,

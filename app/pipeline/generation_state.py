@@ -1,4 +1,4 @@
-"""Shared, serializable contracts for the client intelligence graph."""
+"""Shared, serializable contracts for the artifact generation adapter."""
 
 from __future__ import annotations
 
