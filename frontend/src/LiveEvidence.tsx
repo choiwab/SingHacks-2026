@@ -35,7 +35,7 @@ export function EvidenceButton({
           Evidence: {id}
         </Button>
       </DialogTrigger>
-      <DialogSurface>
+      <DialogSurface className="live-evidence">
         <DialogBody>
           <DialogTitle>Exact Evidence</DialogTitle>
           <DialogContent>

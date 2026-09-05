@@ -158,7 +158,8 @@
   cursor: pointer;
   font-weight: 600;
 }
-pre {
+.live-app pre,
+.live-evidence pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 12px;
