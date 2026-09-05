@@ -5,7 +5,14 @@ import globals from "globals";
 import typescriptParser from "@typescript-eslint/parser";
 
 export default [
-  { ignores: ["frontend/dist", "playwright-report", "test-results"] },
+  {
+    ignores: [
+      "frontend/dist",
+      "frontend/dist-preview",
+      "playwright-report",
+      "test-results",
+    ],
+  },
   eslint.configs.recommended,
   {
     files: ["frontend/**/*.{ts,tsx}"],

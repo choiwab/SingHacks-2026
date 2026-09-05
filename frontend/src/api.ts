@@ -4,6 +4,8 @@ import type {
   ReviewResponse,
 } from "./contracts";
 
+export const isPreview = import.meta.env.MODE === "preview";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -16,18 +18,42 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       payload && typeof payload === "object" && "detail" in payload
         ? String((payload as { detail: unknown }).detail)
         : "The server did not answer. Try again.";
-    throw new Error(detail);
+    throw new Error(
+      path === "/api/app" && response.status === 404
+        ? "The dashboard API is not available yet."
+        : detail,
+    );
   }
 
   return (await response.json()) as T;
 }
 
-export function getMondayBrief(): Promise<MondayBriefProjection> {
-  return request<MondayBriefProjection>("/api/monday-brief");
+export async function getMondayBrief(): Promise<MondayBriefProjection> {
+  const projection = await request<MondayBriefProjection>(
+    isPreview ? "/preview/dashboard" : "/api/app",
+  );
+  // The current live API returns DemoViewModel, which these preview screens
+  // cannot render. Keep the unavailable state until that consumer is migrated.
+  if (
+    !projection ||
+    !Array.isArray(projection.ranking) ||
+    !projection.pre_reads ||
+    !projection.facts ||
+    !projection.scenarios ||
+    !projection.evidence
+  ) {
+    throw new Error("The dashboard API is not available yet.");
+  }
+  return projection;
 }
 
-export function saveReview(review: ReviewRequest): Promise<ReviewResponse> {
-  return request<ReviewResponse>("/api/reviews", {
+export async function saveReview(
+  review: ReviewRequest,
+): Promise<ReviewResponse> {
+  if (!isPreview) {
+    throw new Error("Review actions are not available in this dashboard yet.");
+  }
+  return request<ReviewResponse>("/preview/reviews", {
     method: "POST",
     body: JSON.stringify(review),
   });
