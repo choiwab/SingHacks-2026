@@ -276,3 +276,35 @@ def test_runner_passes_filtered_sources_through_each_normalization_hook(tmp_path
     )
     assert calls == ["fx", "bond", "lookthrough"]
     assert len(run.client_ids) == 20
+
+
+@pytest.mark.parametrize("overlaid", [False, True])
+def test_normalization_keeps_raw_evidence_and_normalized_bundle(tmp_path, overlaid):
+    overlay = None
+    if overlaid:
+        overlay = tmp_path / "overlay"
+        overlay.mkdir()
+        lines = (DEFAULT_SOURCE_DIR / "holdings.csv").read_text().splitlines()
+        (overlay / "holdings.csv").write_text("\n".join(lines[:2]) + "\n")
+
+    def normalize(tables, as_of):
+        tables["holdings"].loc[0, "market_value_base"] = 16904160
+        return tables
+
+    run_pipeline(
+        curated_dir=tmp_path,
+        analytics=_test_analytics,
+        pipeline_version="test-raw-evidence",
+        normalize_fx=normalize,
+        overlay=overlay,
+    )
+    store = ArtifactStore(tmp_path)
+    entry = store.load_evidence_map().entries["holdings:2025-12-31:PF-0001:SYN-EQ-0001"]
+    assert entry.record["market_value_base"] == 8452080
+    assert entry.fields["market_value_base"] == 8452080
+    assert (entry.source_file, entry.row_index) == (
+        "fixtures/update/holdings.csv" if overlaid else "holdings.csv",
+        2,
+    )
+    holding = store.load_curated_bundle("CL-0001").holdings[0]
+    assert holding.market_value_base == 16904160

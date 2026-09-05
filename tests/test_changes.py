@@ -1,5 +1,7 @@
 from datetime import date
 
+import pytest
+
 from app.pipeline.changes import compare_client
 from app.pipeline.schemas import Fact, FactBundle, Signal, SignalSet
 
@@ -140,3 +142,37 @@ def test_same_source_hashes_do_not_hide_a_changed_as_of_date():
     )
     assert result.processing_mode == "incremental_update"
     assert result.changed_fact_ids == ["f1"]
+
+
+@pytest.mark.parametrize("allocation", [71.5, 80])
+def test_supporting_fact_changes_affect_same_severity_signal(allocation):
+    old = signals("r1", {"s1": "high"})
+    old.signals[0].fact_ids = ["allocation", "removed"]
+    new = old.model_copy(deep=True, update={"run_id": "r2"})
+    new.signals[0].fact_ids = ["allocation"]
+    result = compare_client(
+        facts("r2", {"allocation": allocation}),
+        new,
+        facts("r1", {"allocation": 71.5, "removed": 1}),
+        old,
+        changed_source_files=["holdings.csv"],
+    )
+    assert result.affected_signal_ids == ["s1"]
+    assert result.signal_changes[0].before == result.signal_changes[0].after == "high"
+    assert "supporting_facts" in result.signal_changes[0].changed_fields
+
+
+def test_score_and_threshold_changes_are_explained_without_severity_change():
+    old = signals("r1", {"s1": "high"})
+    old.signals[0].threshold = {"limit": 30}
+    new = old.model_copy(deep=True, update={"run_id": "r2"})
+    new.signals[0].priority_score = 5
+    new.signals[0].threshold = {"limit": 25}
+    result = compare_client(
+        facts("r2", {}), new, facts("r1", {}), old, changed_source_files=["mandates.csv"]
+    )
+    assert result.processing_mode == "incremental_update"
+    change = result.signal_changes[0]
+    assert change.changed_fields == ["priority_score", "threshold"]
+    assert (change.before_priority_score, change.after_priority_score) == (1, 5)
+    assert (change.before_threshold, change.after_threshold) == ({"limit": 30}, {"limit": 25})

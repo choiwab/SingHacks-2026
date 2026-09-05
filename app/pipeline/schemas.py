@@ -129,6 +129,11 @@ class SignalChange(ContractModel):
     change: Literal["added", "removed", "changed"]
     before: str | None = None
     after: str | None = None
+    changed_fields: list[str] = Field(default_factory=list)
+    before_priority_score: float | None = None
+    after_priority_score: float | None = None
+    before_threshold: JsonValue = None
+    after_threshold: JsonValue = None
 
 
 class ChangeReport(Artifact):
@@ -140,6 +145,7 @@ class ChangeReport(Artifact):
     changed_fact_ids: list[str] = Field(default_factory=list)
     affected_signal_ids: list[str] = Field(default_factory=list)
     changed_source_files: list[str] = Field(default_factory=list)
+    changed_context_sections: list[str] = Field(default_factory=list)
 
 
 class RunManifest(Artifact):

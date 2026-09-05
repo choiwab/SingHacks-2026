@@ -100,6 +100,9 @@ def run_pipeline(
     prior_pointer = read_latest(curated_dir)
     prior_id = prior_pointer["run_id"] if prior_pointer else None
     prior_manifest = store.load_manifest(prior_id) if prior_id else None
+    # Capture eligible source values before normalization hooks can transform inputs.
+    raw = clean_sources(merged.tables, merged.notes, as_of=as_of)
+    evidence = source_evidence(IngestedSources(raw.tables, raw.notes, as_of))
     cleaned = clean_sources(
         merged.tables,
         merged.notes,
@@ -108,7 +111,6 @@ def run_pipeline(
         normalize_bond_nominal=normalize_bond_nominal,
         look_through=look_through,
     )
-    evidence = source_evidence(IngestedSources(cleaned.tables, cleaned.notes, as_of))
     # Filtering and upserts must not replace physical source locations with merged indexes.
     for identifier, entry in evidence.entries.items():
         provenance = merged.provenance[identifier]
@@ -169,24 +171,44 @@ def run_pipeline(
             raise ValueError(
                 f"Unresolved analytics Evidence: {sorted(unresolved - evidence.entries.keys())}"
             )
+        curated = build_curated_bundle(cleaned, client_id, facts, signals)
+        prior_curated = None
         prior_facts = prior_signals = None
         if prior_id:
             try:
+                prior_curated = store.load_curated_bundle(client_id, run_id=prior_id)
                 prior_facts = store.load_fact_bundle(client_id, run_id=prior_id)
                 prior_signals = store.load_signal_set(client_id, run_id=prior_id)
             except ArtifactNotFound:
                 pass
+        # Agent-visible source context can change the conversation without changing a Fact.
+        # Exclude run metadata and derived identifier lists from this per-client comparison.
+        context_sections = (
+            "profile",
+            "portfolios",
+            "holdings",
+            "mandate_rules",
+            "liquidity",
+            "credit",
+            "cash_needs",
+            "commitments",
+            "rm_notes",
+        )
+        changed_context = [
+            section
+            for section in context_sections
+            if prior_curated is None or getattr(curated, section) != getattr(prior_curated, section)
+        ]
         report = compare_client(
             facts,
             signals,
             prior_facts,
             prior_signals,
             changed_source_files=changed_files,
+            changed_context_sections=changed_context,
             hashes_match=hashes_match,
         )
-        artifacts[f"curated_client_bundle/{client_id}.json"] = build_curated_bundle(
-            cleaned, client_id, facts, signals
-        )
+        artifacts[f"curated_client_bundle/{client_id}.json"] = curated
         artifacts[f"fact_bundle/{client_id}.json"] = facts
         artifacts[f"signal_set/{client_id}.json"] = signals
         artifacts[f"change_report/{client_id}.json"] = report
