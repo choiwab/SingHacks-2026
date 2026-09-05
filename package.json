@@ -27,7 +27,8 @@
     "pipeline:seed": "uv run python -m app.pipeline seed",
     "pipeline:update": "uv run python -m app.pipeline update",
     "pipeline:reset": "uv run python -m app.pipeline reset",
-    "pipeline:diff": "uv run python -m app.pipeline diff"
+    "pipeline:diff": "uv run python -m app.pipeline diff",
+    "test:e2e:live": "playwright test --config playwright.live.config.ts"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.7",
