@@ -308,3 +308,35 @@ def test_normalization_keeps_raw_evidence_and_normalized_bundle(tmp_path, overla
     )
     holding = store.load_curated_bundle("CL-0001").holdings[0]
     assert holding.market_value_base == 16904160
+
+
+@pytest.mark.parametrize("update", ["same", "narrative", "future"])
+def test_transaction_routing_compares_eligible_content_not_overlay_location(tmp_path, update):
+    import csv
+
+    overlay = tmp_path / "overlay"
+    overlay.mkdir()
+    with (DEFAULT_SOURCE_DIR / "transactions.csv").open() as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = reader.fieldnames
+        row = next(row for row in reader if row["client_id"] == "CL-0003")
+    if update == "narrative":
+        row["narrative"] = "Transfer purpose clarified for the next meeting."
+    elif update == "future":
+        row.update(
+            transaction_id="TXN-FUTURE", trade_date="2026-08-27", settlement_date="2026-08-27"
+        )
+    with (overlay / "transactions.csv").open("w") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(row)
+    root = tmp_path / "curated"
+    run_pipeline(curated_dir=root, analytics=_test_analytics)
+    run = run_pipeline(curated_dir=root, analytics=_test_analytics, overlay=overlay)
+    store = ArtifactStore(root)
+    for client in run.client_ids:
+        report = store.load_change_report(client)
+        changed = client == "CL-0003" and update == "narrative"
+        assert report.processing_mode == ("incremental_update" if changed else "no_material_change")
+        assert report.changed_context_sections == (["transactions"] if changed else [])
+        assert report.changed_fact_ids == []

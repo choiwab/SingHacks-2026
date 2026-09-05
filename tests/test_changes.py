@@ -176,3 +176,18 @@ def test_score_and_threshold_changes_are_explained_without_severity_change():
     assert change.changed_fields == ["priority_score", "threshold"]
     assert (change.before_priority_score, change.after_priority_score) == (1, 5)
     assert (change.before_threshold, change.after_threshold) == ({"limit": 30}, {"limit": 25})
+
+
+@pytest.mark.parametrize(
+    "field,value", [("kind", "liquidity_shortfall"), ("evidence_ids", ["rm_notes:N-005"])]
+)
+def test_signal_meaning_or_evidence_changes_are_material(field, value):
+    old = signals("r1", {"s1": "high"})
+    new = old.model_copy(deep=True, update={"run_id": "r2"})
+    setattr(new.signals[0], field, value)
+    result = compare_client(
+        facts("r2", {}), new, facts("r1", {}), old, changed_source_files=["rm_notes.json"]
+    )
+    assert result.processing_mode == "incremental_update"
+    assert result.affected_signal_ids == ["s1"]
+    assert result.signal_changes[0].changed_fields == [field]

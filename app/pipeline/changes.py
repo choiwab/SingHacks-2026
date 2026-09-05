@@ -69,6 +69,10 @@ def compare_client(
                     changed_fields.append("score_components")
                 if set(previous.fact_ids) != set(current.fact_ids):
                     changed_fields.append("fact_ids")
+                if previous.kind != current.kind:
+                    changed_fields.append("kind")
+                if set(previous.evidence_ids) != set(current.evidence_ids):
+                    changed_fields.append("evidence_ids")
             if changed_fields:
                 signal_changes.append(
                     SignalChange(

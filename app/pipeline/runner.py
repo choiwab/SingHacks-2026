@@ -100,6 +100,7 @@ def run_pipeline(
     prior_pointer = read_latest(curated_dir)
     prior_id = prior_pointer["run_id"] if prior_pointer else None
     prior_manifest = store.load_manifest(prior_id) if prior_id else None
+    prior_evidence = store.load_evidence_map(run_id=prior_id) if prior_id else None
     # Capture eligible source values before normalization hooks can transform inputs.
     raw = clean_sources(merged.tables, merged.notes, as_of=as_of)
     evidence = source_evidence(IngestedSources(raw.tables, raw.notes, as_of))
@@ -199,6 +200,20 @@ def run_pipeline(
             for section in context_sections
             if prior_curated is None or getattr(curated, section) != getattr(prior_curated, section)
         ]
+        # Transactions remain exact Evidence rather than a CuratedClientBundle section.
+        # Compare content by stable id, not file hashes or physical row locations.
+        transactions = {
+            key: entry.record
+            for key, entry in evidence.entries.items()
+            if entry.kind == "transactions" and entry.record.get("client_id") == client_id
+        }
+        prior_transactions = {
+            key: entry.record
+            for key, entry in (prior_evidence.entries.items() if prior_evidence else [])
+            if entry.kind == "transactions" and entry.record.get("client_id") == client_id
+        }
+        if transactions != prior_transactions:
+            changed_context.append("transactions")
         report = compare_client(
             facts,
             signals,
