@@ -10,7 +10,7 @@ test("preview is disclosed and review actions never reach the live ledger", asyn
   await page.goto("/clients/CL-0003/pre-read");
   await expect(
     page.getByRole("note", { name: "Fixture preview" }),
-  ).toContainText("Review actions are simulated and are not saved.");
+  ).toContainText("Reviews are simulated and unsaved.");
   await page
     .getByRole("button", { name: "Approve pre-read", exact: true })
     .click();

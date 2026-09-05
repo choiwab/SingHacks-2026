@@ -36,8 +36,16 @@ import {
   FactPreview,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
+import { getPersona } from "./demo/personas";
 import type { Authorship } from "./evidence";
-import { CitedList, WhyButton, WorkflowList } from "./shared";
+import { KeywordChips, LifeEvents, PortfolioBand } from "./PersonaPanels";
+import {
+  CitedList,
+  Eyebrow,
+  WhyButton,
+  WorkflowList,
+  useSurfaceStyles,
+} from "./shared";
 
 /** Lower-dashboard tabs required by PRD 5.6. */
 const TABS = [
@@ -64,14 +72,11 @@ const useStyles = makeStyles({
   section: {
     display: "grid",
     rowGap: tokens.spacingVerticalM,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    paddingTop: tokens.spacingVerticalL,
   },
-  panel: {
-    display: "grid",
-    rowGap: tokens.spacingVerticalS,
-    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  sectionTitle: {
+    fontWeight: 400,
   },
   /** "You said" beside "Data says" once there is room for two columns. */
   gapPair: {
@@ -86,10 +91,8 @@ const useStyles = makeStyles({
   dataSaysText: {
     color: tokens.colorStatusDangerForeground1,
   },
-  label: {
+  unavailableNote: {
     color: tokens.colorNeutralForeground3,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
   },
   quote: {
     maxWidth: "44ch",
@@ -119,7 +122,9 @@ function BriefSection({
 
   return (
     <section className={styles.section} aria-label={title}>
-      <Subtitle1 as="h2">{title}</Subtitle1>
+      <Subtitle1 as="h2" className={styles.sectionTitle}>
+        {title}
+      </Subtitle1>
       {children}
     </section>
   );
@@ -137,6 +142,7 @@ export function PreRead({
   onReviewed: (clientId: string, state: Authorship, text: string) => void;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const preRead = projection.pre_reads[clientId];
@@ -184,6 +190,7 @@ export function PreRead({
     );
   }
 
+  const persona = getPersona(clientId);
   const rank = projection.ranking.findIndex(
     (client) => client.client_id === clientId,
   );
@@ -248,7 +255,7 @@ export function PreRead({
   };
 
   return (
-    <section className="screen pre-read-screen" aria-labelledby="client-name">
+    <section className="screen" aria-labelledby="client-name">
       <div className="screen-kicker">
         <Link as="button" type="button" onClick={() => navigate("/")}>
           ← RM dashboard
@@ -284,10 +291,29 @@ export function PreRead({
             reviewBar.current?.focus({ preventScroll: true });
             reviewBar.current?.scrollIntoView({ block: "center" });
           }}
+          onOpenPitch={
+            persona ? () => navigate(`/clients/${clientId}/pitch`) : undefined
+          }
         />
       </div>
 
+      {persona && <PortfolioBand persona={persona} />}
+
       <FactPreview preRead={preRead} facts={facts} authorship={reviewState} />
+
+      {persona && (
+        <KeywordChips
+          persona={persona}
+          onSelect={(keyword) => {
+            flushSync(() => {
+              setTab("memory");
+              setMemoryQuery(keyword);
+            });
+            briefPanel.current?.focus({ preventScroll: true });
+            briefPanel.current?.scrollIntoView({ block: "start" });
+          }}
+        />
+      )}
 
       <TabList
         className="dashboard-tabs"
@@ -342,12 +368,14 @@ export function PreRead({
         )}
         {tab === "overview" && (
           <div className={styles.brief}>
-            <MessageBar intent="info" layout="multiline">
-              <MessageBarBody>
-                A two-minute summary, discussion topics, and suggested questions
-                are not yet available. Review the supplied brief sections below.
-              </MessageBarBody>
-            </MessageBar>
+            <Caption1 className={styles.unavailableNote}>
+              Summary, discussion topics, and suggested questions unavailable.
+            </Caption1>
+            {persona && (
+              <BriefSection title="Life & next steps">
+                <LifeEvents persona={persona} />
+              </BriefSection>
+            )}
             <BriefSection title="What changed">
               <CitedList
                 items={preRead.what_changed}
@@ -358,14 +386,16 @@ export function PreRead({
 
             <BriefSection title="You said / Data says">
               <div className={styles.gapPair}>
-                <div className={styles.panel}>
-                  <Caption1 className={styles.label}>You said</Caption1>
+                <div className={surfaces.surface}>
+                  <Eyebrow>You said</Eyebrow>
                   <Subtitle2 as="p" className={styles.quote}>
                     “{preRead.gap.belief}”
                   </Subtitle2>
                 </div>
-                <div className={mergeClasses(styles.panel, styles.dataSays)}>
-                  <Caption1 className={styles.label}>Data says</Caption1>
+                <div
+                  className={mergeClasses(surfaces.surface, styles.dataSays)}
+                >
+                  <Eyebrow>Data says</Eyebrow>
                   <Subtitle2
                     as="p"
                     className={mergeClasses(styles.quote, styles.dataSaysText)}
@@ -393,10 +423,6 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Planned cash needs">
-              <Caption1>
-                Private-fund commitments and open follow-ups are not available
-                in this brief.
-              </Caption1>
               <PlannedCashNeeds
                 facts={facts}
                 clientId={clientId}
@@ -405,11 +431,8 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Suggested opening">
-              <div className={styles.panel}>
-                <Caption1 className={styles.label}>
-                  Reporting preference: {preRead.language}
-                </Caption1>
-                <Caption1>The opening may use a different language.</Caption1>
+              <div className={surfaces.surface}>
+                <Eyebrow>Reporting preference: {preRead.language}</Eyebrow>
                 <Subtitle2 as="p" className={styles.quote}>
                   {currentOpening}
                 </Subtitle2>
@@ -424,7 +447,7 @@ export function PreRead({
               </div>
             </BriefSection>
 
-            <BriefSection title="What we are not sure about">
+            <BriefSection title="Uncertainty">
               <Body1 className={styles.prose}>{preRead.uncertainty.text}</Body1>
               <div className={styles.actions}>
                 <WhyButton
@@ -494,7 +517,7 @@ export function PreRead({
         <MessageBar intent="error" role="alert" className="review-error">
           <MessageBarBody>
             <MessageBarTitle>The review was not saved.</MessageBarTitle>
-            {reviewError.message} The brief stays open.
+            {reviewError.message}
           </MessageBarBody>
           <MessageBarActions
             containerAction={
@@ -542,8 +565,8 @@ export function PreRead({
           </Caption1>
           <Caption1 id="review-session-guidance">
             {isPreview
-              ? "Reloading restores the fixture opening and unreviewed status. No decisions are written to the review log."
-              : "In this demo, reloading restores the generated opening and unreviewed status. Saved decisions remain in the review log."}
+              ? "Preview only. Reloading resets it."
+              : "Saved decisions remain in the review log."}
           </Caption1>
         </div>
         <div className="review-actions">
@@ -588,7 +611,7 @@ export function PreRead({
           type="button"
           onClick={() => navigate(`/clients/${clientId}/scenario`)}
         >
-          Rehearse a Strait scenario →
+          Strait scenarios →
         </Link>
       </div>
       {toast && (

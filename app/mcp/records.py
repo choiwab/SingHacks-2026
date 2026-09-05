@@ -8,7 +8,7 @@ from pydantic import AwareDatetime, Field, model_validator
 
 from app.pipeline.schemas import ContractModel
 
-Source = Literal["gmail", "teams", "notes", "calendar"]
+Source = Literal["gmail", "outlook", "teams", "notes", "calendar"]
 SOURCES: tuple[Source, ...] = ("gmail", "teams", "notes", "calendar")
 
 
@@ -47,8 +47,11 @@ class ConnectedContext(ContractModel):
 
     @model_validator(mode="after")
     def availability_matches_records(self) -> Self:
-        if set(self.sources) != set(SOURCES):
+        # Outlook is additive so existing offline fixtures retain their content hashes.
+        if set(self.sources) not in (set(SOURCES), set(SOURCES) | {"outlook"}):
             raise ValueError("Every source must declare its availability")
+        if any(r.source not in self.sources for r in self.records):
+            raise ValueError("Record source must declare its availability")
         for source, status in self.sources.items():
             records = [r for r in self.records if r.source == source]
             if records and (

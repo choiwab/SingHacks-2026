@@ -101,12 +101,10 @@ describe("Monday Brief", () => {
       await screen.findByRole("heading", { name: "Margarethe Voss-Brenner" }),
     ).toBeVisible();
     await user.click(
-      screen.getByRole("button", { name: "Rehearse a Strait scenario →" }),
+      screen.getByRole("button", { name: "Strait scenarios →" }),
     );
     expect(
-      await screen.findByText("Strait reopens", {
-        selector: ".scenario-label",
-      }),
+      await screen.findByRole("heading", { name: "Strait reopens", level: 2 }),
     ).toBeVisible();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -182,7 +180,9 @@ describe("Monday Brief", () => {
       ),
     ).toBeVisible();
     expect(screen.getByText("Next meeting · Mon 10:30")).toBeVisible();
-    expect(screen.getByText("Data health unavailable")).toBeVisible();
+    expect(
+      screen.getByText("Data as of 2026-08-26 · health unavailable"),
+    ).toBeVisible();
     expect(screen.getByRole("heading", { name: "What changed" })).toBeVisible();
 
     // The fact preview stays visible across tabs in projection order.
@@ -210,9 +210,7 @@ describe("Monday Brief", () => {
     );
 
     await user.click(screen.getByRole("tab", { name: "Insights" }));
-    expect(
-      screen.getByText("Every fact for this client is shown above."),
-    ).toBeVisible();
+    expect(screen.getByText("All client facts are shown above.")).toBeVisible();
     expect(
       screen.getByRole("heading", { name: "More client facts" }),
     ).toBeVisible();
@@ -384,12 +382,9 @@ describe("Monday Brief", () => {
       "German inheritance tax instalment starts in 36 days.",
     );
     expect(needs).toHaveTextContent("3,400,000");
-    expect(needs).toHaveTextContent(
-      "Private-fund commitments and open follow-ups are not available",
-    );
     expect(
       screen.getByText(
-        /A two-minute summary, discussion topics, and suggested questions are not yet available/,
+        /Summary, discussion topics, and suggested questions unavailable/,
       ),
     ).toBeVisible();
     expect(
@@ -416,7 +411,7 @@ describe("Monday Brief", () => {
       "Rules & money",
       "Planned cash needs",
       "Suggested opening",
-      "What we are not sure about",
+      "Uncertainty",
       "Where you left off",
     ]) {
       const block = screen.getByRole("region", { name });
@@ -440,7 +435,7 @@ describe("Monday Brief", () => {
     const changed = await screen.findByRole("region", { name: "What changed" });
     const why = within(changed).getAllByRole("button", { name: "Why?" })[0];
     await user.click(why);
-    const dialog = screen.getByRole("dialog", { name: "Why?" });
+    const dialog = await screen.findByRole("dialog", { name: "Why?" });
     expect(dialog).toBeVisible();
     // The claim, its review state, the calculation inputs, and the exact source
     // row are all required by PRD 5.7.
@@ -484,7 +479,7 @@ describe("Monday Brief", () => {
     await user.click(
       within(changed).getAllByRole("button", { name: "Why?" })[0],
     );
-    const drawer = screen.getByRole("dialog", { name: "Why?" });
+    const drawer = await screen.findByRole("dialog", { name: "Why?" });
     expect(within(drawer).getByRole("alert")).toHaveTextContent(
       "Evidence trail is incomplete.",
     );
@@ -629,7 +624,7 @@ describe("Monday Brief", () => {
       "aria-invalid",
       "true",
     );
-    await user.type(screen.getByLabelText("Edit the opening line"), saved);
+    await user.paste(saved);
     expect(
       screen.queryByText("Enter an opening line before saving."),
     ).toBeNull();
@@ -646,16 +641,13 @@ describe("Monday Brief", () => {
     await user.click(screen.getByRole("button", { name: "Edit" }));
     expect(screen.getByLabelText("Edit the opening line")).toHaveValue(saved);
     await user.clear(screen.getByLabelText("Edit the opening line"));
-    await user.type(screen.getByLabelText("Edit the opening line"), "   ");
+    await user.paste("   ");
     await user.click(screen.getByRole("button", { name: "Save edit" }));
     expect(requests).toHaveLength(1);
     expect(opening()).toHaveTextContent(saved);
     expect(screen.getByText("Edited by the RM")).toBeVisible();
     await user.clear(screen.getByLabelText("Edit the opening line"));
-    await user.type(
-      screen.getByLabelText("Edit the opening line"),
-      "Unsaved replacement",
-    );
+    await user.paste("Unsaved replacement");
     failSave = true;
     await user.click(screen.getByRole("button", { name: "Save edit" }));
     await screen.findByRole("alert");

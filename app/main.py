@@ -16,6 +16,7 @@ from app.pipeline.features import AnalyticsProvider, legacy_analytics
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.history import ClientHistory, load_client_history
 from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
+from app.pipeline.member2_bridge import member2_hooks
 from app.pipeline.publish import read_latest
 from app.pipeline.runtime import PipelineRuntime
 from app.pipeline.schemas import ReviewRequest
@@ -53,7 +54,7 @@ def create_app(
             as_of=as_of,
             overlay_dir=overlay_dir,
             analytics=analytics,
-            agents=agents,
+            agents=agents or member2_hooks(store),
         )
         application.state.review_ledger = ledger
         application.state.pipeline_runtime = runtime

@@ -1,0 +1,17 @@
+{
+  "demo_accounts_only": true,
+  "google_account_email": "rm.demo@example.com",
+  "microsoft_account_id": "00000000-0000-0000-0000-000000000001",
+  "clients": {
+    "CL-0003": {
+      "emails": ["margarethe.demo@example.com"],
+      "gmail": true,
+      "outlook_mail": true,
+      "google_calendar_ids": ["primary"],
+      "outlook_calendar_ids": ["REPLACE_WITH_DEMO_CALENDAR_ID"]
+    }
+  },
+  "lookback_days": 180,
+  "future_days": 30,
+  "max_pages": 10
+}

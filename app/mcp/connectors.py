@@ -25,11 +25,12 @@ def replay_records(path: Path, *, client_id: str, as_of: datetime) -> ConnectedC
             raise ValueError(f"Conflicting duplicate record: {record.id}")
         selected[record.id] = cached
     ordered = sorted(selected.values(), key=lambda r: (r.occurred_at, r.id))
+    sources = list(dict.fromkeys([*SOURCES, *[r.source for r in ordered]]))
     return ConnectedContext(
         records=ordered,
         sources={
             source: "Cached" if any(r.source == source for r in ordered) else "Not connected"
-            for source in SOURCES
+            for source in sources
         },
         retrieval_log=[
             {
@@ -39,6 +40,6 @@ def replay_records(path: Path, *, client_id: str, as_of: datetime) -> ConnectedC
                 "as_of": as_of.isoformat(),
                 "record_ids": [r.id for r in ordered if r.source == source],
             }
-            for source in SOURCES
+            for source in sources
         ],
     )

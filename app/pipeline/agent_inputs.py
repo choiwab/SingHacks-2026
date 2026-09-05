@@ -146,7 +146,7 @@ def load_curated_bundle(
     return project_agent_bundle(ArtifactStore(root), client_id, manifest.run_id)
 
 
-def _note_topics(text: str) -> list[str]:
+def note_topics(text: str) -> list[str]:
     # ponytail: explicit keyword tags cover the demo; replace only with labelled evaluations.
     patterns = {
         "who_they_are": r"family|father|husband|wife|daughter|son|retir|inherit|business|griev",
@@ -162,6 +162,10 @@ def _note_topics(text: str) -> list[str]:
         "advice_notes",
         *(name for name, pattern in patterns.items() if re.search(pattern, text, re.I)),
     ]
+
+
+# Alias kept for callers that imported the pre-rename private name.
+_note_topics = note_topics
 
 
 def load_dataset_notes(
@@ -235,7 +239,7 @@ def _notes_context(
                     "retrieved_at": as_of,
                     "participants": [str(note["rm_name"])],
                     "text": note["note"],
-                    "topics": _note_topics(str(note["note"])),
+                    "topics": note_topics(str(note["note"])),
                     "provenance": "dataset",
                     "availability": "Cached",
                     "based_on": [

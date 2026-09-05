@@ -1,7 +1,8 @@
 # Persistent memory and live MCP
 
 The data-backed graph now has a durable runtime and an actual MCP server. This is a local,
-single-Relationship-Manager demo, not an integration with real Gmail or Teams accounts.
+single-Relationship-Manager demo. Optional Google and Outlook account adapters are described in
+[account setup](CONNECT_GOOGLE_OUTLOOK.md); defaults do not contact external accounts.
 The implementation uses the [official MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk/tree/v1.x)
 and [LangGraph checkpoint persistence](https://docs.langchain.com/oss/python/langgraph/persistence).
 
@@ -105,9 +106,11 @@ Three read-only tools are advertised through the actual MCP protocol:
 The graph uses the first two through an SDK client with initialization, structured tool results,
 bounded timeouts, and fail-closed errors. Retrieval details persist in the graph trace. The third
 is available to MCP hosts; internal agents continue using their local index over the fetched records.
-Transport is recorded as `Live`; record availability remains `Cached`. Gmail, Teams and calendar
-remain `Not connected` unless explicitly imported records exist, in which case those records are
-still only `Cached`. Local imports do not prove an account connection.
+Transport is recorded as `Live`; default dataset/imported record availability remains `Cached`.
+External sources remain disconnected unless records were explicitly imported or live adapters
+were configured and authorized. With `--connectors-config`, successful Google/Outlook reads are
+labelled `Live` for that call and persisted as `Cached` for offline recall. Local imports do not
+prove an account connection. Teams is not queried.
 
 The server binds only to loopback and uses the SDK's Host/Origin protection. The graph client
 allows only `http://127.0.0.1:PORT/mcp`, ignores environment proxies, and follows no redirects.
@@ -121,8 +124,9 @@ review submission. SQLite transactions protect individual writes, not a multi-pr
 Stored corrections use latest-known versions eligible by `occurred_at`, not a historical
 "what did we know at ingestion time" reconstruction. The local history command intentionally
 shows all versions, including future-dated ones; it is not exposed as an as-of MCP tool.
-Deletion/tombstones, background polling, external OAuth connectors, neural embeddings, and the
-frontend Meeting Brief API remain separate work. Trigger a refresh by rerunning the CLI.
+Successful connector snapshots replace active external-record membership while preserving audit
+history. General deletion/tombstones, background polling, neural embeddings and the frontend
+Meeting Brief API remain separate work. Trigger a refresh by rerunning the CLI or MCP read.
 
 ## Checks
 
