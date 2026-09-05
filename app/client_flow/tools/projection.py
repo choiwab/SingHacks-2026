@@ -1,4 +1,9 @@
-"""Sample adapter from the existing deterministic pipeline to graph artifacts."""
+"""Temporary adapter from the pipeline and analytics layers to graph artifacts.
+
+This adapter recomputes the full book on every call and stays until Member 3's published
+artifact loaders land. It selects no insights and writes no prose: ``ranked_insights`` is empty
+and ``draft_brief`` is an empty shell for Member 2's agents to fill.
+"""
 
 from __future__ import annotations
 
@@ -6,8 +11,9 @@ from datetime import date
 from pathlib import Path
 from typing import Any, TypedDict
 
-from app.client_flow.tools.evidence import collect_citations
-from app.wealth_intelligence import build_monday_brief
+from app.analytics.facts import fact_engine
+from app.pipeline.evidence import native
+from app.pipeline.sources import load_sources
 
 
 class ClientArtifacts(TypedDict):
@@ -17,42 +23,38 @@ class ClientArtifacts(TypedDict):
     draft_brief: dict[str, Any]
 
 
+def _jsonable(value: Any) -> Any:
+    """Replace numpy scalars with Python natives so graph checkpoints can serialize state."""
+    if isinstance(value, dict):
+        return {key: _jsonable(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_jsonable(item) for item in value]
+    return native(value)
+
+
 def build_client_artifacts(
     source_dir: Path,
     *,
     client_id: str,
     as_of: date,
 ) -> ClientArtifacts:
-    """Build sample selected-client artifacts with the repository's current pipeline."""
-    # The current builder computes the full book. Replace this adapter with narrower
-    # Member 2 tools only if demo latency becomes a problem.
-    projection = build_monday_brief(source_dir, as_of=as_of)
-    facts = [fact.model_dump(mode="json") for fact in projection.facts[client_id]]
-    priority = next(item for item in projection.ranking if item.client_id == client_id)
-    brief = projection.pre_reads[client_id].model_dump(mode="json")
-    insights = [
-        {
-            "text": priority.reason,
-            "citations": priority.citations,
-            "score": priority.score,
-            "urgency": priority.urgency,
-        },
-        *brief["rules_money"][:2],
-    ][:3]
+    """Return one client's facts and the evidence those facts cite."""
+    tables, _notes = load_sources(source_dir, as_of=as_of)
+    facts, evidence = fact_engine(tables, as_of)
+    fact_bundle = _jsonable(facts[client_id])
 
-    fact_ids = {fact["id"] for fact in facts}
-    evidence_ids = collect_citations([insights, brief]) - fact_ids
-    for fact in facts:
+    evidence_ids: set[str] = set()
+    for fact in fact_bundle:
         evidence_ids.update(fact["source_rows"])
         evidence_ids.update(fact["event_ids"])
-    evidence = {
-        evidence_id: projection.evidence[evidence_id].model_dump(mode="json")
+    evidence_map = {
+        evidence_id: _jsonable(evidence[evidence_id])
         for evidence_id in sorted(evidence_ids)
-        if evidence_id in projection.evidence
+        if evidence_id in evidence
     }
     return {
-        "fact_bundle": facts,
-        "evidence_map": evidence,
-        "ranked_insights": insights,
-        "draft_brief": brief,
+        "fact_bundle": fact_bundle,
+        "evidence_map": evidence_map,
+        "ranked_insights": [],
+        "draft_brief": {"client_id": client_id, "sections": {}},
     }

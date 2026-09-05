@@ -8,18 +8,18 @@ from typing import Any, Literal
 
 from app.client_flow.state import ClientFlowState
 from app.client_flow.tools.projection import build_client_artifacts
-from app.wealth_intelligence import ProjectionBuildError
+from app.pipeline.errors import SourceValidationError
 
 
 def wealth_intelligence_agent(state: ClientFlowState) -> dict[str, Any]:
-    """Member 3 sample: call deterministic tools and expose selected-client artifacts."""
+    """Member 2: call deterministic tools and expose selected-client artifacts."""
     try:
         artifacts = build_client_artifacts(
             Path(state["source_dir"]),
             client_id=state["client_id"],
             as_of=date.fromisoformat(state["as_of"]),
         )
-    except ProjectionBuildError as exc:
+    except SourceValidationError as exc:
         return {
             "context_issues": [str(item) for item in exc.diagnostics],
             "status": "needs_confirmation",

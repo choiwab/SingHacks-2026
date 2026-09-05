@@ -8,7 +8,7 @@ from langgraph.types import Command, interrupt
 from pydantic import ValidationError
 
 from app.client_flow.state import ClientFlowState, FlowStatus
-from app.wealth_intelligence.models import ReviewRequest
+from app.pipeline.schemas import ReviewRequest
 
 
 def human_review(
@@ -38,7 +38,7 @@ def human_review(
         if not decision.text.strip():
             raise ValueError("An Edit review requires replacement opening text")
         brief = dict(meeting_brief)
-        brief["opening"] = {**brief["opening"], "text": decision.text}
+        brief["opening"] = {**brief.get("opening", {}), "text": decision.text}
         return Command(
             update={
                 "meeting_brief": brief,

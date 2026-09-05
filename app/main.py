@@ -1,4 +1,4 @@
-"""FastAPI application factory for the Monday Brief demo."""
+"""FastAPI application factory: health, review persistence, and frontend serving."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from app.wealth_intelligence import MondayBriefProjection, build_monday_brief, save_projection
-from app.wealth_intelligence.models import ReviewRequest, ReviewResponse
-from app.wealth_intelligence.reviews import ReviewLedger
+from app.pipeline.schemas import ReviewRequest, ReviewResponse
+from app.pipeline.sources import load_sources
+from app.store import ReviewLedger
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -25,8 +25,6 @@ def create_app(
     source_dir: Path = DATA,
     as_of: date = AS_OF,
     database: Path | str | None = None,
-    projection: MondayBriefProjection | None = None,
-    save_diagnostic: bool = True,
     frontend_dist: Path = FRONTEND_DIST,
 ) -> FastAPI:
     """Create an isolated app; all I/O occurs inside its lifespan."""
@@ -34,34 +32,27 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
-        current = projection or build_monday_brief(source_dir, as_of=as_of)
+        tables, _notes = load_sources(source_dir, as_of=as_of)
         ledger = ReviewLedger(database)
         ledger.import_legacy_json(source_dir / "generated" / "review_log.json")
-        if save_diagnostic:
-            save_projection(current, source_dir / "generated" / "app_data.json")
-        application.state.projection = current
+        application.state.client_ids = frozenset(tables["clients"]["client_id"].astype(str))
         application.state.review_ledger = ledger
         try:
             yield
         finally:
             ledger.close()
 
-    application = FastAPI(title="Monday Brief", version="0.2.0", lifespan=lifespan)
+    application = FastAPI(title="Client Future Room", version="0.2.0", lifespan=lifespan)
 
     @application.get("/api/health")
-    async def health(request: Request) -> dict[str, str]:
-        current: MondayBriefProjection = request.app.state.projection
-        return {"status": "ok", "as_of": current.as_of.isoformat()}
-
-    @application.get("/api/monday-brief", response_model=MondayBriefProjection)
-    async def monday_brief(request: Request) -> MondayBriefProjection:
-        return request.app.state.projection
+    async def health() -> dict[str, str]:
+        return {"status": "ok", "as_of": as_of.isoformat()}
 
     @application.post("/api/reviews", response_model=ReviewResponse)
     async def review(payload: ReviewRequest, request: Request) -> ReviewResponse:
-        current: MondayBriefProjection = request.app.state.projection
-        if payload.client_id not in current.pre_reads:
-            raise HTTPException(status_code=404, detail="Client pre-read not found")
+        client_ids: frozenset[str] = request.app.state.client_ids
+        if payload.client_id not in client_ids:
+            raise HTTPException(status_code=404, detail="Client not found")
         ledger: ReviewLedger = request.app.state.review_ledger
         return ReviewResponse(review=ledger.append(payload, rm="Priscilla Ong"))
 

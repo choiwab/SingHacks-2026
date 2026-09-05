@@ -8,20 +8,22 @@ from app.client_flow.state import ClientFlowState
 from app.client_flow.tools.evidence import collect_citations
 
 
+def _cited_items(brief: dict[str, Any]) -> list[dict[str, Any]]:
+    """Flatten every generated claim under ``brief["sections"]``; each must carry citations."""
+    items: list[dict[str, Any]] = []
+    for section in brief.get("sections", {}).values():
+        for item in section if isinstance(section, list) else [section]:
+            if isinstance(item, dict):
+                items.append(item)
+    return items
+
+
 def evidence_gate(state: ClientFlowState) -> dict[str, Any]:
     """Member 4: block briefs with uncited claims or unresolved evidence."""
     brief = state.get("meeting_brief", {})
     facts = {fact["id"]: fact for fact in state.get("fact_bundle", [])}
     evidence = state.get("evidence_map", {})
-    cited_items = [
-        *brief.get("what_changed", []),
-        *brief.get("rules_money", []),
-        brief.get("gap", {}),
-        brief.get("opening", {}),
-        brief.get("uncertainty", {}),
-        *brief.get("beliefs", []),
-        *brief.get("workflow", []),
-    ]
+    cited_items = _cited_items(brief)
     missing_citations = [
         index for index, item in enumerate(cited_items) if not item.get("citations")
     ]
