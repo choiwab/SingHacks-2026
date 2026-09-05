@@ -30,17 +30,7 @@ const PreReadIcon = bundleIcon(
 );
 const ScenarioIcon = bundleIcon(DataTrending24Filled, DataTrending24Regular);
 
-/** Attention state shown next to each client in the switcher. */
-const URGENCY: Record<
-  RankedClient["urgency"],
-  { label: string; color: "danger" | "warning" | "informative" }
-> = {
-  now: { label: "Act now", color: "danger" },
-  soon: { label: "Prepare", color: "warning" },
-  watch: { label: "Watch", color: "informative" },
-};
-
-const NARROW = "@media (max-width: 60rem)";
+import { NARROW, URGENCY } from "./presentation";
 
 const useStyles = makeStyles({
   shell: {

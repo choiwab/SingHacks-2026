@@ -1,5 +1,6 @@
 import {
   Body1,
+  Body1Strong,
   Button,
   Caption1,
   Field,
@@ -29,12 +30,10 @@ import {
   CompactCalendar,
   DashboardHeader,
   DataPanel,
-  DiscussionTopics,
   InsightsPanel,
   MemoryPanel,
-  OpenCommitments,
-  TopInsights,
-  TwoMinuteSummary,
+  PlannedCashNeeds,
+  FactPreview,
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
 import type { Authorship } from "./evidence";
@@ -270,7 +269,7 @@ export function PreRead({
         }}
       />
 
-      <div className="client-heading">
+      <div className="client-header-layout">
         <DashboardHeader
           preRead={preRead}
           ranked={rankedClient}
@@ -286,7 +285,7 @@ export function PreRead({
         />
       </div>
 
-      <TopInsights preRead={preRead} facts={facts} authorship={reviewState} />
+      <FactPreview preRead={preRead} facts={facts} authorship={reviewState} />
 
       <TabList
         className="dashboard-tabs"
@@ -341,24 +340,12 @@ export function PreRead({
         )}
         {tab === "overview" && (
           <div className={styles.brief}>
-            <BriefSection title="Two-minute summary">
-              <TwoMinuteSummary
-                preRead={preRead}
-                ranked={rankedClient}
-                facts={facts}
-                authorship={reviewState}
-              />
-            </BriefSection>
-
-            <BriefSection title="Three discussion topics">
-              <DiscussionTopics
-                facts={facts}
-                clientId={clientId}
-                clientName={preRead.name}
-                authorship={reviewState}
-              />
-            </BriefSection>
-
+            <MessageBar intent="info" layout="multiline">
+              <MessageBarBody>
+                A two-minute summary, discussion topics, and suggested questions
+                are not yet available. Review the supplied brief sections below.
+              </MessageBarBody>
+            </MessageBar>
             <BriefSection title="What changed">
               <CitedList
                 items={preRead.what_changed}
@@ -403,14 +390,13 @@ export function PreRead({
               />
             </BriefSection>
 
-            <BriefSection title="Open commitments">
+            <BriefSection title="Planned cash needs">
               <Caption1>
-                Planned cash needs cited in this brief. Private-fund commitments
-                are not included.
+                Private-fund commitments and open follow-ups are not available
+                in this brief.
               </Caption1>
-              <OpenCommitments
+              <PlannedCashNeeds
                 facts={facts}
-                evidence={projection.evidence}
                 clientId={clientId}
                 clientName={preRead.name}
               />
@@ -540,16 +526,16 @@ export function PreRead({
         aria-busy={pending !== null}
       >
         <div className="review-copy">
-          <strong>RM checkpoint</strong>
-          <span id="review-guidance">
+          <Body1Strong>RM checkpoint</Body1Strong>
+          <Caption1 id="review-guidance">
             {editing
               ? "Save or cancel your edit before approving or rejecting."
               : "Only this decision is logged."}
-          </span>
-          <span id="review-session-guidance">
+          </Caption1>
+          <Caption1 id="review-session-guidance">
             In this demo, reloading restores the generated opening and
             unreviewed status. Saved decisions remain in the review log.
-          </span>
+          </Caption1>
         </div>
         <div className="review-actions">
           <Button
@@ -597,9 +583,14 @@ export function PreRead({
         </Link>
       </div>
       {toast && (
-        <div className="toast" role="status" aria-live="polite">
-          {toast}
-        </div>
+        <MessageBar
+          intent="success"
+          role="status"
+          className="review-notification"
+          layout="multiline"
+        >
+          <MessageBarBody>{toast}</MessageBarBody>
+        </MessageBar>
       )}
     </section>
   );

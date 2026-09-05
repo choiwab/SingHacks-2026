@@ -17,11 +17,7 @@ import { CompactCalendar, briefState } from "./ClientDashboard";
 import type { MondayBriefProjection, RankedClient } from "./contracts";
 import type { Authorship } from "./evidence";
 
-const URGENCY = {
-  now: { label: "Act now", color: "danger" as const },
-  soon: { label: "Prepare", color: "warning" as const },
-  watch: { label: "Watch", color: "informative" as const },
-};
+import { URGENCY } from "./presentation";
 
 const BRIEF_COLOR = {
   Ready: "success" as const,

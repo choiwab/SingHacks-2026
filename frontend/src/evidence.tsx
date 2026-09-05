@@ -35,6 +35,8 @@ import type {
   ProjectionFact,
 } from "./contracts";
 
+import { formatValue } from "./presentation";
+
 /** Review state of a generated claim, as PRD 5.7 asks the drawer to show it. */
 export type Authorship = "Unreviewed" | "Approved" | "Edited" | "Rejected";
 
@@ -155,13 +157,6 @@ function expandCitations(
   }
 
   return { records, missing };
-}
-
-function formatValue(value: unknown) {
-  if (value === null || value === undefined) return "Not recorded";
-  if (typeof value === "number")
-    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  return String(value);
 }
 
 function Fields({ record }: { record: Record<string, unknown> }) {
@@ -303,9 +298,9 @@ export function EvidenceProvider({
             >
               <MessageBarBody>
                 <MessageBarTitle>Evidence trail is incomplete.</MessageBarTitle>
-                These citations are unavailable in the loaded data. Confirm the
-                missing sources before relying on this claim.
-                <ul aria-label="Unavailable citations">
+                These source records are unavailable in the loaded data. Confirm
+                the missing sources before relying on this claim.
+                <ul aria-label="Unavailable source records">
                   {missing.map((citation) => (
                     <li key={citation}>{citation}</li>
                   ))}

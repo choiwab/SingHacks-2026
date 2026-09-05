@@ -201,7 +201,7 @@ of the data in 30 seconds.
 The demo is a Fluent UI RM dashboard for Priscilla Ong, following the [Member 1 dashboard and UX brief](docs/PRD_TEAMS_RM_INTELLIGENCE.md).
 The home screen shows a top-five priority queue and a compact upcoming-meetings calendar.
 The persistent client switcher searches all 20 clients by name or ID.
-Each selected client has a profile, three leading insights, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
+Each selected client has a profile, a preview of three facts in source order, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
 The meeting brief leads from the client's statements and portfolio facts to an RM review checkpoint.
 An optional scenario rehearsal shows two precomputed Strait scenario ranges with their snapshot context and uncertainty.
 The Python projection module runs once during application startup and saves a diagnostic snapshot to `data/generated/app_data.json`.
@@ -221,9 +221,10 @@ Open `http://127.0.0.1:5173`.
 For a short dashboard walkthrough:
 
 1. Search for `CL-0003` in the client switcher and select Margarethe Voss-Brenner, or select her meeting in the calendar.
-2. Inspect the three leading insights, then find **You said / Data says** in **Overview** to compare her stated aversion to risk with 71.5% equity against a 30% limit.
+2. Inspect the fact preview, then find **You said / Data says** in **Overview** to compare her stated aversion to risk with 71.5% equity against a 30% limit.
 3. Open that comparison's **Why?** action to inspect the claim, calculation inputs, and exact source rows; press Escape to return to the same action.
-4. Review the **Two-minute summary**, **Three discussion topics**, and **Open commitments**, including the EUR 3.4m inheritance-tax cash need.
+4. Review **What changed**, **Rules & money**, and **Planned cash needs**, including the EUR 3.4m inheritance-tax cash need.
+   Open its evidence to inspect the source dates and certainty.
 5. Open **Data** for grouped facts, or **Memory** and search `"safe and boring"` for the exact recorded phrase with highlighted matches and note evidence.
 6. Select **Review meeting brief** to reach the **RM checkpoint**, choose **Edit**, revise the opening, and choose **Save edit** or **Cancel edit**.
 7. Choose **Approve pre-read** to record approval and show **Approved by the RM**; use **Reject** to return a brief to **Needs review**.
@@ -234,7 +235,11 @@ The calendar labels saved edits and approvals **Ready**, while the authorship ba
 Reloading the page resets these visible states because the UI does not yet restore saved reviews from the SQLite ledger; it does not delete the recorded decisions.
 
 The controlled incremental-update demonstration in the PRD still requires Member 4's API and versioned view model.
-**Open commitments** currently contains cited planned cash needs, not the private-fund commitments in `commitments.csv`.
+**Planned cash needs** renders the supplied deadline facts in their original order.
+Private-fund commitments and open follow-ups are not available.
+Ranked insights, per-insight questions and update states, the two-minute summary, discussion topics, data health, refresh and generation timestamps, and meeting purposes require upstream projection fields.
+The UI discloses these gaps instead of inferring them from confidence, fact kinds, or raw evidence.
+The Insights tab labels the supplied opening as an opening, not as a separate generated question.
 The language label reflects the client's reporting preference; some clients have English fallback openings, while Margarethe's opening is German.
 
 Run the automated checks with:

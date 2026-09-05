@@ -36,7 +36,7 @@ describe("Monday Brief", () => {
     ["minimum", 4.9, 5, true],
     ["minimum", 0, 0, false],
   ] as const)(
-    "labels a %s mandate at %s against %s correctly",
+    "preserves source order for a %s mandate at %s against %s",
     async (boundary, actual, limit, breached) => {
       const projection = structuredClone(projectionFixture);
       const fact = projection.facts["CL-0003"].find(
@@ -64,33 +64,17 @@ describe("Monday Brief", () => {
         </MemoryRouter>,
       );
       const top = await screen.findByRole("region", {
-        name: "Top insights",
+        name: "Client facts",
       });
       const cards = within(top).getAllByRole("article");
       const mandate = cards.find((card) =>
         within(card).queryByRole("heading", { name: fact.what }),
       )!;
-      expect(mandate).toHaveTextContent(breached ? "High" : "Within limit");
-      expect(mandate).toHaveTextContent(
-        breached ? "brought back inside" : "still fit your objectives?",
-      );
-      if (breached) {
-        expect(cards[0]).toBe(mandate);
-      } else {
-        expect(cards.at(-1)).toBe(mandate);
-        expect(mandate).toHaveTextContent(`Within the ${limit}% ${boundary}`);
-        expect(mandate).not.toHaveTextContent("points outside");
-      }
-      const topics = screen.getByRole("region", {
-        name: "Three discussion topics",
-      });
-      expect(
-        within(topics)
-          .getAllByRole("heading", { level: 3 })
-          .map((h) => h.textContent),
-      ).toEqual(
-        cards.map((card) => within(card).getByRole("heading").textContent),
-      );
+      expect(mandate).toHaveTextContent(fact.what);
+      expect(mandate).not.toHaveTextContent("High");
+      expect(mandate).not.toHaveTextContent("Within limit");
+      expect(mandate).not.toHaveTextContent("Ask");
+      expect(cards.at(-1)).toBe(mandate);
     },
   );
 
@@ -195,39 +179,21 @@ describe("Monday Brief", () => {
       ),
     ).toBeVisible();
     expect(screen.getByText("Next meeting · Mon 10:30")).toBeVisible();
-    expect(screen.getByText("Data Current")).toBeVisible();
+    expect(screen.getByText("Data health unavailable")).toBeVisible();
     expect(screen.getByRole("heading", { name: "What changed" })).toBeVisible();
 
-    // Top insights sit above the tabs, so they stay visible on every tab
-    // (PRD 5.4). The profile fact is context, so only the two discrepancies
-    // rank, highest severity first.
-    const top = screen.getByRole("region", { name: "Top insights" });
+    // The fact preview stays visible across tabs in projection order.
+    const top = screen.getByRole("region", { name: "Client facts" });
     expect(
       within(top)
         .getAllByRole("heading", { level: 3 })
         .map((node) => node.textContent),
     ).toEqual([
-      "Equity is above the mandate limit.",
       "German inheritance tax instalment starts in 36 days.",
+      "Equity is above the mandate limit.",
     ]);
-    // Why it matters: the narrator's line when it adds something, and the
-    // quantified stake from the fact's own calculation inputs when it does not.
-    expect(within(top).getByText("Equity increased.")).toBeVisible();
-    expect(
-      within(top).getByText(/€3,400,000 falls due in 36 days/),
-    ).toBeVisible();
-    // Each card also carries the question to put to the client and, when the
-    // brief's uncertainty names that fact, what to confirm (PRD 5.4).
-    expect(
-      within(top).getByText(
-        "Do you want Equity brought back inside the 30% maximum, or should we revisit the mandate itself?",
-      ),
-    ).toBeVisible();
-    expect(
-      within(top).getByText(
-        "Which holdings should we raise the \u20ac3,400,000 from, and when do you need it settled?",
-      ),
-    ).toBeVisible();
+    expect(top).not.toHaveTextContent("brought back inside");
+    expect(top).not.toHaveTextContent("Liquid assets cover");
     // The uncertainty cites the gap fact only, so it rides that card alone.
     expect(
       within(top).getAllByText("To confirm: Confirm intent before advising."),
@@ -242,9 +208,11 @@ describe("Monday Brief", () => {
 
     await user.click(screen.getByRole("tab", { name: "Insights" }));
     expect(
-      screen.getByText("Every insight for this client is shown above."),
+      screen.getByText("Every fact for this client is shown above."),
     ).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Also active" })).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "More client facts" }),
+    ).toBeVisible();
     expect(within(top).getAllByRole("heading", { level: 3 })).toHaveLength(2);
     expect(
       screen.queryByRole("heading", { name: "What changed" }),
@@ -300,7 +268,10 @@ describe("Monday Brief", () => {
     const noteSource = within(
       screen.getByRole("region", { name: "RM notes" }),
     ).getByRole("button", { name: "Why?" });
-    await user.click(noteSource);
+    // Exercise keyboard activation here; browser tests cover pointer activation.
+    noteSource.focus();
+    expect(noteSource).toHaveFocus();
+    await user.keyboard("{Enter}");
     const sourceTrail = await screen.findByRole(
       "dialog",
       { name: "Why?" },
@@ -392,7 +363,7 @@ describe("Monday Brief", () => {
     expect(notes.querySelector("mark")).toHaveTextContent("US");
   });
 
-  it("opens the meeting brief with the PRD 5.5 summary, agenda and commitments", async () => {
+  it("discloses missing briefing fields and displays supplied cash-need facts", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(() => Promise.resolve(projectionResponse())),
@@ -403,55 +374,25 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
-    const summary = await screen.findByRole("region", {
-      name: "Two-minute summary",
+    const needs = await screen.findByRole("region", {
+      name: "Planned cash needs",
     });
-    // Assembled from the profile fact, the ranking, the gap, the deadline and
-    // the snapshot deltas - nothing the projection does not already carry.
-    expect(
-      within(summary).getByText(
-        /Recently widowed, resident in Singapore, booked in Singapore/,
-      ),
-    ).toBeVisible();
-    expect(within(summary).getByText(/The meeting is Mon 10:30/)).toBeVisible();
-    expect(within(summary).getByText(/1 position moved/)).toBeVisible();
-
-    // The agenda is severity-ranked, so the mandate gap leads the deadline.
-    const topics = screen.getByRole("region", {
-      name: "Three discussion topics",
-    });
-    const headings = within(topics).getAllByRole("heading", { level: 3 });
-    expect(headings.map((heading) => heading.textContent)).toEqual([
-      "Equity is above the mandate limit.",
+    expect(needs).toHaveTextContent(
       "German inheritance tax instalment starts in 36 days.",
-    ]);
-    expect(
-      within(topics).getByText(
-        "41.5 points outside the 30% maximum, measured Household look-through; strictest applicable band.",
-      ),
-    ).toBeVisible();
-    expect(
-      within(topics).getByText(/Liquid assets cover 528% of it\./),
-    ).toBeVisible();
-    // PRD 5.5 asks for suggested questions, not just one opening line.
-    expect(
-      within(topics).getByText(
-        "Do you want Equity brought back inside the 30% maximum, or should we revisit the mandate itself?",
-      ),
-    ).toBeVisible();
-
-    const commitments = screen.getByRole("region", {
-      name: "Open commitments",
-    });
-    expect(commitments).toHaveTextContent(
-      "Planned cash needs cited in this brief. Private-fund commitments are not included.",
+    );
+    expect(needs).toHaveTextContent("3,400,000");
+    expect(needs).toHaveTextContent(
+      "Private-fund commitments and open follow-ups are not available",
     );
     expect(
-      within(commitments).getByText("German inheritance tax instalment"),
+      screen.getByText(
+        /A two-minute summary, discussion topics, and suggested questions are not yet available/,
+      ),
     ).toBeVisible();
     expect(
-      within(commitments).getByText("Due 2026-10-01 to 2026-12-31 · Confirmed"),
-    ).toBeVisible();
+      screen.queryByRole("region", { name: "Three discussion topics" }),
+    ).not.toBeInTheDocument();
+    expect(needs).not.toHaveTextContent("Due 2026-10-01 to 2026-12-31");
   });
 
   it("makes every PRD 5.5 brief block a named region the RM can jump to", async () => {
@@ -465,13 +406,12 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
-    await screen.findByRole("region", { name: "Two-minute summary" });
+    await screen.findByRole("region", { name: "What changed" });
     for (const name of [
-      "Three discussion topics",
       "What changed",
       "You said / Data says",
       "Rules & money",
-      "Open commitments",
+      "Planned cash needs",
       "Suggested opening",
       "What we are not sure about",
       "Where you left off",
@@ -493,8 +433,7 @@ describe("Monday Brief", () => {
       </MemoryRouter>,
     );
 
-    // Scoped to the "What changed" block: the two-minute summary above it now
-    // owns the first Why? on the page.
+    // Scope the action to its brief section.
     const changed = await screen.findByRole("region", { name: "What changed" });
     const why = within(changed).getAllByRole("button", { name: "Why?" })[0];
     await user.click(why);

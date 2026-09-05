@@ -1,5 +1,7 @@
 import {
   Badge,
+  Card,
+  Title1,
   Body1,
   Button,
   Body1Strong,
@@ -25,23 +27,6 @@ import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
 import { WhyButton } from "./shared";
 
-/**
- * Insight severity per deterministic fact kind (PRD 5.4). The pipeline does not
- * emit a severity field yet, so the ordering lives here.
- * ponytail: move to the projection once the fact engine ranks its own output.
- */
-const SEVERITY: Record<
-  ProjectionFact["kind"],
-  { rank: number; label: string; color: "danger" | "warning" | "informative" }
-> = {
-  mandate_gap: { rank: 0, label: "High", color: "danger" },
-  deadline: { rank: 1, label: "High", color: "danger" },
-  concentration: { rank: 2, label: "Medium", color: "warning" },
-  facility: { rank: 3, label: "Medium", color: "warning" },
-  change: { rank: 4, label: "Low", color: "informative" },
-  profile: { rank: 5, label: "Context", color: "informative" },
-};
-
 const FACT_GROUP: Record<ProjectionFact["kind"], string> = {
   profile: "Profile",
   mandate_gap: "Mandate",
@@ -51,8 +36,7 @@ const FACT_GROUP: Record<ProjectionFact["kind"], string> = {
   change: "Snapshot change",
 };
 
-/** Matches the shell breakpoint where the client switcher becomes a strip. */
-const NARROW = "@media (max-width: 60rem)";
+import { NARROW, formatValue } from "./presentation";
 
 const useStyles = makeStyles({
   header: {
@@ -95,7 +79,7 @@ const useStyles = makeStyles({
     rowGap: tokens.spacingVerticalL,
     paddingBlock: tokens.spacingVerticalL,
   },
-  topInsights: {
+  factPreview: {
     // Separates the always-visible insight strip from the tabs beneath it.
     paddingBlockEnd: tokens.spacingVerticalXXL,
     borderBottomWidth: "2px",
@@ -257,33 +241,7 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     fontVariantNumeric: "tabular-nums",
   },
-  summary: {
-    maxWidth: "68ch",
-    ...shorthands.margin(0),
-  },
-  topics: {
-    display: "flex",
-    flexDirection: "column",
-    rowGap: tokens.spacingVerticalL,
-    listStyleType: "none",
-    ...shorthands.margin(0),
-    ...shorthands.padding(0),
-  },
-  topic: {
-    // Fluent Text renders inline; the column makes each line its own row.
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "flex-start",
-    rowGap: tokens.spacingVerticalXS,
-  },
 });
-
-function formatNumber(value: unknown) {
-  if (typeof value === "number")
-    return value.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if (value === null || value === undefined) return "Not recorded";
-  return String(value);
-}
 
 function FactNumbers({ fact }: { fact: ProjectionFact }) {
   const styles = useStyles();
@@ -292,40 +250,11 @@ function FactNumbers({ fact }: { fact: ProjectionFact }) {
       {Object.entries(fact.numbers).map(([key, value]) => (
         <div key={key} style={{ display: "contents" }}>
           <dt className={styles.term}>{key.replaceAll("_", " ")}</dt>
-          <dd className={styles.value}>{formatNumber(value)}</dd>
+          <dd className={styles.value}>{formatValue(value)}</dd>
         </div>
       ))}
     </dl>
   );
-}
-
-/**
- * Data health is derived from the confidence the fact engine reported, so the
- * header never claims more certainty than the pipeline produced (PRD 5.2).
- */
-function dataHealth(facts: ProjectionFact[]) {
-  const lowConfidence = facts.filter((fact) => fact.confidence === "low");
-  if (lowConfidence.length > 0)
-    return {
-      label: "Needs confirmation",
-      color: "warning" as const,
-      explanation:
-        "Some client facts have low confidence and need confirmation.",
-      citations: lowConfidence.map((fact) => fact.id),
-    };
-  if (facts.length === 0)
-    return {
-      label: "Stale",
-      color: "danger" as const,
-      explanation: "No client facts are available in this snapshot.",
-      citations: [],
-    };
-  return {
-    label: "Current",
-    color: "success" as const,
-    explanation: "No client facts are marked low confidence in this snapshot.",
-    citations: facts.map((fact) => fact.id),
-  };
 }
 
 type FactOf<K extends ProjectionFact["kind"]> = Extract<
@@ -333,75 +262,11 @@ type FactOf<K extends ProjectionFact["kind"]> = Extract<
   { kind: K }
 >;
 
-const factOfKind =
-  <K extends ProjectionFact["kind"]>(kind: K) =>
-  (fact: ProjectionFact): fact is FactOf<K> =>
-    fact.kind === kind;
-
 function mandateBreached(fact: FactOf<"mandate_gap">) {
   const n = fact.numbers;
   return n.boundary === "minimum"
     ? n.actual_pct < n.limit_pct
     : n.actual_pct > n.limit_pct;
-}
-
-function insightSeverity(fact: ProjectionFact) {
-  if (fact.kind === "mandate_gap" && !mandateBreached(fact)) {
-    return { rank: 5, label: "Within limit", color: "informative" as const };
-  }
-  return SEVERITY[fact.kind];
-}
-
-function formatMoney(amount: number, currency: string | null | undefined) {
-  const rounded = Math.round(amount);
-  if (!currency) return formatNumber(rounded);
-  return rounded.toLocaleString(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  });
-}
-
-/**
- * The quantified stake behind a fact, in one line. The Overview ledger states
- * what the fact is; an agenda item has to say how much of it there is, so this
- * reads the calculation inputs the fact engine already emitted.
- */
-function stake(fact: ProjectionFact, currency?: string): string {
-  switch (fact.kind) {
-    case "mandate_gap": {
-      const n = fact.numbers;
-      if (!mandateBreached(fact))
-        return `Within the ${n.limit_pct}% ${n.boundary}, measured ${n.scope}.`;
-      // The headline already states the actual and the limit; the stake adds
-      // how far out it is and what the measurement covers.
-      return `${Math.abs(n.gap_pct).toFixed(1)} points outside the ${n.limit_pct}% ${n.boundary}, measured ${n.scope}.`;
-    }
-    case "deadline": {
-      const n = fact.numbers;
-      const cover =
-        n.coverage_pct === null || n.coverage_pct === undefined
-          ? ""
-          : ` Liquid assets cover ${Math.round(n.coverage_pct)}% of it.`;
-      return `${formatMoney(n.amount, n.currency)} falls due in ${n.days} days.${cover}`;
-    }
-    case "facility": {
-      const n = fact.numbers;
-      return `Loan-to-value is ${n.ltv_pct}% against a ${n.trigger_pct}% margin-call trigger, ${Math.abs(n.gap_pct).toFixed(1)} points of headroom.`;
-    }
-    case "concentration": {
-      const n = fact.numbers;
-      return `${n.weight_pct}% of the portfolio, ${formatMoney(n.value, currency)}.`;
-    }
-    case "change": {
-      const n = fact.numbers;
-      return `${n.instrument} moved by ${formatMoney(n.delta, n.currency)} since the last snapshot.`;
-    }
-    case "profile": {
-      const n = fact.numbers;
-      return `${n.life_stage}, resident in ${n.residence}, booked in ${n.booking_centre}.`;
-    }
-  }
 }
 
 /**
@@ -498,43 +363,6 @@ function MeasureBar({ fact }: { fact: ProjectionFact }) {
       </div>
     </div>
   );
-}
-
-/**
- * The question this fact puts to the client (PRD 5.4, 5.5). The narrator emits
- * one opening question for the whole brief, so a per-insight prompt is derived
- * from the same calculation inputs the card already displays - it asks for the
- * client's intent, which is the one thing no deterministic tool can supply.
- */
-function askAbout(fact: ProjectionFact): string {
-  switch (fact.kind) {
-    case "mandate_gap": {
-      const n = fact.numbers;
-      if (!mandateBreached(fact))
-        return `Does the ${n.limit_pct}% ${n.boundary} for ${n.asset_class} still fit your objectives?`;
-      return `Do you want ${n.asset_class} brought back inside the ${n.limit_pct}% ${n.boundary}, or should we revisit the mandate itself?`;
-    }
-    case "deadline": {
-      const n = fact.numbers;
-      return `Which holdings should we raise the ${formatMoney(n.amount, n.currency)} from, and when do you need it settled?`;
-    }
-    case "facility": {
-      const n = fact.numbers;
-      return `How much headroom do you want above the ${n.trigger_pct}% margin-call trigger if markets fall further?`;
-    }
-    case "concentration": {
-      const n = fact.numbers;
-      return `Are you comfortable with ${n.weight_pct}% of the portfolio sitting in connected positions?`;
-    }
-    case "change": {
-      const n = fact.numbers;
-      return `Was the ${formatMoney(Math.abs(n.delta), n.currency)} move in ${n.instrument} intentional?`;
-    }
-    case "profile": {
-      const n = fact.numbers;
-      return `Has anything changed about ${n.life_stage.toLowerCase()} since we last spoke?`;
-    }
-  }
 }
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -673,7 +501,6 @@ export function DashboardHeader({
 }) {
   const styles = useStyles();
   const profile = facts.find((fact) => fact.kind === "profile");
-  const health = dataHealth(facts);
   const chips = profile
     ? Object.entries(profile.numbers).filter(([key]) => key !== "name")
     : [];
@@ -681,16 +508,16 @@ export function DashboardHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
-        <p className="eyebrow accent">
-          Decision pre-read · {preRead.client_id}
-        </p>
-        <h1 id="client-name">{preRead.name}</h1>
+        <Caption1>Decision pre-read · {preRead.client_id}</Caption1>
+        <Title1 as="h1" id="client-name">
+          {preRead.name}
+        </Title1>
         {profile && <Body1>{profile.what}</Body1>}
         <ul className={styles.chips} aria-label="Client profile">
           {chips.map(([key, value]) => (
             <li key={key}>
               <Badge appearance="outline" color="informative" size="medium">
-                {key.replaceAll("_", " ")}: {formatNumber(value)}
+                {key.replaceAll("_", " ")}: {formatValue(value)}
               </Badge>
             </li>
           ))}
@@ -710,21 +537,13 @@ export function DashboardHeader({
             : "No meeting booked"}
         </Body1Strong>
         <Caption1>{ranked?.reason ?? "No ranked reason recorded."}</Caption1>
-        <Badge appearance="filled" color={health.color}>
-          Data {health.label}
+        <Caption1>Meeting purpose not recorded.</Caption1>
+        <Badge appearance="outline" color="informative">
+          Data health unavailable
         </Badge>
-        <Caption1>{health.explanation}</Caption1>
-        {health.citations.length > 0 && (
-          <div className={styles.action}>
-            <WhyButton
-              citations={health.citations}
-              clientId={preRead.client_id}
-              claim={`${preRead.name}: Data ${health.label}. ${health.explanation} Data as of ${asOf}. This status reflects fact confidence, not a live data refresh.`}
-            >
-              Why this data status?
-            </WhyButton>
-          </div>
-        )}
+        <Caption1>
+          Refresh and insight-generation times are not available.
+        </Caption1>
         <Caption1>
           Data as of {asOf} · reporting preference: {preRead.language}
         </Caption1>
@@ -741,86 +560,40 @@ export function DashboardHeader({
   );
 }
 
-/**
- * Ranked insight candidates: every non-profile fact, highest severity first.
- * The dashboard shows the leading three (PRD 5.4); the Insights tab shows the
- * rest, so a lower-severity fact is still reachable without competing for
- * attention on the first screen.
- */
-function rankedInsights(facts: ProjectionFact[]) {
-  return facts
-    .filter((fact) => fact.kind !== "profile")
-    .sort((a, b) => insightSeverity(a).rank - insightSeverity(b).rank);
+/** Facts retain the order supplied by the projection until ranked insights exist. */
+function displayedFacts(facts: ProjectionFact[]) {
+  return facts.filter((fact) => fact.kind !== "profile");
 }
 
-/**
- * The narrator's line for a fact, when it says something the headline does not
- * already say. Otherwise the quantified stake, so "why it matters" is never
- * blank on a card.
- */
-function whyItMatters(
-  fact: ProjectionFact,
-  supporting: Map<string, string>,
-  currency: string | undefined,
-) {
-  const narrative = supporting.get(fact.id);
-  return narrative && narrative !== fact.what
-    ? narrative
-    : stake(fact, currency);
-}
-
-function InsightCard({
+function FactCard({
   fact,
   clientId,
   clientName,
   authorship,
-  state,
-  matters,
   uncertainty,
 }: {
   fact: ProjectionFact;
   clientId: string;
   clientName: string;
   authorship: Authorship;
-  state: "Changed" | "Unchanged";
-  matters: string;
   uncertainty?: string;
 }) {
   const styles = useStyles();
-  const severity = insightSeverity(fact);
-  const question = askAbout(fact);
   const claim = [
-    `${clientName} · ${FACT_GROUP[fact.kind]} · ${state} · ${fact.what}`,
-    matters,
-    `Ask: ${question}`,
+    `${clientName} · ${FACT_GROUP[fact.kind]} · ${fact.what}`,
     uncertainty ? `To confirm: ${uncertainty}` : undefined,
   ]
     .filter(Boolean)
     .join(" ");
   return (
-    <article className={styles.card}>
+    <Card role="article" className={styles.card}>
       <div className={styles.cardMeta}>
-        <Badge appearance="filled" color={severity.color}>
-          {severity.label}
-        </Badge>
         <Badge appearance="outline" color="informative">
           {FACT_GROUP[fact.kind]}
-        </Badge>
-        <Badge appearance="tint" color="informative">
-          {state}
         </Badge>
       </div>
       <Subtitle2 as="h3">{fact.what}</Subtitle2>
       <MeasureBar fact={fact} />
-      <Body1 as="p" className={styles.summary}>
-        {matters}
-      </Body1>
-      <div className={styles.note}>
-        <Caption1 className={styles.term}>Ask</Caption1>
-        <Body1 as="p" className={styles.summary}>
-          {question}
-        </Body1>
-      </div>
       <Caption1>Confidence: {fact.confidence}</Caption1>
       {uncertainty ? <Caption1>To confirm: {uncertainty}</Caption1> : null}
       <div className={styles.cardAction}>
@@ -831,50 +604,14 @@ function InsightCard({
           authorship={authorship}
         />
       </div>
-    </article>
+    </Card>
   );
 }
 
 /**
- * Reads which facts the brief describes as having moved. A fact counts as
- * changed when a "what changed" line cites it, or when the fact engine itself
- * emitted it as a snapshot delta (PRD 5.4).
+ * Show the first three facts without claiming a priority the projection lacks.
  */
-function useInsightContext(preRead: ClientPreRead, facts: ProjectionFact[]) {
-  const changed = new Set(
-    preRead.what_changed.flatMap((item) => item.citations),
-  );
-  const supporting = new Map(
-    preRead.rules_money
-      .flatMap((item) => item.citations.map((id) => [id, item.text] as const))
-      .concat(
-        preRead.what_changed.flatMap((item) =>
-          item.citations.map((id) => [id, item.text] as const),
-        ),
-      ),
-  );
-  const currency = facts.find(factOfKind("profile"))?.numbers.currency;
-  const state = (fact: ProjectionFact) =>
-    changed.has(fact.id) || fact.kind === "change"
-      ? ("Changed" as const)
-      : ("Unchanged" as const);
-  const matters = (fact: ProjectionFact) =>
-    whyItMatters(fact, supporting, currency);
-  // PRD 5.4 wants uncertainty on the card, and the brief's single uncertainty
-  // names the facts it applies to, so it is only shown on those.
-  const uncertainty = (fact: ProjectionFact) =>
-    preRead.uncertainty.citations.includes(fact.id)
-      ? preRead.uncertainty.text
-      : undefined;
-  return { state, matters, uncertainty };
-}
-
-/**
- * PRD 5.4's top insights. They sit above the tabs rather than inside one, so
- * the client summary, the discrepancies and the brief action are all visible
- * from a single interaction.
- */
-export function TopInsights({
+export function FactPreview({
   preRead,
   facts,
   authorship,
@@ -884,34 +621,38 @@ export function TopInsights({
   authorship: Authorship;
 }) {
   const styles = useStyles();
-  const { state, matters, uncertainty } = useInsightContext(preRead, facts);
-  const insights = rankedInsights(facts).slice(0, 3);
+  const preview = displayedFacts(facts).slice(0, 3);
 
   return (
     <section
-      className={mergeClasses(styles.panel, styles.topInsights)}
-      aria-labelledby="top-insights-title"
+      className={mergeClasses(styles.panel, styles.factPreview)}
+      aria-labelledby="client-facts-title"
     >
       <div className={styles.group}>
-        <Subtitle2 as="h2" id="top-insights-title">
-          Top insights
+        <Subtitle2 as="h2" id="client-facts-title">
+          Client facts
         </Subtitle2>
-        <Caption1>Highest severity first.</Caption1>
+        <Caption1>
+          Shown in source order. Ranked insights, questions, and update status
+          are not yet available.
+        </Caption1>
       </div>
-      {insights.length === 0 ? (
-        <Body1 className={styles.empty}>No insights for this client.</Body1>
+      {preview.length === 0 ? (
+        <Body1 className={styles.empty}>No facts for this client.</Body1>
       ) : (
         <div className={styles.cards}>
-          {insights.map((fact) => (
-            <InsightCard
+          {preview.map((fact) => (
+            <FactCard
               key={fact.id}
               fact={fact}
               clientId={preRead.client_id}
               clientName={preRead.name}
               authorship={authorship}
-              state={state(fact)}
-              matters={matters(fact)}
-              uncertainty={uncertainty(fact)}
+              uncertainty={
+                preRead.uncertainty.citations.includes(fact.id)
+                  ? preRead.uncertainty.text
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -921,9 +662,7 @@ export function TopInsights({
 }
 
 /**
- * The Insights tab (PRD 5.6): the insights the top three pushed below the fold,
- * plus the suggested question and the single uncertainty that apply to all of
- * them.
+ * Remaining facts and the supplied opening and uncertainty.
  */
 export function InsightsPanel({
   preRead,
@@ -935,39 +674,40 @@ export function InsightsPanel({
   authorship: Authorship;
 }) {
   const styles = useStyles();
-  const { state, matters, uncertainty } = useInsightContext(preRead, facts);
-  const rest = rankedInsights(facts).slice(3);
+  const rest = displayedFacts(facts).slice(3);
 
   return (
     <div className={styles.panel}>
       <section className={styles.group} aria-labelledby="also-active-title">
         <Subtitle2 as="h3" id="also-active-title">
-          Also active
+          More client facts
         </Subtitle2>
-        <Caption1>Lower-severity facts, below the top three.</Caption1>
+        <Caption1>Remaining facts in source order.</Caption1>
         {rest.length === 0 ? (
           <Body1 className={styles.empty}>
-            Every insight for this client is shown above.
+            Every fact for this client is shown above.
           </Body1>
         ) : (
           <div className={styles.cards}>
             {rest.map((fact) => (
-              <InsightCard
+              <FactCard
                 key={fact.id}
                 fact={fact}
                 clientId={preRead.client_id}
                 clientName={preRead.name}
                 authorship={authorship}
-                state={state(fact)}
-                matters={matters(fact)}
-                uncertainty={uncertainty(fact)}
+                uncertainty={
+                  preRead.uncertainty.citations.includes(fact.id)
+                    ? preRead.uncertainty.text
+                    : undefined
+                }
               />
             ))}
           </div>
         )}
       </section>
-      <section className={styles.group} aria-label="Suggested question">
-        <Subtitle2 as="h3">Suggested question</Subtitle2>
+      <section className={styles.group} aria-label="Suggested opening">
+        <Subtitle2 as="h3">Suggested opening</Subtitle2>
         <Body1>{preRead.opening.text}</Body1>
         <div className={styles.action}>
           <WhyButton
@@ -994,195 +734,35 @@ export function InsightsPanel({
   );
 }
 
-/**
- * PRD 5.5's two-minute client summary. Every sentence is assembled from a field
- * the projection already carries, and the Why? link carries the union of their
- * citations so the whole paragraph stays traceable.
- */
-export function TwoMinuteSummary({
-  preRead,
-  ranked,
-  facts,
-  authorship,
-}: {
-  preRead: ClientPreRead;
-  ranked: RankedClient | undefined;
-  facts: ProjectionFact[];
-  authorship: Authorship;
-}) {
-  const styles = useStyles();
-  const profile = facts.find(factOfKind("profile"));
-  const deadline = facts.find(factOfKind("deadline"));
-  const sentences: { text: string; citations: string[] }[] = [];
-
-  if (profile)
-    sentences.push({
-      text: `${profile.what} ${stake(profile)} Reporting runs in ${profile.numbers.currency} and ${profile.numbers.language}.`,
-      citations: [profile.id],
-    });
-  // The ranking reason is often the gap verbatim; only add it when it says
-  // something the "data says" sentence below does not.
-  const reason =
-    ranked?.reason && ranked.reason !== preRead.gap.data
-      ? ` ${ranked.reason}`
-      : "";
-  sentences.push({
-    text: ranked?.meeting
-      ? `The meeting is ${ranked.meeting}.${reason}`
-      : `No meeting is booked this week.${reason}`,
-    citations: ranked?.citations ?? [],
-  });
-  sentences.push({
-    text: `The client told us “${preRead.gap.belief}” The data says ${preRead.gap.data}`,
-    citations: preRead.gap.citations,
-  });
-  if (deadline)
-    sentences.push({ text: stake(deadline), citations: [deadline.id] });
-  if (preRead.what_changed.length > 0)
-    sentences.push({
-      text: `${preRead.what_changed.length} position${preRead.what_changed.length === 1 ? "" : "s"} moved since the last snapshot.`,
-      citations: preRead.what_changed.flatMap((item) => item.citations),
-    });
-
-  return (
-    <>
-      <Body1 as="p" className={styles.summary}>
-        {sentences.map((sentence) => sentence.text).join(" ")}
-      </Body1>
-      <div className={styles.headerActions}>
-        <WhyButton
-          citations={[
-            ...new Set(sentences.flatMap((sentence) => sentence.citations)),
-          ]}
-          clientId={preRead.client_id}
-          claim={sentences.map((sentence) => sentence.text).join(" ")}
-          authorship={authorship}
-        />
-      </div>
-    </>
-  );
-}
-
-/**
- * PRD 5.5's three discussion topics: the agenda, severity-ranked, each with the
- * quantified stake pulled from the fact's own calculation inputs.
- */
-export function DiscussionTopics({
+/** Planned cash-need facts as supplied; source details remain in the evidence drawer. */
+export function PlannedCashNeeds({
   facts,
   clientId,
   clientName,
-  authorship,
 }: {
   facts: ProjectionFact[];
   clientId: string;
   clientName: string;
-  authorship: Authorship;
 }) {
   const styles = useStyles();
-  const currency = facts.find(factOfKind("profile"))?.numbers.currency;
-  const topics = rankedInsights(facts).slice(0, 3);
-
-  if (topics.length === 0)
-    return (
-      <Body1 className={styles.empty}>No agenda topics for this client.</Body1>
-    );
-
-  return (
-    <ol className={styles.topics}>
-      {topics.map((fact, index) => {
-        const summary = stake(fact, currency);
-        const question = askAbout(fact);
-        return (
-          <li className={styles.topic} key={fact.id}>
-            <div className={styles.cardMeta}>
-              <Badge appearance="filled" color={insightSeverity(fact).color}>
-                Topic {index + 1}
-              </Badge>
-              <Badge appearance="outline" color="informative">
-                {FACT_GROUP[fact.kind]}
-              </Badge>
-            </div>
-            <Subtitle2 as="h3">{fact.what}</Subtitle2>
-            <Body1 as="p" className={styles.summary}>
-              {summary}
-            </Body1>
-            <div className={styles.note}>
-              <Caption1 className={styles.term}>Ask</Caption1>
-              <Body1 as="p" className={styles.summary}>
-                {question}
-              </Body1>
-            </div>
-            <div className={styles.headerActions}>
-              <WhyButton
-                citations={[fact.id]}
-                clientId={clientId}
-                claim={`${clientName} · Topic ${index + 1} · ${fact.what} ${summary} Ask: ${question}`}
-                authorship={authorship}
-              />
-            </div>
-          </li>
-        );
-      })}
-    </ol>
-  );
-}
-
-/**
- * PRD 5.5's open commitments: the planned cash needs the client's own facts
- * cite, so the RM sees what money is already spoken for before advising.
- */
-export function OpenCommitments({
-  facts,
-  evidence,
-  clientId,
-  clientName,
-}: {
-  facts: ProjectionFact[];
-  evidence: MondayBriefProjection["evidence"];
-  clientId: string;
-  clientName: string;
-}) {
-  const styles = useStyles();
-  const commitments = [...new Set(facts.flatMap((fact) => fact.source_rows))]
-    .filter((row) => row.startsWith("planned_cash_needs:"))
-    .map((row) => evidence[row])
-    .filter(Boolean)
-    .sort((a, b) =>
-      String(a.record.due_from).localeCompare(String(b.record.due_from)),
-    );
-
-  if (commitments.length === 0)
-    return (
-      <Body1 className={styles.empty}>
-        No planned cash needs included in this brief.
-      </Body1>
-    );
-
+  const needs = facts.filter((fact) => fact.kind === "deadline");
+  if (needs.length === 0)
+    return <Body1>No planned cash needs included in this brief.</Body1>;
   return (
     <div className={styles.cards}>
-      {commitments.map((commitment) => {
-        const record = commitment.record;
-        const amount =
-          typeof record.amount === "number"
-            ? formatMoney(record.amount, String(record.currency ?? ""))
-            : "Amount not recorded";
-        const description = String(record.description ?? commitment.title);
-        const timing = `Due ${String(record.due_from)} to ${String(record.due_to)} · ${String(record.certainty ?? "Certainty not recorded")}`;
-        return (
-          <article className={styles.card} key={commitment.id}>
-            <Body1Strong>{description}</Body1Strong>
-            <Subtitle2 as="p">{amount}</Subtitle2>
-            <Caption1>{timing}</Caption1>
-            <div className={styles.action}>
-              <WhyButton
-                citations={[commitment.id]}
-                clientId={clientId}
-                claim={`${clientName} · ${description} · ${amount} · ${timing}`}
-              />
-            </div>
-          </article>
-        );
-      })}
+      {needs.map((fact) => (
+        <Card role="article" key={fact.id}>
+          <Body1Strong>{fact.what}</Body1Strong>
+          <FactNumbers fact={fact} />
+          <div className={styles.action}>
+            <WhyButton
+              citations={[fact.id]}
+              clientId={clientId}
+              claim={`${clientName} · ${fact.what}`}
+            />
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }
@@ -1216,7 +796,7 @@ export function DataPanel({
             {facts
               .filter((fact) => fact.kind === kind)
               .map((fact) => (
-                <article className={styles.card} key={fact.id}>
+                <Card role="article" className={styles.card} key={fact.id}>
                   <Body1Strong>{fact.what}</Body1Strong>
                   <MeasureBar fact={fact} />
                   <FactNumbers fact={fact} />
@@ -1231,7 +811,7 @@ export function DataPanel({
                       claim={`${clientName} · ${fact.what}`}
                     />
                   </div>
-                </article>
+                </Card>
               ))}
           </div>
         </section>
@@ -1456,7 +1036,7 @@ export function MemoryPanel({
         ) : (
           <div className={styles.cards}>
             {matchedBeliefs.map((belief) => (
-              <article className={styles.card} key={belief.id}>
+              <Card role="article" className={styles.card} key={belief.id}>
                 <Body1>
                   “<Highlight text={belief.text} terms={terms} />”
                 </Body1>
@@ -1470,7 +1050,7 @@ export function MemoryPanel({
                     claim={`${preRead.name} · Extracted belief: “${belief.text}”`}
                   />
                 </div>
-              </article>
+              </Card>
             ))}
           </div>
         )}

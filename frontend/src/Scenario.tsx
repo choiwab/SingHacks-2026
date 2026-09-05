@@ -104,10 +104,7 @@ export function Scenario({
   const valueRange = `${money(scenario.low_delta, scenario.currency)} to ${money(scenario.high_delta, scenario.currency)}`;
   const percentRange = `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of the snapshot portfolio`;
   const baseline = `Portfolio baseline: ${scenario.currency} ${scenario.portfolio_value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · as of ${projection.as_of}.`;
-  const disclaimer = scenario.disclaimer.replace(
-    "Precomputed range, ",
-    "Estimated range · ",
-  );
+  const disclaimer = scenario.disclaimer;
   const resultSummary = `${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${baseline} ${disclaimer}`;
   const scale = (value: number) =>
     Math.max(0, Math.min(100, ((value + 20) / 40) * 100));

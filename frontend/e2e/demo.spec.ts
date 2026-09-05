@@ -2,61 +2,7 @@ import { expect, test } from "@playwright/test";
 import type { MondayBriefProjection } from "../src/contracts";
 
 for (const width of [1280, 390]) {
-  test(`data status explains its supporting facts at ${width}px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 844 });
-    await page.goto("/clients/CL-0003/pre-read");
-    const why = page.getByRole("button", { name: "Why this data status?" });
-    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
-    for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
-      await page.getByRole("tab", { name: tab, exact: true }).click();
-      await expect(
-        page.getByText(
-          "No client facts are marked low confidence in this snapshot.",
-          { exact: true },
-        ),
-      ).toBeVisible();
-      await why.focus();
-      await page.keyboard.press("Enter");
-      await expect(drawer).toContainText(
-        "Margarethe Voss-Brenner: Data Current.",
-      );
-      await expect(drawer).toContainText(
-        "This status reflects fact confidence, not a live data refresh.",
-      );
-      await expect(drawer).toContainText(
-        "Confidence medium · as of 2026-08-26",
-      );
-      await expect(drawer).toContainText(
-        "data/clients.csv · row clients:CL-0003",
-      );
-      await expect(drawer).toContainText("data/holdings.csv");
-      expect(
-        await drawer.evaluate((el) => el.scrollWidth <= el.clientWidth),
-      ).toBe(true);
-      await page.keyboard.press("Escape");
-      await expect(why).toBeFocused();
-    }
-    await page
-      .getByRole("navigation", { name: "Client switcher" })
-      .getByRole("button", { name: /Alistair Pemberton-Hale/ })
-      .click();
-    await why.click();
-    await expect(drawer).toContainText(
-      "Alistair Pemberton-Hale: Data Current.",
-    );
-    await expect(drawer).not.toContainText("CL-0003");
-    await page.keyboard.press("Escape");
-    await expect(why).toBeFocused();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-  });
-
-  test(`data status explains low-confidence and missing facts at ${width}px`, async ({
+  test(`data health is not inferred from confidence at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
@@ -64,42 +10,35 @@ for (const width of [1280, 390]) {
     await page.route("**/api/monday-brief", async (route) => {
       const response = await route.fetch();
       const projection: MondayBriefProjection = await response.json();
-      const facts = projection.facts["CL-0003"];
-      const deadline = facts.find((fact) => fact.kind === "deadline")!;
-      deadline.confidence = "low";
+      projection.facts["CL-0003"].forEach((fact) => {
+        fact.confidence = "low";
+      });
       if (missing) projection.facts["CL-0003"] = [];
       await route.fulfill({ response, json: projection });
     });
     await page.goto("/clients/CL-0003/pre-read");
-    await expect(
-      page.getByText("Data Needs confirmation", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByText(
-        "Some client facts have low confidence and need confirmation.",
-        { exact: true },
-      ),
-    ).toBeVisible();
-    const why = page.getByRole("button", { name: "Why this data status?" });
-    await why.click();
-    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
-    await expect(drawer).toContainText(
-      "Margarethe Voss-Brenner: Data Needs confirmation.",
-    );
-    await expect(drawer).toContainText("Confidence low · as of 2026-08-26");
-    await expect(drawer).toContainText("data/planned_cash_needs.csv");
-    await expect(drawer).not.toContainText("Confidence high");
-    await expect(drawer).not.toContainText("Confidence medium");
-    await page.keyboard.press("Escape");
-    await expect(why).toBeFocused();
+    for (const tab of ["Overview", "Insights", "Data", "Memory"]) {
+      await page.getByRole("tab", { name: tab, exact: true }).click();
+      await expect(
+        page.getByText("Data health unavailable", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText(
+          "Refresh and insight-generation times are not available.",
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Why this data status?" }),
+      ).toHaveCount(0);
+    }
     missing = true;
     await page.reload();
     await expect(
-      page.getByText("No client facts are available in this snapshot.", {
-        exact: true,
-      }),
+      page.getByText("Data health unavailable", { exact: true }),
     ).toBeVisible();
-    await expect(why).toHaveCount(0);
+    await expect(
+      page.getByText("No facts for this client.", { exact: true }),
+    ).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -723,7 +662,7 @@ for (const width of [1280, 390]) {
       const valueRange = await page.locator(".range-value").innerText();
       const percentRange = await page.locator(".range-percent").innerText();
       const baseline = await page.locator(".scenario-baseline").innerText();
-      const chartDescription = `${scenario}: ${percentRange}. ${baseline} Estimated range · not a forecast. Scale: −20% to +20%.`;
+      const chartDescription = `${scenario}: ${percentRange}. ${baseline} Precomputed range, not a forecast. Scale: −20% to +20%.`;
       const chart = page.getByRole("img", {
         name: chartDescription,
         exact: true,
@@ -733,7 +672,7 @@ for (const width of [1280, 390]) {
         `- ${JSON.stringify(`img "${chartDescription}"`)}`,
       );
       await expect(announcement).toHaveText(
-        `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). ${baseline} Estimated range · not a forecast.`,
+        `Abdullah Al-Mansoori · ${scenario}: ${valueRange} (${percentRange}). ${baseline} Precomputed range, not a forecast.`,
       );
       expect(
         await announcement.evaluate(
@@ -788,7 +727,7 @@ for (const width of [1280, 390]) {
           await expect(
             drawer.getByRole("region", { name: "Generated claim" }),
           ).toHaveText(
-            `Claim on the dashboard${client} · ${scenario}. ${baseline} Estimated range · not a forecast. ${sector}`,
+            `Claim on the dashboard${client} · ${scenario}. ${baseline} Precomputed range, not a forecast. ${sector}`,
           );
           await expect(drawer).toContainText("data/holdings.csv");
           await expect(drawer).toContainText("data/event_log.csv");
@@ -869,16 +808,15 @@ for (const width of [1280, 390]) {
     await page.goto("/clients/CL-0003/pre-read");
     await page.getByRole("tab", { name: "Insights", exact: true }).click();
     const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
-    for (const region of ["Top insights", "Also active"]) {
+    for (const region of ["Client facts", "More client facts"]) {
       const card = page
         .getByRole("region", { name: region })
         .getByRole("article")
         .first();
       const headline = await card.getByRole("heading").innerText();
-      const paragraphs = await card.locator("p").allTextContents();
-      expect(paragraphs).toHaveLength(2);
+
       const caveat =
-        region === "Also active"
+        region === "Client facts"
           ? await card.getByText(/^To confirm:/).innerText()
           : undefined;
       const why = card.getByRole("button", { name: "Why?", exact: true });
@@ -887,15 +825,14 @@ for (const width of [1280, 390]) {
       const claim = drawer.getByRole("region", { name: "Generated claim" });
       await expect(claim).toContainText("Margarethe Voss-Brenner");
       await expect(claim).toContainText(headline);
-      await expect(claim).toContainText(paragraphs[0]);
-      await expect(claim).toContainText(`Ask: ${paragraphs[1]}`);
+      await expect(claim).not.toContainText("Ask:");
       if (caveat) {
         await expect(claim).toContainText(caveat);
         await expect(drawer).toContainText("data/event_log.csv");
-        await expect(claim).toContainText("Changed");
+        await expect(claim).not.toContainText("Changed");
       } else {
         await expect(claim).not.toContainText("To confirm:");
-        await expect(claim).toContainText("Unchanged");
+        await expect(claim).not.toContainText("Unchanged");
       }
       await expect(drawer).toContainText("Generated · awaiting RM review");
       await expect(drawer).toContainText("Calculation inputs and result");
@@ -912,7 +849,7 @@ for (const width of [1280, 390]) {
     }
     await page.getByRole("button", { name: "Approve pre-read" }).click();
     await expect(page.getByRole("status").last()).toContainText("Approved");
-    for (const region of ["Top insights", "Also active"]) {
+    for (const region of ["Client facts", "More client facts"]) {
       await page
         .getByRole("region", { name: region })
         .getByRole("article")
@@ -928,7 +865,7 @@ for (const width of [1280, 390]) {
       .getByRole("button", { name: /Abdullah Al-Mansoori/ })
       .click();
     await page
-      .getByRole("region", { name: "Top insights" })
+      .getByRole("region", { name: "Client facts" })
       .getByRole("article")
       .first()
       .getByRole("button", { name: "Why?", exact: true })
@@ -940,78 +877,29 @@ for (const width of [1280, 390]) {
     await expect(drawer).not.toContainText("Margarethe");
   });
 
-  test(`discussion evidence retains the agenda and review at ${width}px`, async ({
+  test(`missing briefing fields are disclosed at ${width}px`, async ({
     page,
   }) => {
-    await page.route("**/api/reviews", async (route) => {
-      await route.fulfill({
-        json: {
-          review: {
-            ...route.request().postDataJSON(),
-            timestamp: "2026-09-05T10:00:00Z",
-            rm: "Priscilla Ong",
-          },
-        },
-      });
-    });
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
-    const topics = page
-      .getByRole("region", { name: "Three discussion topics" })
-      .getByRole("listitem");
-    await expect(topics).toHaveCount(3);
-    const drawer = page.getByRole("dialog", { name: "Why?", exact: true });
-    for (let index = 0; index < 3; index += 1) {
-      const topic = topics.nth(index);
-      const headline = await topic.getByRole("heading").innerText();
-      const paragraphs = await topic.locator("p").allTextContents();
-      expect(paragraphs).toHaveLength(2);
-      const why = topic.getByRole("button", { name: "Why?", exact: true });
-      await why.focus();
-      await why.press("Enter");
-      const claim = drawer.getByRole("region", { name: "Generated claim" });
-      await expect(claim).toContainText(
-        `Margarethe Voss-Brenner · Topic ${index + 1} · ${headline}`,
-      );
-      await expect(claim).toContainText(paragraphs[0]);
-      await expect(claim).toContainText(`Ask: ${paragraphs[1]}`);
-      await expect(drawer).toContainText("Generated · awaiting RM review");
-      await expect(drawer).toContainText("Calculation inputs and result");
-      await expect(drawer).toContainText(
-        index === 1
-          ? "data/planned_cash_needs.csv · row planned_cash_needs:CN-004"
-          : "data/holdings.csv · row holdings:",
-      );
-      await expect(drawer).toContainText("as of 2026-08-26");
-      expect(
-        await drawer.evaluate(
-          (element) => element.scrollWidth <= element.clientWidth,
-        ),
-      ).toBe(true);
-      await page.keyboard.press("Escape");
-      await expect(drawer).not.toBeVisible();
-      await expect(why).toBeFocused();
-    }
-    await page.getByRole("button", { name: "Approve pre-read" }).click();
-    await expect(page.getByRole("status").last()).toContainText("Approved");
-    await topics
-      .first()
-      .getByRole("button", { name: "Why?", exact: true })
-      .click();
-    await expect(drawer).toContainText("Approved by the RM");
-    await page.keyboard.press("Escape");
-    await expect(drawer).not.toBeVisible();
-    await page
-      .getByRole("navigation", { name: "Client switcher" })
-      .getByRole("button", { name: /Abdullah Al-Mansoori/ })
-      .click();
-    await topics
-      .first()
-      .getByRole("button", { name: "Why?", exact: true })
-      .click();
-    await expect(drawer).toContainText("Abdullah Al-Mansoori · Topic 1");
-    await expect(drawer).toContainText("Generated · awaiting RM review");
-    await expect(drawer).not.toContainText("Margarethe");
+    await expect(
+      page.getByText(
+        /A two-minute summary, discussion topics, and suggested questions are not yet available/,
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Three discussion topics" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("region", { name: "Two-minute summary" }),
+    ).toHaveCount(0);
+    const opening = page.getByRole("region", { name: "Suggested opening" });
+    await expect(opening).toContainText("Sie wünschen");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
   });
 
   test(`commitment evidence retains the client and cash-need terms at ${width}px`, async ({
@@ -1019,15 +907,16 @@ for (const width of [1280, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
-    const commitments = page.getByRole("region", { name: "Open commitments" });
+    const commitments = page.getByRole("region", {
+      name: "Planned cash needs",
+    });
     await expect(commitments).toContainText(
-      "Planned cash needs cited in this brief. Private-fund commitments are not included.",
+      "Private-fund commitments and open follow-ups are not available in this brief.",
     );
-    const description = "German inheritance tax instalment";
-    const timing = "Due 2026-10-01 to 2026-12-31 · Confirmed";
+    const description = "German inheritance tax instalment starts in 36 days.";
     await expect(commitments).toContainText(description);
-    await expect(commitments).toContainText("€3,400,000");
-    await expect(commitments).toContainText(timing);
+    await expect(commitments).toContainText("3,400,000");
+    await expect(commitments).not.toContainText("Due 2026-10-01 to 2026-12-31");
     const why = commitments.getByRole("button", { name: "Why?", exact: true });
     await why.focus();
     await why.press("Enter");
@@ -1035,7 +924,7 @@ for (const width of [1280, 390]) {
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
     ).toHaveText(
-      `Claim on the dashboardMargarethe Voss-Brenner · ${description} · €3,400,000 · ${timing}`,
+      `Claim on the dashboardMargarethe Voss-Brenner · ${description}`,
     );
     await expect(drawer).toContainText(
       "data/planned_cash_needs.csv · row planned_cash_needs:CN-004",
@@ -1048,7 +937,7 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Escape");
     await expect(drawer).not.toBeVisible();
     await expect(why).toBeFocused();
-    await expect(commitments).toContainText(timing);
+    await expect(commitments).toContainText(description);
     await page
       .getByRole("navigation", { name: "Client switcher" })
       .getByRole("button", { name: /Abdullah Al-Mansoori/ })
@@ -1060,7 +949,7 @@ for (const width of [1280, 390]) {
     await expect(
       drawer.getByRole("region", { name: "Generated claim" }),
     ).toHaveText(
-      "Claim on the dashboardAbdullah Al-Mansoori · Seed capital for Singapore family office entity · $5,000,000 · Due 2027-01-01 to 2027-12-31 · Likely",
+      "Claim on the dashboardAbdullah Al-Mansoori · Seed capital for Singapore family office entity starts in 128 days.",
     );
     await expect(drawer).toContainText("planned_cash_needs:CN-017");
     await expect(drawer).not.toContainText("Margarethe");
@@ -1280,7 +1169,7 @@ for (const width of [1280, 390]) {
     await expect(page.getByRole("main")).toBeFocused();
     await page.getByRole("tab", { name: "Scenario rehearsal" }).click();
     await page.getByRole("button", { name: "Why this range?" }).click();
-    await expect(drawer).toContainText("Estimated range · not a forecast.");
+    await expect(drawer).toContainText("Precomputed range, not a forecast.");
     await page.goBack();
     await expect(drawer).not.toBeVisible();
     await expect(page.getByRole("main")).toBeFocused();
@@ -1334,7 +1223,7 @@ for (const width of [1280, 390]) {
         await expect(claim).toContainText(client.currency);
         await expect(claim).toContainText(percentage);
         await expect(claim).toContainText(baselineText);
-        await expect(claim).toContainText("Estimated range · not a forecast.");
+        await expect(claim).toContainText("Precomputed range, not a forecast.");
         await expect(
           drawer.getByText(/data\/event_log\.csv · row /).first(),
         ).toBeVisible();
@@ -1621,7 +1510,7 @@ for (const width of [1280, 390]) {
       await expect(panel).toBeFocused();
       await expect(panel).toHaveCSS("outline-style", "solid");
       await expect(
-        page.getByRole("heading", { name: "Two-minute summary" }),
+        page.getByRole("heading", { name: "What changed" }),
       ).toBeInViewport();
       await expect(draft).toHaveValue("An unfinished meeting opening.");
       await expect(
@@ -1803,55 +1692,47 @@ for (const width of [1280, 390]) {
     ).toBe(true);
   });
 
-  test(`within-limit mandates do not displace active topics at ${width}px`, async ({
+  test(`facts preserve projection order regardless of mandate values at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.goto("/clients/CL-0019/pre-read");
-    const top = page.getByRole("region", { name: "Top insights", exact: true });
-    const topics = page.getByRole("region", {
-      name: "Three discussion topics",
-    });
-    await expect(top.getByRole("heading", { level: 3 })).toHaveCount(3);
-    await expect(top).not.toContainText("Structured Products");
-    await expect(top).toContainText("Connected positions represent 42.1%");
-    await expect(topics).not.toContainText("Structured Products");
-
-    await page.getByRole("tab", { name: "Insights", exact: true }).click();
-    const mandate = page.getByRole("article").filter({
-      has: page.getByRole("heading", {
-        name: "Structured Products is 12.9% against a 15% maximum.",
+    for (const clientId of ["CL-0019", "CL-0003"]) {
+      const response = await page.request.get("/api/monday-brief");
+      const projection: MondayBriefProjection = await response.json();
+      const facts = projection.facts[clientId].filter(
+        (fact) => fact.kind !== "profile",
+      );
+      await page.goto(`/clients/${clientId}/pre-read`);
+      const top = page.getByRole("region", {
+        name: "Client facts",
         exact: true,
-      }),
-    });
-    await expect(mandate).toContainText("Within limit");
-    await expect(mandate).toContainText("Within the 15% maximum");
-    await expect(mandate).toContainText(
-      "Does the 15% maximum for Structured Products still fit your objectives?",
-    );
-    await expect(mandate).not.toContainText("brought back inside");
-    await mandate.getByRole("button", { name: "Why?" }).click();
-    const drawer = page.getByRole("dialog", { name: "Why?" });
-    await expect(drawer).toContainText("Structured Products is 12.9%");
-    await expect(drawer).toContainText("data/mandates.csv");
-    await page.keyboard.press("Escape");
-    await expect(mandate.getByRole("button", { name: "Why?" })).toBeFocused();
-    expect(
-      await mandate.evaluate((el) => el.scrollWidth <= el.clientWidth),
-    ).toBe(true);
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= innerWidth,
-      ),
-    ).toBe(true);
-
-    await page.goto("/clients/CL-0003/pre-read");
-    const breached = top.getByRole("article").first();
-    await expect(breached).toContainText("High");
-    await expect(breached).toContainText(
-      "Equity is 71.5% against a 30% maximum.",
-    );
-    await expect(breached).toContainText("brought back inside");
+      });
+      await expect(top.getByRole("heading", { level: 3 })).toHaveText(
+        facts.slice(0, 3).map((fact) => fact.what),
+      );
+      await page.getByRole("tab", { name: "Insights", exact: true }).click();
+      const rest = page.getByRole("region", { name: "More client facts" });
+      await expect(
+        rest
+          .getByRole("heading", { level: 3 })
+          .filter({ hasNotText: "More client facts" }),
+      ).toHaveText(facts.slice(3).map((fact) => fact.what));
+      const mandate = rest.getByRole("article").filter({
+        has: page.getByRole("heading", {
+          name: /against a .* (maximum|minimum)/,
+        }),
+      });
+      await expect(mandate).not.toContainText("Within limit");
+      await expect(mandate).not.toContainText("High");
+      await mandate.getByRole("button", { name: "Why?", exact: true }).click();
+      await expect(
+        page.getByRole("dialog", { name: "Why?", exact: true }),
+      ).toContainText("data/mandates.csv");
+      await page.keyboard.press("Escape");
+      await expect(
+        mandate.getByRole("button", { name: "Why?", exact: true }),
+      ).toBeFocused();
+    }
   });
 
   test(`client search reports results without moving focus at ${width}px`, async ({
@@ -2340,8 +2221,9 @@ for (const width of [1280, 390]) {
       await route.fulfill({ response, json: projection });
     });
     await page.goto("/clients/CL-0003/pre-read");
+    await page.getByRole("tab", { name: "Insights", exact: true }).click();
     const why = page
-      .getByRole("region", { name: "Top insights", exact: true })
+      .getByRole("region", { name: "More client facts", exact: true })
       .getByRole("button", { name: "Why?" });
     await why.first().click();
     const drawer = page.getByRole("dialog", { name: "Why?" });
@@ -2926,46 +2808,30 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await switcher
     .getByRole("button", { name: /Margarethe Voss-Brenner/ })
     .click();
-  // The top three insights are visible without opening a tab (PRD 5.4/12).
-  const top = page.getByRole("region", { name: "Top insights" });
-  await expect(top.getByRole("article")).toHaveCount(3);
-  await expect(top).toContainText("Equity is 71.5% against a 30% maximum.");
-  // Each card carries the question to put to the client (PRD 5.4).
-  await expect(top).toContainText(
-    "Do you want Equity brought back inside the 30% maximum",
+  const response = await page.request.get("/api/monday-brief");
+  const projection: MondayBriefProjection = await response.json();
+  const facts = projection.facts["CL-0003"].filter(
+    (fact) => fact.kind !== "profile",
   );
-  // The mandate card draws the 71.5% fill past the 30% limit marker; the two
-  // cards whose facts carry no scale draw nothing.
-  await expect(
-    top.getByText("Equity allocation against the 30% maximum"),
-  ).toBeVisible();
-  const fill = top.locator('[aria-hidden="true"] > div').first();
-  const [fillBox, trackBox] = [
-    await fill.boundingBox(),
-    await top.locator('[aria-hidden="true"]').first().boundingBox(),
-  ];
-  expect(fillBox!.width / trackBox!.width).toBeCloseTo(71.5 / (71.5 * 1.1), 2);
-
-  // The Insights tab carries the insights the top three pushed below the fold.
+  const top = page.getByRole("region", { name: "Client facts" });
+  await expect(top.getByRole("heading", { level: 3 })).toHaveText(
+    facts.slice(0, 3).map((fact) => fact.what),
+  );
+  await expect(top.getByText(/^To confirm: /)).toHaveCount(3);
   await page.getByRole("tab", { name: "Insights" }).click();
-  const alsoActive = page.getByRole("region", { name: "Also active" });
-  await expect(alsoActive.getByRole("article")).toHaveCount(3);
-  // The brief's uncertainty names the three snapshot deltas, so it rides those
-  // cards rather than the whole dashboard.
-  await expect(alsoActive.getByText(/^To confirm: /)).toHaveCount(3);
-  await expect(top.getByRole("article")).toHaveCount(3);
+  const rest = page.getByRole("region", { name: "More client facts" });
+  await expect(rest.getByRole("article")).toHaveCount(3);
+  await expect(rest).toContainText("Equity is 71.5% against a 30% maximum.");
+  const fill = rest.locator('[aria-hidden="true"] > div').first();
+  const fillBox = await fill.boundingBox();
+  const trackBox = await rest
+    .locator('[aria-hidden="true"]')
+    .first()
+    .boundingBox();
+  expect(fillBox!.width / trackBox!.width).toBeCloseTo(71.5 / (71.5 * 1.1), 2);
   await page.getByRole("tab", { name: "Overview" }).click();
-
-  // The meeting brief opens on PRD 5.5's summary, agenda and commitments.
-  const summary = page.getByRole("region", { name: "Two-minute summary" });
-  await expect(summary).toContainText("The meeting is Mon");
   await expect(
-    page
-      .getByRole("region", { name: "Three discussion topics" })
-      .getByRole("listitem"),
-  ).toHaveCount(3);
-  await expect(
-    page.getByRole("region", { name: "Open commitments" }),
+    page.getByRole("region", { name: "Planned cash needs" }),
   ).toContainText("German inheritance tax instalment");
 
   await page
