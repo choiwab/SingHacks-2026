@@ -14,6 +14,7 @@ from app.agents.contracts import (
 )
 from app.agents.generation import generate
 from app.agents.state import AgentState
+from app.agents.wording import DISCUSSION_QUESTIONS, OPENING, PRIORITIES_QUESTION
 from app.mcp.records import ConnectedContext
 from app.mcp.retrieval import MemoryIndex
 
@@ -70,6 +71,28 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         )
         for item in insights
     ]
+    questions = [
+        Claim(
+            id="question:priorities",
+            text=PRIORITIES_QUESTION,
+            citations=references,
+            kind="suggestion",
+        )
+    ]
+    if any(record.provenance == "dataset" for record in connected.records):
+        facts = {fact.id: fact for fact in bundle.facts}
+        for insight in insights:
+            fact_id = insight.facts[0].citations[0]
+            question = DISCUSSION_QUESTIONS.get(facts[fact_id].kind.split(".")[0])
+            if question:
+                questions.append(
+                    Claim(
+                        id=f"question:{insight.signal_id}",
+                        text=question,
+                        citations=[fact_id],
+                        kind="suggestion",
+                    )
+                )
     uncertainty = [
         Claim(
             id=f"uncertainty:{signal.id}",
@@ -80,6 +103,32 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         for signal in bundle.signals
         if signal.id in {i.signal_id for i in insights}
     ]
+    if any(record.provenance == "dataset" for record in connected.records):
+        selected_fact_ids = {
+            citation for item in insights for f in item.facts for citation in f.citations
+        }
+        event_ids = sorted(
+            {
+                e
+                for fact in bundle.facts
+                if fact.id in selected_fact_ids
+                for e in fact.evidence_ids
+                if bundle.evidence[e].source == "data/event_log.csv"
+            }
+        )
+        for event_id in event_ids:
+            event = bundle.evidence[event_id].record
+            uncertainty.append(
+                Claim(
+                    id=f"event:{event_id}",
+                    text=(
+                        f"Event-log association, not causal attribution: {event['event_date']}: "
+                        f"{event['description']}"
+                    ),
+                    citations=[event_id],
+                    kind="uncertainty",
+                )
+            )
     preferences: dict[str, list[Any]] = {}
     for record in connected.records:
         if record.preference_key:
@@ -123,19 +172,12 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
             ],
             opening=Claim(
                 id="opening",
-                text="May we review your priorities and the portfolio findings together?",
+                text=OPENING,
                 citations=references,
                 kind="suggestion",
             ),
             talking_points=talking_points,
-            questions=[
-                Claim(
-                    id="question:priorities",
-                    text="What would you most like us to clarify today?",
-                    citations=references,
-                    kind="suggestion",
-                )
-            ],
+            questions=questions,
             uncertainty=uncertainty,
         ),
         memory_card=ClientMemoryCard(**sections),

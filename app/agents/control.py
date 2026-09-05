@@ -10,7 +10,11 @@ from app.agents.contracts import MeetingPack, ReviewAction, fingerprint
 from app.agents.state import AgentState
 
 
-def human_review(state: AgentState) -> Command[Literal["verify", "finalize", "needs_confirmation"]]:
+def human_review(
+    state: AgentState,
+    *,
+    check_current: Callable[[AgentState], bool] | None = None,
+) -> Command[Literal["context", "verify", "finalize", "needs_confirmation"]]:
     pack = MeetingPack.model_validate(state.get("pack"))
     report = state.get("verification")
     if not report or not report["passed"] or report["pack_version"] != pack.version:
@@ -43,6 +47,14 @@ def human_review(state: AgentState) -> Command[Literal["verify", "finalize", "ne
         except ValueError as exc:
             payload["validation_error"] = str(exc)
     update: dict[str, Any] = {}
+    # Check AFTER interrupt resumes: durable sources may have changed while the RM was away.
+    if check_current and not check_current(state):
+        return Command(
+            update={
+                "trace": [{"node": "human_review", "result": "inputs_changed_refresh_required"}]
+            },
+            goto="context",
+        )
     route = "finalize"
     if decision.action == "Edit":
         history = [

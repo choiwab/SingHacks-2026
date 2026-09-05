@@ -12,6 +12,16 @@
 | Core deliverable | Automated data pipeline + explainable agent layer demonstrated through one meeting workflow |
 | Team size | Four people: 1 frontend · 1 agents + external MCPs (RAG) · 2 data (pipeline + analysis) |
 
+### Current integration checkpoint
+
+The CLI now uses SQLite for persistent interactions, graph checkpoints, pack history, and Review
+Decisions. A read-only local MCP server exposes dated Curated Client Bundles, communication context,
+and cited memory search over stdio or Streamable HTTP. The graph can consume those live protocol
+responses; dataset/imported records remain labelled Cached, not live external account data.
+See [run and demo instructions](PERSISTENT_MEMORY_MCP.md). Real Gmail/Teams/calendar OAuth,
+background synchronization, and the new dashboard API remain unimplemented. This does not satisfy
+the stretch goal of a live external-account retrieval. Team ownership below remains unchanged.
+
 ## 1. Product statement
 
 Client Future Room is a simple but comprehensive RM dashboard. It helps an RM select a client,
