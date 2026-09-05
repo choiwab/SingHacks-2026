@@ -22,6 +22,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 import type { MondayBriefProjection, RankedClient } from "./contracts";
+import { WORDMARK_FONT } from "./theme";
 
 const CalendarIcon = bundleIcon(CalendarLtr24Filled, CalendarLtr24Regular);
 const PreReadIcon = bundleIcon(
@@ -69,10 +70,18 @@ const useStyles = makeStyles({
     display: "grid",
     placeItems: "center",
     marginBottom: tokens.spacingVerticalS,
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorBrandBackground,
-    color: tokens.colorNeutralForegroundOnBrand,
-    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorBrandForeground1,
+    fontFamily: WORDMARK_FONT,
+    fontSize: "26px",
+    lineHeight: 1,
+  },
+  wordmark: {
+    color: tokens.colorBrandForeground1,
+    fontFamily: WORDMARK_FONT,
+    fontSize: "22px",
+    lineHeight: 1.1,
+    letterSpacing: "0.01em",
+    marginBottom: tokens.spacingVerticalXS,
   },
   switcher: {
     gridArea: "switcher",
@@ -118,21 +127,26 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
-    rowGap: "2px",
+    rowGap: tokens.spacingVerticalXXS,
     width: "100%",
     textAlign: "left",
     cursor: "pointer",
     ...shorthands.border("none"),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    borderInlineStartWidth: "2px",
+    borderInlineStartStyle: "solid",
+    borderInlineStartColor: "transparent",
     paddingBlock: tokens.spacingVerticalS,
     paddingInline: tokens.spacingHorizontalM,
     backgroundColor: "transparent",
+    transitionProperty: "background-color, border-color",
+    transitionDuration: "180ms",
+    transitionTimingFunction: "ease",
     ":hover": { backgroundColor: tokens.colorNeutralBackground3Hover },
     [NARROW]: { width: "15rem" },
   },
   clientSelected: {
     backgroundColor: tokens.colorNeutralBackground1,
-    boxShadow: tokens.shadow2,
+    borderInlineStartColor: tokens.colorBrandStroke1,
   },
   clientTop: {
     display: "flex",
@@ -222,6 +236,7 @@ function ClientSwitcher({
   return (
     <nav className={styles.switcher} aria-label="Client switcher">
       <div className={styles.switcherHead}>
+        <span className={styles.wordmark}>Aurelis</span>
         <Body1Strong>Clients</Body1Strong>
         <Caption1 role="status" aria-atomic="true">
           {query.trim()
@@ -301,7 +316,7 @@ export function AppShell({
     <div className={styles.shell}>
       <nav className={styles.rail} aria-label="Workspace navigation">
         <span className={styles.brand} aria-hidden="true">
-          WI
+          A
         </span>
         <TabList
           aria-label="Workspace views"

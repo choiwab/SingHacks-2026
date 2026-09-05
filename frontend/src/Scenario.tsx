@@ -1,7 +1,6 @@
 import {
   Body1,
   Caption1,
-  Card,
   Link,
   mergeClasses,
   Subtitle2,
@@ -15,7 +14,7 @@ import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { MondayBriefProjection, ScenarioKey } from "./contracts";
-import { CitedList, WhyButton } from "./shared";
+import { CitedList, WhyButton, useSurfaceStyles } from "./shared";
 
 const useStyles = makeStyles({
   header: {
@@ -47,7 +46,8 @@ const useStyles = makeStyles({
   visual: { minWidth: 0, paddingBottom: tokens.spacingVerticalXS },
   disclaimer: {
     display: "block",
-    marginTop: "2.2rem",
+    // Clears the axis labels absolutely positioned 1.8rem below the range axis.
+    marginTop: tokens.spacingVerticalXXXL,
     color: tokens.colorNeutralForeground3,
   },
   detail: {
@@ -82,6 +82,7 @@ export function Scenario({
   projection: MondayBriefProjection;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const [scenarioKey, setScenarioKey] = useState<ScenarioKey>("reopens");
@@ -112,10 +113,7 @@ export function Scenario({
   const right = scale(scenario.high_pct);
 
   return (
-    <section
-      className="screen scenario-screen"
-      aria-labelledby="scenario-title"
-    >
+    <section className="screen" aria-labelledby="scenario-title">
       <div className="screen-kicker">
         <Link
           as="button"
@@ -157,13 +155,12 @@ export function Scenario({
         {resultSummary}
       </p>
 
-      <Card
-        role="region"
-        className={styles.result}
+      <section
+        className={mergeClasses(surfaces.surface, styles.result)}
         aria-labelledby="scenario-name"
       >
         <div className={styles.copy}>
-          <Subtitle2 as="h2" className="scenario-label" id="scenario-name">
+          <Subtitle2 as="h2" id="scenario-name">
             {scenario.name}
           </Subtitle2>
           <Title2 as="p" className={mergeClasses("range-value", styles.range)}>
@@ -208,7 +205,7 @@ export function Scenario({
           </div>
           <Caption1 className={styles.disclaimer}>{disclaimer}</Caption1>
         </div>
-      </Card>
+      </section>
 
       <section
         className={styles.detail}

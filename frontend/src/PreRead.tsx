@@ -37,7 +37,13 @@ import {
 } from "./ClientDashboard";
 import type { MondayBriefProjection, ReviewAction } from "./contracts";
 import type { Authorship } from "./evidence";
-import { CitedList, WhyButton, WorkflowList } from "./shared";
+import {
+  CitedList,
+  Eyebrow,
+  WhyButton,
+  WorkflowList,
+  useSurfaceStyles,
+} from "./shared";
 
 /** Lower-dashboard tabs required by PRD 5.6. */
 const TABS = [
@@ -64,14 +70,11 @@ const useStyles = makeStyles({
   section: {
     display: "grid",
     rowGap: tokens.spacingVerticalM,
+    borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+    paddingTop: tokens.spacingVerticalL,
   },
-  panel: {
-    display: "grid",
-    rowGap: tokens.spacingVerticalS,
-    ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalL),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
+  sectionTitle: {
+    fontWeight: 400,
   },
   /** "You said" beside "Data says" once there is room for two columns. */
   gapPair: {
@@ -86,10 +89,8 @@ const useStyles = makeStyles({
   dataSaysText: {
     color: tokens.colorStatusDangerForeground1,
   },
-  label: {
+  unavailableNote: {
     color: tokens.colorNeutralForeground3,
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
   },
   quote: {
     maxWidth: "44ch",
@@ -119,7 +120,9 @@ function BriefSection({
 
   return (
     <section className={styles.section} aria-label={title}>
-      <Subtitle1 as="h2">{title}</Subtitle1>
+      <Subtitle1 as="h2" className={styles.sectionTitle}>
+        {title}
+      </Subtitle1>
       {children}
     </section>
   );
@@ -137,6 +140,7 @@ export function PreRead({
   onReviewed: (clientId: string, state: Authorship, text: string) => void;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const preRead = projection.pre_reads[clientId];
@@ -248,7 +252,7 @@ export function PreRead({
   };
 
   return (
-    <section className="screen pre-read-screen" aria-labelledby="client-name">
+    <section className="screen" aria-labelledby="client-name">
       <div className="screen-kicker">
         <Link as="button" type="button" onClick={() => navigate("/")}>
           ← RM dashboard
@@ -342,11 +346,9 @@ export function PreRead({
         )}
         {tab === "overview" && (
           <div className={styles.brief}>
-            <MessageBar intent="info" layout="multiline">
-              <MessageBarBody>
-                Summary, discussion topics, and suggested questions unavailable.
-              </MessageBarBody>
-            </MessageBar>
+            <Caption1 className={styles.unavailableNote}>
+              Summary, discussion topics, and suggested questions unavailable.
+            </Caption1>
             <BriefSection title="What changed">
               <CitedList
                 items={preRead.what_changed}
@@ -357,14 +359,16 @@ export function PreRead({
 
             <BriefSection title="You said / Data says">
               <div className={styles.gapPair}>
-                <div className={styles.panel}>
-                  <Caption1 className={styles.label}>You said</Caption1>
+                <div className={surfaces.surface}>
+                  <Eyebrow>You said</Eyebrow>
                   <Subtitle2 as="p" className={styles.quote}>
                     “{preRead.gap.belief}”
                   </Subtitle2>
                 </div>
-                <div className={mergeClasses(styles.panel, styles.dataSays)}>
-                  <Caption1 className={styles.label}>Data says</Caption1>
+                <div
+                  className={mergeClasses(surfaces.surface, styles.dataSays)}
+                >
+                  <Eyebrow>Data says</Eyebrow>
                   <Subtitle2
                     as="p"
                     className={mergeClasses(styles.quote, styles.dataSaysText)}
@@ -403,10 +407,8 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Suggested opening">
-              <div className={styles.panel}>
-                <Caption1 className={styles.label}>
-                  Reporting preference: {preRead.language}
-                </Caption1>
+              <div className={surfaces.surface}>
+                <Eyebrow>Reporting preference: {preRead.language}</Eyebrow>
                 <Caption1>Draft language may differ.</Caption1>
                 <Subtitle2 as="p" className={styles.quote}>
                   {currentOpening}

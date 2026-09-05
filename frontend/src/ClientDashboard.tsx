@@ -1,6 +1,5 @@
 import {
   Badge,
-  Card,
   Title1,
   Body1,
   Button,
@@ -25,7 +24,7 @@ import { useEffect, useRef } from "react";
 
 import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
-import { WhyButton } from "./shared";
+import { Eyebrow, WhyButton, useSurfaceStyles } from "./shared";
 
 const FACT_GROUP: Record<ProjectionFact["kind"], string> = {
   profile: "Profile",
@@ -92,15 +91,8 @@ const useStyles = makeStyles({
     gap: tokens.spacingHorizontalM,
   },
   card: {
-    display: "flex",
     // Keeps a lone card readable instead of stretching it across the dashboard.
     maxWidth: "34rem",
-    flexDirection: "column",
-    rowGap: tokens.spacingVerticalS,
-    ...shorthands.padding(tokens.spacingVerticalM, tokens.spacingHorizontalM),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    backgroundColor: tokens.colorNeutralBackground1,
-    border: `1px solid ${tokens.colorNeutralStroke2}`,
   },
   cardMeta: {
     display: "flex",
@@ -115,14 +107,12 @@ const useStyles = makeStyles({
   track: {
     position: "relative",
     blockSize: "0.5rem",
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     backgroundColor: tokens.colorNeutralBackground4,
     // The limit marker sits at limit/scale, which is always inside the track.
     overflow: "hidden",
   },
   fill: {
     blockSize: "100%",
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     backgroundColor: tokens.colorPaletteGreenBackground3,
   },
   fillBreached: {
@@ -136,7 +126,7 @@ const useStyles = makeStyles({
     insetBlockStart: 0,
     insetBlockEnd: 0,
     inlineSize: "2px",
-    backgroundColor: tokens.colorNeutralForeground1,
+    backgroundColor: tokens.colorBrandStroke1,
   },
   numbers: {
     display: "grid",
@@ -198,7 +188,6 @@ const useStyles = makeStyles({
   mark: {
     backgroundColor: tokens.colorBrandBackground2,
     color: tokens.colorBrandForeground2,
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
     ...shorthands.padding(0, "0.1em"),
     fontWeight: tokens.fontWeightSemibold,
   },
@@ -223,14 +212,16 @@ const useStyles = makeStyles({
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-start",
-    rowGap: "2px",
+    rowGap: tokens.spacingVerticalXXS,
     minWidth: "13rem",
     cursor: "pointer",
     textAlign: "left",
     ...shorthands.border("1px", "solid", tokens.colorNeutralStroke2),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
     ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     backgroundColor: tokens.colorNeutralBackground1,
+    transitionProperty: "border-color, background-color",
+    transitionDuration: "180ms",
+    transitionTimingFunction: "ease",
     ":hover": { backgroundColor: tokens.colorNeutralBackground1Hover },
   },
   meetingSelected: {
@@ -508,7 +499,7 @@ export function DashboardHeader({
   return (
     <header className={styles.header}>
       <div className={styles.headerMain}>
-        <Caption1>Meeting brief · {preRead.client_id}</Caption1>
+        <Eyebrow>Meeting brief · {preRead.client_id}</Eyebrow>
         <Title1 as="h1" id="client-name">
           {preRead.name}
         </Title1>
@@ -537,12 +528,7 @@ export function DashboardHeader({
             : "No meeting booked"}
         </Body1Strong>
         <Caption1>{ranked?.reason ?? "No ranked reason recorded."}</Caption1>
-        <Caption1>Meeting purpose not recorded.</Caption1>
-        <Badge appearance="outline" color="informative">
-          Data health unavailable
-        </Badge>
-        <Caption1>Refresh and insight times unavailable.</Caption1>
-        <Caption1>Data as of {asOf}</Caption1>
+        <Caption1>Data as of {asOf} · health unavailable</Caption1>
         <div className={styles.headerActions}>
           <Button appearance="primary" onClick={onReviewBrief}>
             Review meeting brief
@@ -575,6 +561,7 @@ function FactCard({
   uncertainty?: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const claim = [
     `${clientName} · ${FACT_GROUP[fact.kind]} · ${fact.what}`,
     uncertainty ? `To confirm: ${uncertainty}` : undefined,
@@ -582,11 +569,9 @@ function FactCard({
     .filter(Boolean)
     .join(" ");
   return (
-    <Card role="article" className={styles.card}>
+    <article className={mergeClasses(surfaces.surface, styles.card)}>
       <div className={styles.cardMeta}>
-        <Badge appearance="outline" color="informative">
-          {FACT_GROUP[fact.kind]}
-        </Badge>
+        <Eyebrow>{FACT_GROUP[fact.kind]}</Eyebrow>
       </div>
       <Subtitle2 as="h3">{fact.what}</Subtitle2>
       <MeasureBar fact={fact} />
@@ -600,7 +585,7 @@ function FactCard({
           authorship={authorship}
         />
       </div>
-    </Card>
+    </article>
   );
 }
 
@@ -739,13 +724,17 @@ export function PlannedCashNeeds({
   clientName: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const needs = facts.filter((fact) => fact.kind === "deadline");
   if (needs.length === 0)
     return <Body1>No planned cash needs included in this brief.</Body1>;
   return (
     <div className={styles.cards}>
       {needs.map((fact) => (
-        <Card role="article" key={fact.id}>
+        <article
+          className={mergeClasses(surfaces.surface, styles.card)}
+          key={fact.id}
+        >
           <Body1Strong>{fact.what}</Body1Strong>
           <FactNumbers fact={fact} />
           <div className={styles.action}>
@@ -755,7 +744,7 @@ export function PlannedCashNeeds({
               claim={`${clientName} · ${fact.what}`}
             />
           </div>
-        </Card>
+        </article>
       ))}
     </div>
   );
@@ -771,6 +760,7 @@ export function DataPanel({
   clientName: string;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const kinds = [...new Set(facts.map((fact) => fact.kind))];
 
   return (
@@ -786,7 +776,10 @@ export function DataPanel({
             {facts
               .filter((fact) => fact.kind === kind)
               .map((fact) => (
-                <Card role="article" className={styles.card} key={fact.id}>
+                <article
+                  className={mergeClasses(surfaces.surface, styles.card)}
+                  key={fact.id}
+                >
                   <Body1Strong>{fact.what}</Body1Strong>
                   <MeasureBar fact={fact} />
                   <FactNumbers fact={fact} />
@@ -801,7 +794,7 @@ export function DataPanel({
                       claim={`${clientName} · ${fact.what}`}
                     />
                   </div>
-                </Card>
+                </article>
               ))}
           </div>
         </section>
@@ -967,6 +960,7 @@ export function MemoryPanel({
   onQueryChange: (query: string) => void;
 }) {
   const styles = useStyles();
+  const surfaces = useSurfaceStyles();
   const terms = queryTerms(query);
   const notes = Object.values(evidence)
     .filter(
@@ -1026,7 +1020,10 @@ export function MemoryPanel({
         ) : (
           <div className={styles.cards}>
             {matchedBeliefs.map((belief) => (
-              <Card role="article" className={styles.card} key={belief.id}>
+              <article
+                className={mergeClasses(surfaces.surface, styles.card)}
+                key={belief.id}
+              >
                 <Body1>
                   “<Highlight text={belief.text} terms={terms} />”
                 </Body1>
@@ -1040,7 +1037,7 @@ export function MemoryPanel({
                     claim={`${preRead.name} · Extracted belief: “${belief.text}”`}
                   />
                 </div>
-              </Card>
+              </article>
             ))}
           </div>
         )}
