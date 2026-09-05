@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clients/{client_id}/memory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Client Memory */
+        get: operations["client_memory_api_clients__client_id__memory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/communications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Communications Data */
+        get: operations["communications_data_api_communications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/clients/{client_id}/history": {
         parameters: {
             query?: never;
@@ -191,6 +225,44 @@ export interface components {
             /** Versions */
             versions: components["schemas"]["BriefHistoryVersion"][];
         };
+        /** ClientMemory */
+        ClientMemory: {
+            /** Records */
+            records: components["schemas"]["CommunicationRecord"][];
+            /** Sources */
+            sources: {
+                [key: string]: "Cached" | "Live" | "Not connected";
+            };
+            /** Retrieval Log */
+            retrieval_log: {
+                [key: string]: string | string[];
+            }[];
+            /** Client Id */
+            client_id: string;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+        };
+        /** ClientRanking */
+        ClientRanking: {
+            /** Client Id */
+            client_id: string;
+            /** Name */
+            name: string;
+            /** Score */
+            score: number;
+            /**
+             * Urgency
+             * @enum {string}
+             */
+            urgency: "now" | "soon" | "watch";
+            /** Meeting */
+            meeting: string | null;
+            /** Reason */
+            reason: string;
+        };
         /** ClientView */
         ClientView: {
             header: components["schemas"]["ClientHeader"];
@@ -227,6 +299,65 @@ export interface components {
             };
             /** Context Issues */
             context_issues?: string[];
+        };
+        /** CommunicationRecord */
+        CommunicationRecord: {
+            /** Id */
+            id: string;
+            /** Client Id */
+            client_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "gmail" | "outlook" | "teams" | "notes" | "calendar";
+            /** Version */
+            version: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Retrieved At
+             * Format: date-time
+             */
+            retrieved_at: string;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Participants */
+            participants: string[];
+            /** Text */
+            text: string;
+            /** Topics */
+            topics: string[];
+            /**
+             * Provenance
+             * @enum {string}
+             */
+            provenance: "synthetic_fixture" | "dataset" | "recorded_live";
+            /**
+             * Availability
+             * @default Cached
+             * @enum {string}
+             */
+            availability: "Cached" | "Live";
+            /** Based On */
+            based_on?: string[];
+            /** Preference Key */
+            preference_key?: string | null;
+            /** Preference Value */
+            preference_value?: string | null;
+        };
+        /** CommunicationsResponse */
+        CommunicationsResponse: {
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+            /** Records */
+            records: components["schemas"]["NamedCommunicationRecord"][];
         };
         /** DataQualityFinding */
         DataQualityFinding: {
@@ -292,6 +423,8 @@ export interface components {
             clients: {
                 [key: string]: components["schemas"]["ClientView"];
             };
+            /** Ranking */
+            ranking?: components["schemas"]["ClientRanking"][];
             /** Calendar */
             calendar?: {
                 [key: string]: components["schemas"]["JsonValue"];
@@ -388,6 +521,57 @@ export interface components {
             detail?: components["schemas"]["ValidationError"][];
         };
         JsonValue: unknown;
+        /** NamedCommunicationRecord */
+        NamedCommunicationRecord: {
+            /** Id */
+            id: string;
+            /** Client Id */
+            client_id: string;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "gmail" | "outlook" | "teams" | "notes" | "calendar";
+            /** Version */
+            version: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Retrieved At
+             * Format: date-time
+             */
+            retrieved_at: string;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Participants */
+            participants: string[];
+            /** Text */
+            text: string;
+            /** Topics */
+            topics: string[];
+            /**
+             * Provenance
+             * @enum {string}
+             */
+            provenance: "synthetic_fixture" | "dataset" | "recorded_live";
+            /**
+             * Availability
+             * @default Cached
+             * @enum {string}
+             */
+            availability: "Cached" | "Live";
+            /** Based On */
+            based_on?: string[];
+            /** Preference Key */
+            preference_key?: string | null;
+            /** Preference Value */
+            preference_value?: string | null;
+            /** Client Name */
+            client_name: string;
+        };
         /** ReviewActionRequest */
         ReviewActionRequest: {
             /** Client Id */
@@ -537,6 +721,68 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoViewModel"];
+                };
+            };
+        };
+    };
+    client_memory_api_clients__client_id__memory_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClientMemory"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    communications_data_api_communications_get: {
+        parameters: {
+            query?: {
+                source?: ("gmail" | "outlook" | "teams" | "notes" | "calendar") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

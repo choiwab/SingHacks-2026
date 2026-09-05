@@ -118,7 +118,7 @@ function formatTime(iso: string | null | undefined): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "UTC",
+    timeZone: "Asia/Singapore",
   });
 }
 
@@ -127,13 +127,26 @@ function snippet(text: string, limit = 260): string {
   return `${text.slice(0, limit).trimEnd()}…`;
 }
 
+/** Body without the connector header lines (Subject/From/Scheduled/Location). */
+function bodyLines(text: string): string {
+  return text
+    .split("\n")
+    .filter(
+      (line) =>
+        !/^(Subject|From|To|Meeting|Scheduled|Location):/.test(line.trim()),
+    )
+    .join("\n")
+    .trim();
+}
+
 function RecordRow({ record }: { record: CommunicationRecord }) {
   const styles = useStyles();
   const navigate = useNavigate();
   const isMeeting = record.source === "calendar";
+  const firstLine = record.text.split("\n")[0] ?? "";
   const title = isMeeting
-    ? (record.text.split("\n")[0] ?? "Meeting").replace(/^Meeting:\s*/, "")
-    : (record.text.split("\n")[0] ?? "");
+    ? firstLine.replace(/^Meeting:\s*/, "") || "Meeting"
+    : firstLine.replace(/^Subject:\s*/, "") || "Message";
   return (
     <li className={styles.row}>
       <div className={styles.rowTop}>
@@ -159,12 +172,15 @@ function RecordRow({ record }: { record: CommunicationRecord }) {
           ? ` · ${record.participants.join(", ")}`
           : ""}
       </Caption1>
-      {!isMeeting && <Body1 className={styles.snippet}>{snippet(record.text)}</Body1>}
-      {isMeeting && (
-        <Body1 className={styles.snippet}>
-          {snippet(record.text.split("\n").slice(1).join("\n"))}
-        </Body1>
+      {isMeeting && record.scheduled_at && (
+        <Caption1 className={styles.meta}>
+          {formatTime(record.scheduled_at)} SGT ·{" "}
+          {/^Location: /m.test(record.text)
+            ? record.text.match(/^Location: (.*)$/m)?.[1]
+            : "No location"}
+        </Caption1>
       )}
+      <Body1 className={styles.snippet}>{snippet(bodyLines(record.text))}</Body1>
     </li>
   );
 }

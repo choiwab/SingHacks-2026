@@ -13,13 +13,13 @@ from typing import Any, cast
 
 from app.agents.briefing import rm_briefing_agent
 from app.agents.context import CommunicationLoader, context_agent
-from app.pipeline.agent_inputs import note_topics
 from app.agents.contracts import CuratedClientBundle, MeetingPack, Signal, fingerprint
 from app.agents.state import AgentState
 from app.agents.verification import verify_meeting_pack
 from app.agents.wealth import wealth_intelligence_agent
 from app.analytics.signals import build_signals
 from app.mcp.records import SOURCES, CommunicationRecord, ConnectedContext
+from app.pipeline.agent_inputs import note_topics
 from app.pipeline.generation_state import ClientFlowState
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.loaders import ArtifactStore
@@ -247,10 +247,16 @@ def member2_hooks(
         as_of = date.fromisoformat(state["as_of"])
         connected = ConnectedContext(
             records=cast(Any, state.get("connected_context") or []),
-            sources=cast(Any, state.get("connected_sources") or disconnected("", as_of, "").sources),
+            sources=cast(
+                Any,
+                state.get("connected_sources")
+                or disconnected("", datetime.combine(as_of, time.min, tzinfo=UTC), "").sources,
+            ),
             retrieval_log=cast(Any, state.get("retrieval_log") or []),
         )
-        report = verify_meeting_pack(pack, bundle(state["client_id"], as_of, state["run_id"]), connected)
+        report = verify_meeting_pack(
+            pack, bundle(state["client_id"], as_of, state["run_id"]), connected
+        )
         return {
             "verification_report": {
                 "passed": report.passed,

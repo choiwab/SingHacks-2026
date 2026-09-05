@@ -4,14 +4,23 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import date
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
+from app.mcp.records import Source
+from app.mcp.seed import seed_demo_memory
+from app.mcp.service import load_memory
+from app.mcp.store import MemoryStore
 from app.pipeline.actions import DemoUpdateRequest, ReviewActionRequest, ReviewActionResponse
-from app.pipeline.api_schemas import DemoViewModel
+from app.pipeline.api_schemas import (
+    ClientMemory,
+    CommunicationsResponse,
+    DemoViewModel,
+    NamedCommunicationRecord,
+)
 from app.pipeline.features import AnalyticsProvider, legacy_analytics
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.history import ClientHistory, load_client_history
@@ -37,6 +46,7 @@ def create_app(
     frontend_dist: Path = FRONTEND_DIST,
     curated_dir: Path | None = None,
     overlay_dir: Path | None = None,
+    memory_dir: Path | None = None,
     analytics: AnalyticsProvider = legacy_analytics,
     agents: AgentHooks | None = None,
 ) -> FastAPI:
@@ -47,6 +57,19 @@ def create_app(
     async def lifespan(application: FastAPI) -> AsyncIterator[None]:
         ledger = ReviewLedger(database)
         store = ArtifactStore(curated_dir or source_dir / "generated/curated")
+        memory = MemoryStore((memory_dir or source_dir / "generated/memory") / "records.sqlite3")
+        seed_demo_memory(memory, source_dir / "fixtures/connected/records.json")
+
+        def communications(client_id: str, cutoff: datetime, revision: str):
+            return load_memory(
+                source_dir,
+                memory,
+                client_id,
+                datetime.combine(cutoff.date(), time.min, tzinfo=UTC),
+                revision,
+                connected=None,
+            )
+
         runtime = PipelineRuntime(
             store,
             ledger,
@@ -54,8 +77,10 @@ def create_app(
             as_of=as_of,
             overlay_dir=overlay_dir,
             analytics=analytics,
-            agents=agents or member2_hooks(store),
+            agents=agents or member2_hooks(store, load_communications=communications),
+            load_communications=communications if agents is None else None,
         )
+        application.state.memory_store = memory
         application.state.review_ledger = ledger
         application.state.pipeline_runtime = runtime
         try:
@@ -82,6 +107,60 @@ def create_app(
     @application.get("/api/app", response_model=DemoViewModel)
     def app_data(request: Request) -> DemoViewModel:
         return view(request.app.state.pipeline_runtime)
+
+    def memory_for(request: Request, client_id: str) -> ClientMemory:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        with runtime.lock:
+            manifest = runtime.store.load_manifest()
+            if client_id not in manifest.client_ids:
+                raise HTTPException(status_code=404, detail="Client not found")
+            cutoff = datetime.combine(manifest.as_of, time.min, tzinfo=UTC)
+            context = load_memory(
+                source_dir,
+                request.app.state.memory_store,
+                client_id,
+                cutoff,
+                manifest.run_id,
+                connected=None,
+            )
+            sources = context.sources.copy()
+            sources.setdefault("outlook", "Not connected")
+            return ClientMemory(
+                client_id=client_id,
+                as_of=cutoff,
+                **context.model_dump(exclude={"sources"}),
+                sources=sources,
+            )
+
+    @application.get("/api/clients/{client_id}/memory", response_model=ClientMemory)
+    def client_memory(client_id: str, request: Request) -> ClientMemory:
+        return memory_for(request, client_id)
+
+    @application.get("/api/communications", response_model=CommunicationsResponse)
+    def communications_data(
+        request: Request, source: Source | None = None
+    ) -> CommunicationsResponse:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        with runtime.lock:
+            manifest = runtime.store.load_manifest()
+            records = []
+            for client_id in manifest.client_ids:
+                name = runtime.store.load_curated_bundle(
+                    client_id, run_id=manifest.run_id
+                ).profile.client_name
+                context = memory_for(request, client_id)
+                records.extend(
+                    NamedCommunicationRecord(**record.model_dump(), client_name=name)
+                    for record in context.records
+                    if source is None or record.source == source
+                )
+            records.sort(
+                key=lambda record: (record.scheduled_at or record.occurred_at, record.id),
+                reverse=True,
+            )
+            return CommunicationsResponse(
+                as_of=datetime.combine(manifest.as_of, time.min, tzinfo=UTC), records=records
+            )
 
     @application.get("/api/clients/{client_id}/history", response_model=ClientHistory)
     def client_history(

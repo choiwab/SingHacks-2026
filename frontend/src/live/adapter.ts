@@ -259,15 +259,23 @@ function adaptPreRead(view: LiveClientView): ClientPreRead {
   const gapMatch = advice
     ? /Data says: (.*?) RM note records: "(.*?)"/.exec(advice.text)
     : null;
+  // Memory-card sections cite overlapping note chunks; keep each statement once.
+  const seenBeliefs = new Set<string>();
   const beliefs = [
     ...(card.stated_needs_and_goals?.claims ?? []),
     ...(card.who_they_are?.claims ?? []),
-  ].map((claim) => ({
-    id: claim.id,
-    note_id: noteIdOf(claim.id),
-    text: claim.text,
-    citations: claim.citations?.length ? claim.citations : [claim.id],
-  }));
+  ]
+    .filter((claim) => {
+      if (seenBeliefs.has(claim.text)) return false;
+      seenBeliefs.add(claim.text);
+      return true;
+    })
+    .map((claim) => ({
+      id: claim.id,
+      note_id: noteIdOf(claim.id),
+      text: claim.text,
+      citations: claim.citations?.length ? claim.citations : [claim.id],
+    }));
   return {
     client_id: view.header.client_id,
     name: view.header.client_name,

@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import fcntl
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from copy import deepcopy
-from datetime import date
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 from threading import RLock
 from typing import Any
 
 from app.analytics.phase_a import phase_a_analytics
+from app.mcp.records import ConnectedContext
 from app.pipeline.features import AnalyticsProvider
 from app.pipeline.graph_adapter import AgentHooks, execute_client, verify_brief
 from app.pipeline.loaders import ArtifactStore
@@ -35,11 +36,13 @@ class PipelineRuntime:
         overlay_dir: Path | None = None,
         analytics: AnalyticsProvider = phase_a_analytics,
         agents: AgentHooks | None = None,
+        load_communications: Callable[[str, datetime, str], ConnectedContext] | None = None,
     ):
         self.store, self.ledger = store, ledger
         self.source_dir, self.as_of = source_dir, as_of
         self.overlay_dir = overlay_dir or source_dir / "fixtures/update"
         self.analytics, self.agents = analytics, agents
+        self.load_communications = load_communications
         self.lock = RLock()
 
     @contextmanager
@@ -109,15 +112,35 @@ class PipelineRuntime:
                 is_seed=seed,
             )
         for client_id in manifest.client_ids:
-            if self.ledger.get_brief(client_id, manifest.run_id) is not None:
+            current = self.ledger.get_brief(client_id, manifest.run_id)
+            memory_changed = False
+            if current is not None and self.load_communications is not None:
+                context = self.load_communications(
+                    client_id,
+                    datetime.combine(manifest.as_of, time.min, tzinfo=UTC),
+                    manifest.run_id,
+                )
+                saved = current.body.get("connected_context", [])
+                if isinstance(saved, dict):
+                    saved = saved.get("records", [])
+                memory_changed = saved != [r.model_dump(mode="json") for r in context.records]
+            if current is not None and not memory_changed:
                 continue
+            # Preserve explicit RM edits; their persisted evidence remains tied to that version.
+            if current is not None and current.origin == "rm_edited":
+                continue
+            version = current.brief_version + 1 if current else 1
             report = self.store.load_change_report(client_id, run_id=manifest.run_id)
             previous_brief = (
                 self.ledger.get_brief(client_id, report.prior_run_id)
                 if report.prior_run_id
                 else None
             )
-            if report.processing_mode == "no_material_change" and previous_brief:
+            if (
+                report.processing_mode == "no_material_change"
+                and previous_brief
+                and self.load_communications is None
+            ):
                 body = deepcopy(previous_brief.body)
                 verification = verify_brief(
                     self.store,
@@ -125,18 +148,18 @@ class PipelineRuntime:
                     manifest.run_id,
                     body,
                     verifier=self.agents.verifier if self.agents else None,
-                    brief_version=1,
+                    brief_version=version,
                 )
             else:
                 output = execute_client(self.store, client_id, manifest.run_id, agents=self.agents)
                 body = {key: value for key, value in output.items() if key != "verification_report"}
-                verification = {**output["verification_report"], "brief_version": 1}
+                verification = {**output["verification_report"], "brief_version": version}
             self.ledger.store_brief(
                 client_id=client_id,
                 run_id=manifest.run_id,
                 body=body,
                 verification_report=verification,
-                brief_version=1,
+                brief_version=version,
             )
 
     def review(self, request: ReviewRequest) -> dict[str, Any]:
