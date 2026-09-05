@@ -68,7 +68,7 @@ def test_projection_is_read_only_and_uses_current_persisted_version(tmp_path):
     model = build_view_model(ArtifactStore(root), ledger, source)
     assert model == build_view_model(ArtifactStore(root), ledger, source)
     assert model.data_health == "Current"  # Warning findings never alter health.
-    assert model.clients[CLIENT].brief_status == "Ready"
+    assert model.clients[CLIENT].brief_status == "Needs review"
     assert model.clients[CLIENT].brief_version == second.brief_version
     assert model.clients[CLIENT].meeting_brief == {
         "sections": {"opening": {"text": "Updated"}},
@@ -323,6 +323,9 @@ def test_missing_malformed_or_contradictory_verification_never_exposes_claims(tm
         },
         verification=report,
     )
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=SEED, brief_version=1, action="Approve"), rm="RM"
+    )
     model = build_view_model(ArtifactStore(root), ledger, source)
     assert model.data_health == "Needs confirmation"
     assert model.clients[CLIENT].brief_status == "Needs review"
@@ -336,5 +339,58 @@ def test_explicit_passing_checks_allow_verified_content(tmp_path, checks):
     root, _run, source, ledger = setup_projection(tmp_path)
     store_brief(ledger, verification={"passed": True, "checks": checks})
     model = build_view_model(ArtifactStore(root), ledger, source)
-    assert model.clients[CLIENT].brief_status == "Ready"
+    assert model.clients[CLIENT].brief_status == "Needs review"
     assert model.clients[CLIENT].meeting_brief is not None
+
+
+def test_current_version_approval_does_not_transfer_between_runs(tmp_path):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    store_brief(ledger)
+    ledger.add_run(run_id=UPDATE, pipeline_version="1", as_of="2026-08-26", source_hashes={})
+    store_brief(ledger, run_id=UPDATE)
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=UPDATE, brief_version=1, action="Approve"), rm="RM"
+    )
+    assert (
+        build_view_model(ArtifactStore(root), ledger, source).clients[CLIENT].brief_status
+        == "Needs review"
+    )
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=SEED, brief_version=1, action="Approve"), rm="RM"
+    )
+    assert (
+        build_view_model(ArtifactStore(root), ledger, source).clients[CLIENT].brief_status
+        == "Ready"
+    )
+
+
+@pytest.mark.parametrize("reference", ["record_ids", "citations"])
+def test_connected_envelope_resolves_memory_and_preserves_calendar_provenance(tmp_path, reference):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    record = {
+        "id": "calendar:1",
+        "client_id": CLIENT,
+        "source": "calendar",
+        "occurred_at": "2026-08-20T00:00:00Z",
+        "retrieved_at": "2026-08-26T00:00:00Z",
+        "scheduled_at": "2026-08-26T15:00:00Z",
+        "availability": "Cached",
+        "provenance": "synthetic_fixture",
+        "text": "Discuss objectives",
+    }
+    store_brief(
+        ledger,
+        body={
+            "connected_context": {
+                "records": [record],
+                "sources": {"calendar": "Cached"},
+                "retrieval_log": [],
+            },
+            "memory_card": {"needs": [{"text": "Discuss objectives", reference: [record["id"]]}]},
+        },
+    )
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.connected_evidence == {record["id"]: record}
+    assert model.calendar == [record]
+    assert model.clients[CLIENT].memory_tab == [record]
+    assert model.evidence == {}

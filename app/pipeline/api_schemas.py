@@ -62,4 +62,11 @@ class DemoViewModel(ContractModel):
     clients: dict[str, ClientView]
     calendar: list[dict[str, JsonValue]] = Field(default_factory=list)
     evidence: dict[str, Evidence] = Field(default_factory=dict)
+    connected_evidence: dict[str, dict[str, JsonValue]] = Field(
+        default_factory=dict,
+        description=(
+            "Cited Connected Records keyed by id, preserving connector provenance "
+            "and availability separately from dataset Evidence."
+        ),
+    )
     reviews: list[ReviewRecord] = Field(default_factory=list)

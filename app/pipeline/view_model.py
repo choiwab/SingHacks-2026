@@ -97,14 +97,16 @@ def _references(value: Any) -> set[str]:
     result: set[str] = set()
     if isinstance(value, dict):
         for key, item in value.items():
-            if key == "evidence_id" and isinstance(item, str):
+            if key in {"evidence_id", "record_id"} and isinstance(item, str):
                 result.add(item)
-            elif key in {"evidence_ids", "citations"} and isinstance(item, list):
+            elif key in {"evidence_ids", "record_ids", "citations"} and isinstance(item, list):
                 for reference in item:
                     if isinstance(reference, str):
                         result.add(reference)
                     elif isinstance(reference, dict):
-                        identifier = reference.get("evidence_id", reference.get("id"))
+                        identifier = reference.get(
+                            "evidence_id", reference.get("record_id", reference.get("id"))
+                        )
                         if isinstance(identifier, str):
                             result.add(identifier)
             result.update(_references(item))
@@ -157,6 +159,8 @@ def build_view_model(
     calendar: list[dict[str, Any]] = []
     calendar_seen: set[str] = set()
     references: dict[str, set[str]] = {}
+    connected_records: dict[str, dict[str, Any]] = {}
+    reviews = ledger.list(manifest.run_id)
     needs_confirmation = (
         bool(manifest.context_issues)
         or store.load_data_quality_report(run_id=manifest.run_id).has_errors
@@ -176,17 +180,39 @@ def build_view_model(
         client_unconfirmed = failed or quality.has_errors or bool(context_issues)
         needs_confirmation = needs_confirmation or client_unconfirmed
         brief = body.get("meeting_brief")
+        applicable_reviews = [
+            review
+            for review in reviews
+            if review.client_id == client_id
+            and persisted is not None
+            and review.brief_version == persisted.brief_version
+        ]
+        approved = bool(applicable_reviews) and applicable_reviews[-1].action == "Approve"
         status = (
             "Not prepared"
             if not _prepared(brief)
-            else ("Needs review" if client_unconfirmed or not verified else "Ready")
+            else ("Needs review" if client_unconfirmed or not verified or not approved else "Ready")
         )
         connected = body.get("connected_context", [])
+        # PR30 persists a ConnectedContext envelope; older runs stored its records directly.
+        if isinstance(connected, dict):
+            connected = connected.get("records", [])
         for item in connected:
-            if item.get("type") in {"calendar", "meeting"} or item.get("kind") in {
-                "calendar",
-                "meeting",
-            }:
+            identifier = item.get("id", item.get("record_id"))
+            if isinstance(identifier, str):
+                previous = connected_records.get(identifier)
+                if previous is not None and previous != item:
+                    raise ValueError(f"Conflicting connected record: {identifier}")
+                connected_records[identifier] = item
+            if (
+                item.get("type") in {"calendar", "meeting"}
+                or item.get("source") == "calendar"
+                or item.get("kind")
+                in {
+                    "calendar",
+                    "meeting",
+                }
+            ):
                 key = json.dumps(item, sort_keys=True)
                 if key not in calendar_seen:
                     calendar.append(item)
@@ -232,11 +258,18 @@ def build_view_model(
         data_health=health,
         clients=clients,
         calendar=calendar,
-        reviews=ledger.list(manifest.run_id),
+        reviews=reviews,
     )
     requested = _references(result.model_dump(mode="json"))
     evidence_ids = set()
     for identifier in requested:
         evidence_ids.update(references.get(identifier, {identifier}))
-    result.evidence = store.load_evidence(sorted(evidence_ids), run_id=manifest.run_id)
+    result.connected_evidence = {
+        identifier: connected_records[identifier]
+        for identifier in sorted(evidence_ids)
+        if identifier in connected_records
+    }
+    result.evidence = store.load_evidence(
+        sorted(evidence_ids - result.connected_evidence.keys()), run_id=manifest.run_id
+    )
     return result
