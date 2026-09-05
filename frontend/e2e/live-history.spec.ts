@@ -18,7 +18,8 @@ test("approved seed Brief stays historical after a Controlled Update and reset r
       run_id: updated.run_id,
       client_id: clientId,
       brief_version: updated.clients[clientId].brief_version,
-      text: "Reset test review state",
+      text: "",
+      reason: "Reset test review state",
     },
   });
   expect(rejected.ok()).toBeTruthy();
