@@ -201,3 +201,34 @@ verification reports, associated Review Decisions, and persisted operational tra
 the selected run's `prior_run_id` ancestry, so reset excludes later update runs by default.
 Only verified brief content is returned; failed versions retain their version and verification
 reasons. This endpoint performs no generation and does not expose model chain-of-thought.
+
+## Communication-only refresh
+
+With `member2_hooks` configured, `POST /api/clients/{client_id}/refresh` accepts the current
+`run_id` and `brief_version`. It reads one complete communication snapshot for that client,
+validates its client and as-of boundary, and generates/verifies a new pack only when the
+communication content revision changes. The response includes `changed`, the resulting
+`brief_version`, `communication_revision`, and `verification_report`. Fetch `/api/app` afterward
+for the gated projection. A read of `/api/app` never refreshes communications.
+
+Financial artifact files, hashes and `run_id` are unchanged. The ledger retains the original
+snapshot, exact records and retrieved spans alongside the generated pack. The revision includes
+record content/version and source availability, but excludes record ordering, retrieval logs and
+`retrieved_at` polling timestamps. An unchanged snapshot creates no version and preserves edits
+and reviews. Changed content, record deletion, or a source-availability change creates a new
+version requiring fresh approval. The full verifier remains an injected data-team dependency.
+
+A stale run or brief version returns 409; a missing client returns 404. Invalid or unavailable
+snapshots or unsuccessful generation return 502 without replacing the prior brief or exposing
+raw connector errors. A failed generation does not cache the new revision, so the same snapshot
+can be retried after recovery. A complete candidate that fails verification is stored as a new,
+unapprovable version.
+A runtime without a configured communication/generation adapter returns 409. Connector loaders
+must supply complete, client-scoped snapshots through the existing loader interface. Generation
+consumes the exact snapshot read by refresh, without retrieving it again.
+
+Reset keeps its existing semantics: select the seed financial run and that run's latest persisted
+brief and communication revision. It does not rewind communication changes already made within
+the seed run. Reset and restart do not fetch connector state; all earlier versions and reviews
+remain in the history endpoint; after reset, pass an explicit `run_id` to inspect later update-run
+versions. Explicit refresh is required to admit newer connector records.

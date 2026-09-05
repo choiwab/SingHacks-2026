@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/clients/{client_id}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh Communications */
+        post: operations["refresh_communications_api_clients__client_id__refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/reviews": {
         parameters: {
             query?: never;
@@ -227,6 +244,30 @@ export interface components {
             };
             /** Context Issues */
             context_issues?: string[];
+        };
+        /** CommunicationRefreshRequest */
+        CommunicationRefreshRequest: {
+            /** Run Id */
+            run_id: string;
+            /** Brief Version */
+            brief_version: number;
+        };
+        /** CommunicationRefreshResponse */
+        CommunicationRefreshResponse: {
+            /** Client Id */
+            client_id: string;
+            /** Run Id */
+            run_id: string;
+            /** Brief Version */
+            brief_version: number;
+            /** Communication Revision */
+            communication_revision: string;
+            /** Changed */
+            changed: boolean;
+            /** Verification Report */
+            verification_report: {
+                [key: string]: unknown;
+            };
         };
         /** DataQualityFinding */
         DataQualityFinding: {
@@ -594,6 +635,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DemoViewModel"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    refresh_communications_api_clients__client_id__refresh_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommunicationRefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommunicationRefreshResponse"];
                 };
             };
             /** @description Validation Error */

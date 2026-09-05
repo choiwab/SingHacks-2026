@@ -9,10 +9,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass
+from datetime import date
 from typing import Any, NotRequired, cast
 
 from langgraph.graph import END, START, StateGraph
 
+from app.pipeline.communications import CommunicationSnapshot
 from app.pipeline.generation_state import ClientFlowState
 from app.pipeline.legacy_verification import evidence_gate
 from app.pipeline.loaders import ArtifactStore
@@ -21,6 +23,7 @@ Node = Callable[[ClientFlowState], dict[str, Any]]
 
 
 class ArtifactFlowState(ClientFlowState):
+    communication_snapshot: NotRequired[dict[str, Any]]
     signal_set: NotRequired[list[dict[str, Any]]]
     connected_context: NotRequired[list[dict[str, Any]]]
     memory_card: NotRequired[dict[str, Any] | None]
@@ -46,6 +49,7 @@ def rm_briefing_agent(state: ClientFlowState) -> dict[str, Any]:
 class AgentHooks:
     """Dependency seam for Member 2 agents and Member 4's complete verifier."""
 
+    communications: Callable[[str, date, str], CommunicationSnapshot] | None = None
     context: Node | None = None
     wealth: Node | None = None
     briefing: Node = rm_briefing_agent
@@ -124,6 +128,8 @@ def verify_brief(
             {
                 key: deepcopy(brief[key])
                 for key in (
+                    "communication_snapshot",
+                    "communication_revision",
                     "pack",
                     "pack_version",
                     "memory_index",
@@ -153,10 +159,16 @@ def execute_client(
     run_id: str,
     *,
     agents: AgentHooks | None = None,
+    communication_snapshot: CommunicationSnapshot | None = None,
 ) -> dict[str, Any]:
     """Execute generation and verification, stopping before the review-ledger boundary."""
     hooks = agents or AgentHooks()
     initial = _state(store, client_id, run_id)
+    if communication_snapshot is not None:
+        snapshot = CommunicationSnapshot.model_validate(communication_snapshot.model_dump())
+        if snapshot.client_id != client_id or snapshot.as_of.isoformat() != initial["as_of"]:
+            raise ValueError("Communication snapshot must match the pinned client and date")
+        initial["communication_snapshot"] = snapshot.model_dump(mode="json")
     if hooks.generator is not None:
         output = hooks.generator(initial)
         verification_state = {**initial, **output, "ranked_insights": output.get("insights", [])}
