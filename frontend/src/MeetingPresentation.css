@@ -1,0 +1,177 @@
+body.presenting-meeting {
+  overflow: hidden;
+}
+.meeting-presentation-root {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: auto;
+  background: #f3f5f7;
+  color: #172d3b;
+  font-family: "Segoe UI", sans-serif;
+}
+.meeting-presentation-controls {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: #fff;
+  border-bottom: 1px solid #d9e0e5;
+  z-index: 1;
+}
+.meeting-presentation-controls span {
+  font-size: 0.875rem;
+  color: #435968;
+}
+.meeting-document {
+  max-width: 64rem;
+  margin: 1.5rem auto;
+  padding: 2rem 4rem;
+  background: white;
+}
+.meeting-document-brand {
+  font-size: 0.875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.meeting-document-status {
+  display: inline-block;
+  padding: 0.5rem 0.75rem;
+  background: #eaf1f5;
+  font-weight: 600;
+}
+.meeting-document h1 {
+  font-size: clamp(2.3rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+  font-weight: 600;
+  margin: 1rem 0;
+  text-wrap: balance;
+}
+.meeting-document-intro {
+  font-size: 1.05rem;
+}
+.meeting-document-metadata {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  padding-block: 1rem;
+  border-block: 1px solid #d9e0e5;
+}
+.meeting-document dt {
+  color: #435968;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+}
+.meeting-document dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.meeting-document-run {
+  grid-column: 1 / -1;
+}
+.meeting-document-run dd {
+  font-size: 0.8rem;
+}
+.meeting-document-notice {
+  color: #435968;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.meeting-document-content {
+  margin-top: 3rem;
+}
+.meeting-document section {
+  margin-block: 2.5rem;
+}
+.meeting-document h2 {
+  font-size: 1rem;
+  color: #435968;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+.meeting-document-content p {
+  font-size: 1.2rem;
+  line-height: 1.7;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+.meeting-document-content section:first-child p {
+  font-size: 1.5rem;
+  line-height: 1.55;
+}
+.meeting-document sup {
+  font-size: 0.7rem;
+  color: #435968;
+  white-space: nowrap;
+}
+.meeting-document-sources {
+  border-top: 1px solid #d9e0e5;
+  padding-top: 1rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.meeting-document-sources li {
+  padding-left: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+.meeting-document-footer {
+  margin-top: 3rem;
+  font-size: 0.75rem;
+  color: #435968;
+}
+@media (max-width: 40rem) {
+  .meeting-document {
+    margin: 0;
+    padding: 2rem 1.25rem;
+  }
+  .meeting-presentation-controls {
+    padding: 0.75rem;
+  }
+  .meeting-presentation-controls span {
+    display: none;
+  }
+}
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  body.presenting-meeting {
+    overflow: visible;
+  }
+  body.presenting-meeting > :not(.meeting-presentation-root) {
+    display: none !important;
+  }
+  .meeting-presentation-root {
+    position: static;
+    overflow: visible;
+    background: white;
+  }
+  .meeting-presentation-controls {
+    display: none !important;
+  }
+  .meeting-document {
+    margin: 0;
+    padding: 0;
+    max-width: none;
+  }
+  .meeting-document h1 {
+    font-size: 28pt;
+  }
+  .meeting-document-content p,
+  .meeting-document-content section:first-child p {
+    font-size: 12pt;
+  }
+  .meeting-document section {
+    break-inside: avoid;
+  }
+  .meeting-document-sources {
+    break-before: auto;
+  }
+}
