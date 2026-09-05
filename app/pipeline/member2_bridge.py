@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from copy import deepcopy
-from datetime import date, datetime
+from datetime import UTC, date, datetime, time
 from typing import Any, cast
 
 from app.agents.briefing import rm_briefing_agent
@@ -17,6 +17,7 @@ from app.agents.contracts import CuratedClientBundle, MeetingPack, Signal
 from app.agents.state import AgentState
 from app.agents.wealth import wealth_intelligence_agent
 from app.mcp.records import SOURCES, ConnectedContext
+from app.pipeline.communications import CommunicationSnapshot
 from app.pipeline.generation_state import ClientFlowState
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.loaders import ArtifactStore
@@ -69,8 +70,39 @@ def member2_hooks(
     does not define Member 2 topic/uncertainty strings or integral score conversion.
     """
 
+    def communications(client_id: str, as_of: date, revision: str) -> CommunicationSnapshot:
+        return CommunicationSnapshot(
+            client_id=client_id,
+            as_of=as_of,
+            context=load_communications(
+                client_id, datetime.combine(as_of, time.max, UTC), revision
+            ),
+        )
+
     def generate(initial: ClientFlowState) -> dict[str, Any]:
         client_id, run_id = initial["client_id"], initial["run_id"]
+        as_of = date.fromisoformat(initial["as_of"])
+        override = initial.get("communication_snapshot")
+        snapshot = (
+            CommunicationSnapshot.model_validate(override)
+            if override is not None
+            else communications(client_id, as_of, run_id)
+        )
+        if snapshot.client_id != client_id or snapshot.as_of != as_of:
+            raise ValueError("Communication snapshot must match the pinned client and date")
+        snapshot_metadata = {
+            "communication_snapshot": snapshot.model_dump(mode="json"),
+            "communication_revision": snapshot.revision,
+        }
+
+        def pinned_communications(client: str, cutoff: datetime, revision: str) -> ConnectedContext:
+            if (client, cutoff, revision) != (
+                client_id,
+                datetime.combine(as_of, time.max, UTC),
+                run_id,
+            ):
+                raise ValueError("Generation must use the pinned communication snapshot")
+            return snapshot.context.model_copy(deep=True)
 
         def load_bundle(client: str, as_of: date, revision: str) -> CuratedClientBundle:
             if (client, revision) != (client_id, run_id):
@@ -113,12 +145,13 @@ def member2_hooks(
             context_agent(
                 state,
                 load_bundle=load_bundle,
-                load_communications=load_communications,
+                load_communications=pinned_communications,
                 generation_policy="v1:deterministic",
             )
         )
         if state.get("context_failed"):
             return {
+                **snapshot_metadata,
                 "meeting_brief": {},
                 "insights": [],
                 "memory_card": None,
@@ -131,6 +164,7 @@ def member2_hooks(
         pack = state.get("pack") or {}
         context = state.get("connected_context", {})
         return {
+            **snapshot_metadata,
             **project_pack(MeetingPack.model_validate(pack)),
             "trace": state.get("trace", []),
             "memory_index": state.get("memory_index"),
@@ -142,4 +176,4 @@ def member2_hooks(
             "context_issues": list(initial.get("context_issues", [])),
         }
 
-    return AgentHooks(generator=generate, edit=edit_pack)
+    return AgentHooks(generator=generate, edit=edit_pack, communications=communications)
