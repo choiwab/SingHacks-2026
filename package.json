@@ -19,7 +19,10 @@
     "test:e2e": "playwright test",
     "export:openapi": "uv run python -m scripts.export_openapi --output .generated/openapi.json",
     "generate:api": "pnpm export:openapi && openapi-typescript .generated/openapi.json -o frontend/src/generated/openapi.ts",
-    "check:contract": "uv run python -m scripts.check_contract"
+    "check:contract": "uv run python -m scripts.check_contract",
+    "dev:preview": "vite --config frontend/vite.config.ts --mode preview",
+    "build:preview": "tsc -b frontend/tsconfig.json && vite build --config frontend/vite.config.ts --mode preview",
+    "preview": "vite preview --config frontend/vite.config.ts --mode preview"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.7",

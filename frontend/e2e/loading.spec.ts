@@ -8,7 +8,7 @@ for (const width of [1280, 390]) {
     const errorDetail = `Temporary outage: ${"UpstreamUnavailable_".repeat(18)}`;
     let fail = true;
     let responseGate = Promise.resolve();
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       await responseGate;
       if (fail) {
         await route.fulfill({

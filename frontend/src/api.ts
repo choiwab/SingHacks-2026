@@ -4,6 +4,8 @@ import type {
   ReviewResponse,
 } from "./contracts";
 
+export const isPreview = import.meta.env.MODE === "preview";
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -16,19 +18,28 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       payload && typeof payload === "object" && "detail" in payload
         ? String((payload as { detail: unknown }).detail)
         : "The server did not answer. Try again.";
-    throw new Error(detail);
+    throw new Error(
+      path === "/api/app" && response.status === 404
+        ? "The dashboard API is not available yet."
+        : detail,
+    );
   }
 
   return (await response.json()) as T;
 }
 
 export function getMondayBrief(): Promise<MondayBriefProjection> {
-  return request<MondayBriefProjection>("/api/monday-brief");
+  return request<MondayBriefProjection>(
+    isPreview ? "/preview/dashboard" : "/api/app",
+  );
 }
 
 export function saveReview(review: ReviewRequest): Promise<ReviewResponse> {
-  return request<ReviewResponse>("/api/reviews", {
-    method: "POST",
-    body: JSON.stringify(review),
-  });
+  return request<ReviewResponse>(
+    isPreview ? "/preview/reviews" : "/api/reviews",
+    {
+      method: "POST",
+      body: JSON.stringify(review),
+    },
+  );
 }

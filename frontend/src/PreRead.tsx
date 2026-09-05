@@ -25,7 +25,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
-import { saveReview } from "./api";
+import { isPreview, saveReview } from "./api";
 import {
   CompactCalendar,
   DashboardHeader,
@@ -220,7 +220,9 @@ export function PreRead({
         hour: "2-digit",
         minute: "2-digit",
       });
-      setReceipt(`Review log · ${label} · ${time} · ${response.review.rm}`);
+      setReceipt(
+        `${isPreview ? "Preview review" : "Review log"} · ${label} · ${time} · ${response.review.rm}`,
+      );
       setToast(`${label} for ${preRead.name}.`);
     } catch (error) {
       setReviewError({
@@ -450,7 +452,11 @@ export function PreRead({
         <div className="edit-panel" ref={editPanel}>
           <Field
             label="Edit the opening line"
-            hint="Saved to the review log as your wording."
+            hint={
+              isPreview
+                ? "Used only in this preview session."
+                : "Saved to the review log as your wording."
+            }
             validationMessage={
               emptyOpening ? "Enter an opening line before saving." : undefined
             }
@@ -530,11 +536,14 @@ export function PreRead({
           <Caption1 id="review-guidance">
             {editing
               ? "Save or cancel your edit before approving or rejecting."
-              : "Only this decision is logged."}
+              : isPreview
+                ? "This decision is simulated, not saved."
+                : "Only this decision is logged."}
           </Caption1>
           <Caption1 id="review-session-guidance">
-            In this demo, reloading restores the generated opening and
-            unreviewed status. Saved decisions remain in the review log.
+            {isPreview
+              ? "Reloading restores the fixture opening and unreviewed status. No decisions are written to the review log."
+              : "In this demo, reloading restores the generated opening and unreviewed status. Saved decisions remain in the review log."}
           </Caption1>
         </div>
         <div className="review-actions">

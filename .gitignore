@@ -8,6 +8,7 @@ __pycache__/
 .generated/
 node_modules/
 frontend/dist/
+frontend/dist-preview/
 playwright-report/
 test-results/
 *.tsbuildinfo

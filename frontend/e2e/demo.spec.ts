@@ -7,7 +7,7 @@ for (const width of [1280, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     let missing = false;
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       const response = await route.fetch();
       const projection: MondayBriefProjection = await response.json();
       projection.facts["CL-0003"].forEach((fact) => {
@@ -263,7 +263,7 @@ for (const width of [1280, 390]) {
   test(`saved opening references wrap in the evidence drawer at ${width}px`, async ({
     page,
   }) => {
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       await route.fulfill({
         json: {
           review: {
@@ -579,7 +579,7 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     const submitted: { action: string; text: string }[] = [];
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       submitted.push(route.request().postDataJSON());
       await route.fulfill({
         status: 503,
@@ -793,7 +793,7 @@ for (const width of [1280, 390]) {
   test(`insight evidence retains questions, uncertainty, and review at ${width}px`, async ({
     page,
   }) => {
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       await route.fulfill({
         json: {
           review: {
@@ -961,7 +961,7 @@ for (const width of [1280, 390]) {
   test(`workflow evidence retains the client, status, and review at ${width}px`, async ({
     page,
   }) => {
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       await route.fulfill({
         json: {
           review: {
@@ -1189,7 +1189,7 @@ for (const width of [1280, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     const projection = await page.request
-      .get("/api/monday-brief")
+      .get("/preview/dashboard")
       .then((response) => response.json());
     for (const client of [
       { id: "CL-0003", name: "Margarethe Voss-Brenner", currency: "EUR" },
@@ -1312,7 +1312,7 @@ for (const width of [1280, 390]) {
     const saveGate = new Promise<void>((resolve) => {
       finishSave = resolve;
     });
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       const request = route.request().postDataJSON();
       submitted.push(request);
       await saveGate;
@@ -1373,7 +1373,7 @@ for (const width of [1280, 390]) {
     page,
   }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       const response = await route.fetch();
       const projection = await response.json();
       projection.pre_reads["CL-0003"].beliefs = [];
@@ -1697,7 +1697,7 @@ for (const width of [1280, 390]) {
   }) => {
     await page.setViewportSize({ width, height: 844 });
     for (const clientId of ["CL-0019", "CL-0003"]) {
-      const response = await page.request.get("/api/monday-brief");
+      const response = await page.request.get("/preview/dashboard");
       const projection: MondayBriefProjection = await response.json();
       const facts = projection.facts[clientId].filter(
         (fact) => fact.kind !== "profile",
@@ -2001,7 +2001,7 @@ for (const width of [1280, 390]) {
   test(`Memory preserves signed amounts at ${width}px`, async ({ page }) => {
     const wording =
       "Recorded -5% performance, +3.4m inflows, and −12,500.50 in fees. A 0.5% fee, -.25% adjustment, and +.75m inflow.";
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       const response = await route.fetch();
       const projection = await response.json();
       projection.evidence["rm_notes:N-024"].record.note = wording;
@@ -2078,7 +2078,7 @@ for (const width of [1280, 390]) {
   }) => {
     const wording =
       "Requested EUR 5,000 for travel, 12500 for repairs, and 1,250,000.50 for a purchase.";
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       const response = await route.fetch();
       const projection = await response.json();
       projection.evidence["rm_notes:N-024"].record.note = wording;
@@ -2206,7 +2206,7 @@ for (const width of [1280, 390]) {
 
   test(`incomplete evidence is disclosed at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.route("**/api/monday-brief", async (route) => {
+    await page.route("**/preview/dashboard", async (route) => {
       const response = await route.fetch();
       const projection = await response.json();
       const fact = projection.facts["CL-0003"].find(
@@ -2431,7 +2431,7 @@ for (const width of [1280, 390]) {
   }) => {
     const submitted: { action: string; text: string }[] = [];
     let failSave = true;
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       const request = route.request().postDataJSON();
       submitted.push(request);
       await route.fulfill({
@@ -2516,7 +2516,7 @@ for (const width of [1280, 390]) {
   }) => {
     const submitted: { action: string; text: string }[] = [];
     const errorMessage = `Review ledger unavailable for reference ${"REFERENCE".repeat(30)}.`;
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       submitted.push(route.request().postDataJSON());
       await route.fulfill({
         status: 503,
@@ -2597,7 +2597,7 @@ for (const width of [1280, 390]) {
     let finishReview!: () => void;
     let failSave = true;
     const submitted: string[] = [];
-    await page.route("**/api/reviews", async (route) => {
+    await page.route("**/preview/reviews", async (route) => {
       const request = route.request().postDataJSON();
       submitted.push(request.text);
       await new Promise<void>((resolve) => {
@@ -2665,7 +2665,7 @@ for (const width of [1280, 390]) {
   }) => {
     let reviewRequests = 0;
     page.on("request", (request) => {
-      if (request.url().endsWith("/api/reviews")) reviewRequests += 1;
+      if (request.url().endsWith("/preview/reviews")) reviewRequests += 1;
     });
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
@@ -2715,7 +2715,7 @@ for (const width of [1280, 390]) {
   }) => {
     let reviewRequests = 0;
     page.on("request", (request) => {
-      if (request.url().endsWith("/api/reviews")) reviewRequests += 1;
+      if (request.url().endsWith("/preview/reviews")) reviewRequests += 1;
     });
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/clients/CL-0003/pre-read");
@@ -2808,7 +2808,7 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await switcher
     .getByRole("button", { name: /Margarethe Voss-Brenner/ })
     .click();
-  const response = await page.request.get("/api/monday-brief");
+  const response = await page.request.get("/preview/dashboard");
   const projection: MondayBriefProjection = await response.json();
   const facts = projection.facts["CL-0003"].filter(
     (fact) => fact.kind !== "profile",
@@ -2863,7 +2863,7 @@ test("judge demo path remains navigable and responsive", async ({ page }) => {
   await expect(opening).toContainText("May I walk you through the gap?");
   const approval = page.waitForRequest(
     (request) =>
-      request.url().endsWith("/api/reviews") && request.method() === "POST",
+      request.url().endsWith("/preview/reviews") && request.method() === "POST",
   );
   await page.getByRole("button", { name: "Approve pre-read" }).click();
   expect((await approval).postDataJSON()).toMatchObject({
