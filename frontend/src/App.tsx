@@ -18,6 +18,7 @@ import {
 } from "react-router-dom";
 
 import { getMondayBrief, isPreview } from "./api";
+import { LiveDashboard } from "./LiveDashboard";
 import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
 import type { Authorship } from "./evidence";
@@ -150,7 +151,7 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
   );
 }
 
-export function App() {
+function PreviewApp() {
   const [projection, setProjection] = useState<MondayBriefProjection | null>(
     null,
   );
@@ -229,6 +230,16 @@ export function App() {
           {status}
         </main>
       )}
+    </FluentProvider>
+  );
+}
+
+export function App() {
+  return isPreview ? (
+    <PreviewApp />
+  ) : (
+    <FluentProvider theme={teamsLightTheme} className="fluent-root">
+      <LiveDashboard />
     </FluentProvider>
   );
 }

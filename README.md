@@ -279,6 +279,7 @@ pnpm check:contract
 pnpm build
 pnpm exec playwright install chromium
 pnpm test:e2e
+pnpm test:e2e:live
 ```
 
 ### Demo architecture
@@ -302,15 +303,23 @@ still needs to be connected before it can grant approval.
 [ADR 0002](docs/adr/0002-split-pipeline-along-data-team-seam.md) splits analytics, pipeline plumbing, and agent-generated prose between their owners.
 The old `GET /api/monday-brief` endpoint and generated projection models have been removed.
 The pipeline now exposes `GET /api/app`, `POST /api/reviews`, and a SQLite ledger through the
-versioned Demo View Model and review-action contracts. The frontend still needs to migrate
-from its historical preview model to those live contracts.
+versioned Demo View Model and review-action contracts. The normal frontend consumes this
+live payload directly: booked meetings select a client, the continuity panel restores dated
+Source Records and verified commitments, and the Meeting Brief exposes exact Evidence.
+Review Decisions persist against the current run and Brief version; edits create a new version
+that needs a separate approval. Stale actions offer a reload recovery path.
 Generated TypeScript types describe the live API; preview types describe the frozen fixture.
 
 React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and scenario rehearsal inside a shared Fluent UI shell.
 `pnpm dev:preview` explicitly enables a Vite fixture server at `/preview/dashboard` and a non-persistent simulated review endpoint at `/preview/reviews`.
-The handwritten preview types preserve the historical UI shape until the frontend consumes the published replacement contract.
+The handwritten preview types preserve the historical UI shape separately from the live generated contract.
 The frontend does not recalculate or generate financial content.
-Browser tests exercise this fixture preview and separately verify the live API's unavailable state.
+Browser tests exercise the fixture preview and the normal production route's withheld-content state.
+`pnpm test:e2e:live` separately exercises real API persistence and version recovery using an
+isolated temporary store with explicitly injected test-only generation and verification providers.
+Those providers are never imported by production. The default production backend still withholds
+unverified Meeting Briefs until the data-team and full Evidence Gate integration is complete;
+the UI discloses this state and does not replace it with generated or fixture content.
 
 Create a normal optimized frontend build with `pnpm build`.
 To inspect an optimized fixture preview, use `pnpm build:preview` followed by `pnpm preview`.

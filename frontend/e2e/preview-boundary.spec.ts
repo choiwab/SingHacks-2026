@@ -23,7 +23,7 @@ test("preview is disclosed and review actions never reach the live ledger", asyn
   expect(liveReviews).toEqual([]);
 });
 
-test("normal runtime reports the missing live API without substituting a fixture", async ({
+test("normal runtime renders live data without substituting a fixture", async ({
   page,
 }) => {
   const previewRequests: string[] = [];
@@ -32,16 +32,22 @@ test("normal runtime reports the missing live API without substituting a fixture
       previewRequests.push(request.url());
   });
   await page.goto("http://127.0.0.1:4174/");
-  await expect(page.getByRole("alert")).toContainText(
-    "The dashboard API is not available yet.",
-  );
+  await expect(
+    page.getByRole("heading", { name: "Since we last spoke" }),
+  ).toBeVisible();
   await expect(page.getByRole("note", { name: "Fixture preview" })).toHaveCount(
     0,
   );
-  await page.getByRole("button", { name: "Try again" }).click();
-  await expect(page.getByRole("alert")).toContainText(
-    "The dashboard API is not available yet.",
-  );
+  await expect(
+    page.getByText(/No verified Meeting Brief is available/),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Approve Meeting Brief" }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Reload current version" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Since we last spoke" }),
+  ).toBeVisible();
   expect(previewRequests).toEqual([]);
   const oldApi = await page.request.get(
     "http://127.0.0.1:4174/api/monday-brief",
