@@ -1,8 +1,9 @@
-import json
 import shutil
 
+import pandas as pd
 from test_runtime import analytics_stub
 
+from app.pipeline.evidence import evidence_id
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.runner import DEFAULT_SOURCE_DIR
@@ -16,13 +17,16 @@ def test_unchanged_facts_reverify_old_claim_against_current_source_evidence(tmp_
     source = tmp_path / "source"
     shutil.copytree(DEFAULT_SOURCE_DIR, source, ignore=shutil.ignore_patterns("generated"))
     generated = []
+    events_path = source / "event_log.csv"
+    events = pd.read_csv(events_path)
+    cited_event = evidence_id("event_log", events.iloc[0])
 
     def wealth(state):
         generated.append(state["client_id"])
-        citations = ["rm_notes:N-001"] if state["client_id"] == "CL-0001" else []
+        citations = [cited_event] if state["client_id"] == "CL-0001" else []
         return {
             "draft_brief": {
-                "sections": {"summary": {"text": "Discuss prior note.", "citations": citations}}
+                "sections": {"summary": {"text": "Discuss prior event.", "citations": citations}}
             }
         }
 
@@ -30,7 +34,7 @@ def test_unchanged_facts_reverify_old_claim_against_current_source_evidence(tmp_
         citations = state["meeting_brief"]["sections"]["summary"]["citations"]
         passed = all(identifier in state["evidence_map"] for identifier in citations)
         return {
-            "verification_report": {"passed": passed, "errors": [] if passed else ["Missing note"]}
+            "verification_report": {"passed": passed, "errors": [] if passed else ["Missing event"]}
         }
 
     service = PipelineRuntime(
@@ -41,12 +45,7 @@ def test_unchanged_facts_reverify_old_claim_against_current_source_evidence(tmp_
         agents=AgentHooks(wealth=wealth, verifier=verifier),
     )
     seed = service.seed()
-    notes_path = source / "rm_notes.json"
-    notes_path.write_text(
-        json.dumps(
-            [note for note in json.loads(notes_path.read_text()) if note["note_id"] != "N-001"]
-        )
-    )
+    events.iloc[1:].to_csv(events_path, index=False)
     updated = service.update()
     assert service.store.load_change_report("CL-0001").processing_mode == "no_material_change"
     assert generated.count("CL-0001") == 1

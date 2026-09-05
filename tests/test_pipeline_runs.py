@@ -276,3 +276,68 @@ def test_runner_passes_filtered_sources_through_each_normalization_hook(tmp_path
     )
     assert calls == ["fx", "bond", "lookthrough"]
     assert len(run.client_ids) == 20
+
+
+@pytest.mark.parametrize("overlaid", [False, True])
+def test_normalization_keeps_raw_evidence_and_normalized_bundle(tmp_path, overlaid):
+    overlay = None
+    if overlaid:
+        overlay = tmp_path / "overlay"
+        overlay.mkdir()
+        lines = (DEFAULT_SOURCE_DIR / "holdings.csv").read_text().splitlines()
+        (overlay / "holdings.csv").write_text("\n".join(lines[:2]) + "\n")
+
+    def normalize(tables, as_of):
+        tables["holdings"].loc[0, "market_value_base"] = 16904160
+        return tables
+
+    run_pipeline(
+        curated_dir=tmp_path,
+        analytics=_test_analytics,
+        pipeline_version="test-raw-evidence",
+        normalize_fx=normalize,
+        overlay=overlay,
+    )
+    store = ArtifactStore(tmp_path)
+    entry = store.load_evidence_map().entries["holdings:2025-12-31:PF-0001:SYN-EQ-0001"]
+    assert entry.record["market_value_base"] == 8452080
+    assert entry.fields["market_value_base"] == 8452080
+    assert (entry.source_file, entry.row_index) == (
+        "fixtures/update/holdings.csv" if overlaid else "holdings.csv",
+        2,
+    )
+    holding = store.load_curated_bundle("CL-0001").holdings[0]
+    assert holding.market_value_base == 16904160
+
+
+@pytest.mark.parametrize("update", ["same", "narrative", "future"])
+def test_transaction_routing_compares_eligible_content_not_overlay_location(tmp_path, update):
+    import csv
+
+    overlay = tmp_path / "overlay"
+    overlay.mkdir()
+    with (DEFAULT_SOURCE_DIR / "transactions.csv").open() as handle:
+        reader = csv.DictReader(handle)
+        fieldnames = reader.fieldnames
+        assert fieldnames is not None
+        row = next(row for row in reader if row["client_id"] == "CL-0003")
+    if update == "narrative":
+        row["narrative"] = "Transfer purpose clarified for the next meeting."
+    elif update == "future":
+        row.update(
+            transaction_id="TXN-FUTURE", trade_date="2026-08-27", settlement_date="2026-08-27"
+        )
+    with (overlay / "transactions.csv").open("w") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow(row)
+    root = tmp_path / "curated"
+    run_pipeline(curated_dir=root, analytics=_test_analytics)
+    run = run_pipeline(curated_dir=root, analytics=_test_analytics, overlay=overlay)
+    store = ArtifactStore(root)
+    for client in run.client_ids:
+        report = store.load_change_report(client)
+        changed = client == "CL-0003" and update == "narrative"
+        assert report.processing_mode == ("incremental_update" if changed else "no_material_change")
+        assert report.changed_context_sections == (["transactions"] if changed else [])
+        assert report.changed_fact_ids == []

@@ -28,7 +28,18 @@ class ArtifactFlowState(ClientFlowState):
 
 def rm_briefing_agent(state: ClientFlowState) -> dict[str, Any]:
     """Publish the existing injected draft without generating new claims."""
-    return {"meeting_brief": state.get("draft_brief", {}), "status": "brief_ready"}
+    draft = state.get("draft_brief")
+    if not draft:
+        return {
+            "context_issues": ["RM briefing received no draft"],
+            "status": "needs_confirmation",
+            "trace": ["rm_briefing_agent:failed"],
+        }
+    return {
+        "meeting_brief": draft,
+        "status": "brief_ready",
+        "trace": ["rm_briefing_agent:complete"],
+    }
 
 
 @dataclass(frozen=True)
@@ -212,4 +223,5 @@ def execute_client(
         "connected_context": result.get("connected_context", []),
         "context_issues": result.get("context_issues", []),
         "verification_report": {**result.get("verification_report", {}), "brief_version": 1},
+        "trace": result.get("trace", []),
     }

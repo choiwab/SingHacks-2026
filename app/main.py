@@ -7,14 +7,15 @@ from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
 from app.pipeline.actions import DemoUpdateRequest, ReviewActionRequest, ReviewActionResponse
 from app.pipeline.api_schemas import DemoViewModel
 from app.pipeline.features import AnalyticsProvider, legacy_analytics
 from app.pipeline.graph_adapter import AgentHooks
-from app.pipeline.loaders import ArtifactStore
+from app.pipeline.history import ClientHistory, load_client_history
+from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
 from app.pipeline.publish import read_latest
 from app.pipeline.runtime import PipelineRuntime
 from app.pipeline.schemas import ReviewRequest
@@ -80,6 +81,21 @@ def create_app(
     @application.get("/api/app", response_model=DemoViewModel)
     def app_data(request: Request) -> DemoViewModel:
         return view(request.app.state.pipeline_runtime)
+
+    @application.get("/api/clients/{client_id}/history", response_model=ClientHistory)
+    def client_history(
+        client_id: str,
+        request: Request,
+        run_id: str | None = Query(default=None, pattern=r"^[a-f0-9]{12}$"),
+    ) -> ClientHistory:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        try:
+            with runtime.lock:
+                return load_client_history(runtime.store, runtime.ledger, client_id, run_id=run_id)
+        except ArtifactNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     @application.post("/api/demo/update", response_model=DemoViewModel)
     def demo_update(payload: DemoUpdateRequest, request: Request) -> DemoViewModel:

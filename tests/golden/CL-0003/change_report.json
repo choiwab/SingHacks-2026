@@ -1,6 +1,18 @@
 {
   "affected_signal_ids": [],
   "as_of": "2026-08-26",
+  "changed_context_sections": [
+    "cash_needs",
+    "commitments",
+    "credit",
+    "holdings",
+    "liquidity",
+    "mandate_rules",
+    "portfolios",
+    "profile",
+    "rm_notes",
+    "transactions"
+  ],
   "changed_fact_ids": [
     "CL-0003:fact:change-1:delta",
     "CL-0003:fact:change-2:delta",
@@ -120,6 +132,6 @@
   ],
   "prior_run_id": null,
   "processing_mode": "first_seen",
-  "run_id": "c71cf6c45287",
+  "run_id": "f72a9d0769b6",
   "signal_changes": []
 }

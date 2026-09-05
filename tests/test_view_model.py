@@ -68,7 +68,7 @@ def test_projection_is_read_only_and_uses_current_persisted_version(tmp_path):
     model = build_view_model(ArtifactStore(root), ledger, source)
     assert model == build_view_model(ArtifactStore(root), ledger, source)
     assert model.data_health == "Current"  # Warning findings never alter health.
-    assert model.clients[CLIENT].brief_status == "Ready"
+    assert model.clients[CLIENT].brief_status == "Needs review"
     assert model.clients[CLIENT].brief_version == second.brief_version
     assert model.clients[CLIENT].meeting_brief == {
         "sections": {"opening": {"text": "Updated"}},
@@ -323,6 +323,9 @@ def test_missing_malformed_or_contradictory_verification_never_exposes_claims(tm
         },
         verification=report,
     )
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=SEED, brief_version=1, action="Approve"), rm="RM"
+    )
     model = build_view_model(ArtifactStore(root), ledger, source)
     assert model.data_health == "Needs confirmation"
     assert model.clients[CLIENT].brief_status == "Needs review"
@@ -336,5 +339,137 @@ def test_explicit_passing_checks_allow_verified_content(tmp_path, checks):
     root, _run, source, ledger = setup_projection(tmp_path)
     store_brief(ledger, verification={"passed": True, "checks": checks})
     model = build_view_model(ArtifactStore(root), ledger, source)
-    assert model.clients[CLIENT].brief_status == "Ready"
+    assert model.clients[CLIENT].brief_status == "Needs review"
     assert model.clients[CLIENT].meeting_brief is not None
+
+
+def test_current_version_approval_does_not_transfer_between_runs(tmp_path):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    store_brief(ledger)
+    ledger.add_run(run_id=UPDATE, pipeline_version="1", as_of="2026-08-26", source_hashes={})
+    store_brief(ledger, run_id=UPDATE)
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=UPDATE, brief_version=1, action="Approve"), rm="RM"
+    )
+    assert (
+        build_view_model(ArtifactStore(root), ledger, source).clients[CLIENT].brief_status
+        == "Needs review"
+    )
+    ledger.append(
+        ReviewRequest(client_id=CLIENT, run_id=SEED, brief_version=1, action="Approve"), rm="RM"
+    )
+    assert (
+        build_view_model(ArtifactStore(root), ledger, source).clients[CLIENT].brief_status
+        == "Ready"
+    )
+
+
+@pytest.mark.parametrize("reference", ["record_ids", "citations"])
+def test_connected_envelope_resolves_memory_and_preserves_calendar_provenance(tmp_path, reference):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    record = {
+        "id": "calendar:1",
+        "client_id": CLIENT,
+        "source": "calendar",
+        "occurred_at": "2026-08-20T00:00:00Z",
+        "retrieved_at": "2026-08-26T00:00:00Z",
+        "scheduled_at": "2026-08-26T15:00:00Z",
+        "availability": "Cached",
+        "provenance": "synthetic_fixture",
+        "text": "Discuss objectives",
+    }
+    store_brief(
+        ledger,
+        body={
+            "connected_context": {
+                "records": [record],
+                "sources": {"calendar": "Cached"},
+                "retrieval_log": [],
+            },
+            "memory_card": {"needs": [{"text": "Discuss objectives", reference: [record["id"]]}]},
+        },
+    )
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.connected_evidence == {record["id"]: record}
+    assert model.calendar == [record]
+    assert model.clients[CLIENT].memory_tab == [record]
+    assert model.evidence == {}
+
+
+def chunk_projection(tmp_path, *, citation=None, parent=True):
+    root, _run, source, ledger = setup_projection(tmp_path)
+    record = {
+        "id": "gmail:1",
+        "client_id": CLIENT,
+        "source": "gmail",
+        "version": "v1",
+        "text": "Prefers calls.\nDiscuss objectives.",
+        "availability": "Cached",
+        "provenance": "synthetic_fixture",
+        "occurred_at": "2026-08-20T00:00:00Z",
+        "retrieved_at": "2026-08-26T00:00:00Z",
+    }
+    chunk_id = "gmail:1#abcdef012345:0-14"
+    chunk = {
+        "id": chunk_id,
+        "record_id": record["id"],
+        "start": 0,
+        "end": 14,
+        "text": "Prefers calls.",
+        "topics": ["communication"],
+        "occurred_at": record["occurred_at"],
+    }
+    # Python's string slice is the authoritative span produced by MemoryIndex.
+    chunk["end"] = len(chunk["text"])
+    store_brief(
+        ledger,
+        body={
+            "memory_card": {
+                "communication": {"text": "Prefers calls.", "citations": [citation or chunk_id]}
+            },
+            "connected_context": {"records": [record] if parent else []},
+            "memory_index": {
+                "client_id": CLIENT,
+                "as_of": "2026-08-26T23:59:59Z",
+                "record_versions": {record["id"]: "abcdef0123456789"},
+                "chunks": {chunk_id: chunk},
+            },
+        },
+    )
+    return root, source, ledger, record, chunk
+
+
+def test_exact_connected_chunk_citation_includes_span_and_parent_provenance(tmp_path):
+    root, source, ledger, record, chunk = chunk_projection(tmp_path)
+    model = build_view_model(ArtifactStore(root), ledger, source)
+    assert model.connected_evidence == {
+        chunk["id"]: {"chunk": chunk, "record": record, "record_version": "abcdef0123456789"}
+    }
+    assert model.evidence == {}
+
+
+@pytest.mark.parametrize("parent", [False, True])
+def test_unknown_or_orphan_connected_chunk_never_resolves_from_id_prefix(tmp_path, parent):
+    citation = "gmail:1#unknown:0-14" if parent else None
+    root, source, ledger, _record, _chunk = chunk_projection(
+        tmp_path, citation=citation, parent=parent
+    )
+    with pytest.raises(ArtifactNotFound, match="gmail:1#"):
+        build_view_model(ArtifactStore(root), ledger, source)
+
+
+@pytest.mark.parametrize("defect", ["wrong_client", "wrong_span", "missing_version"])
+def test_connected_chunk_requires_matching_cached_parent(tmp_path, defect):
+    root, source, ledger, _record, chunk = chunk_projection(tmp_path)
+    current = ledger.get_brief(CLIENT, SEED)
+    assert current is not None
+    body = current.body
+    if defect == "wrong_client":
+        body["memory_index"]["client_id"] = "CL-9999"
+    elif defect == "wrong_span":
+        body["memory_index"]["chunks"][chunk["id"]]["text"] = "Fabricated text"
+    else:
+        body["memory_index"]["record_versions"] = {}
+    store_brief(ledger, body=body)
+    with pytest.raises(ArtifactNotFound, match="gmail:1#"):
+        build_view_model(ArtifactStore(root), ledger, source)
