@@ -172,6 +172,15 @@ class PipelineRuntime:
                     verifier=self.agents.verifier if self.agents else None,
                 )
                 report["brief_version"] = version
+                body["trace"] = [
+                    *body.get("trace", []),
+                    {
+                        "node": "review",
+                        "action": "Edit",
+                        "brief_version": version,
+                        "verification_passed": verification_passed(report),
+                    },
+                ]
                 current = self.ledger.store_brief(
                     client_id=request.client_id,
                     run_id=latest.run_id,

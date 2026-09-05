@@ -175,4 +175,5 @@ def execute_client(
         "connected_context": result.get("connected_context", []),
         "context_issues": result.get("context_issues", []),
         "verification_report": {**result.get("verification_report", {}), "brief_version": 1},
+        "trace": result.get("trace", []),
     }
