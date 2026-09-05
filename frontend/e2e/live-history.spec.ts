@@ -28,7 +28,9 @@ test("approved seed Brief stays historical after a Controlled Update and reset r
   expect(seeded.run_id).not.toBe(updated.run_id);
 
   await page.goto(`/clients/${clientId}/pre-read`);
-  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Approve Meeting Brief", exact: true })
+    .click();
   await expect(
     page.getByText("Reviewed meeting pack", { exact: true }),
   ).toBeVisible();

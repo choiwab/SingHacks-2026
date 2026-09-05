@@ -56,11 +56,13 @@ function VersionCard({
   title,
   other,
   compare,
+  clientId,
 }: {
   version?: BriefVersion;
   title: string;
   other?: BriefVersion;
   compare: boolean;
+  clientId: string;
 }) {
   if (!version)
     return (
@@ -121,6 +123,7 @@ function VersionCard({
         <summary>Review Decisions for this version</summary>
         {(version.reviews ?? []).filter(
           (review) =>
+            review.client_id === clientId &&
             review.run_id === version.run_id &&
             review.brief_version === version.brief_version,
         ).length === 0 ? (
@@ -129,6 +132,7 @@ function VersionCard({
           (version.reviews ?? [])
             .filter(
               (review) =>
+                review.client_id === clientId &&
                 review.run_id === version.run_id &&
                 review.brief_version === version.brief_version,
             )
@@ -327,12 +331,14 @@ function HistorySession({
           <div className="brief-history-columns">
             <VersionCard
               version={selected}
+              clientId={client.header.client_id}
               title="Earlier Meeting Brief"
               other={current}
               compare={true}
             />
             <VersionCard
               version={current}
+              clientId={client.header.client_id}
               title="Current Meeting Brief"
               other={selected}
               compare={true}
