@@ -164,8 +164,12 @@ md("""
 **What we check.** Size, shape, missing values and duplicates for all 12 source files, plus a look
 at a few real rows.
 
-**Why it matters.** Before we build anything on this data we need to know what is actually in it.
-A field we assume exists, or assume is always filled, is a bug waiting to happen in the pipeline.
+**Why it matters.** In a private bank the position file is the record of what a client owns, and
+everything downstream — the valuation, the suitability test, the tax pack — is derived from it. We
+need to know which fields are always populated before we compute anything, because a suitability
+check that silently skips a position is worse than no check at all. Nulls also mark where the
+operational seams are: a missing cost basis almost always means an asset was transferred in from
+another institution, and that one fact changes what advice is even possible for that client.
 
 **What we found.** 12 files, 1,703 rows across the tabular sources. The data is cleaner than
 production banking data usually is: **no duplicate rows in any file**, and only 12 columns anywhere
@@ -180,6 +184,12 @@ That leaves three genuinely missing things, all of which turn out to matter: `cl
 once (Fong Enterprises is a legal entity, not a person); `holdings.sector` is null for 5 rows; and
 5 rows have no cost basis at all. The last two belong to just **two instruments inside one
 portfolio, PF-0005** — which section 11 shows is a portfolio transferred in from another bank.
+
+> **Pipeline action.** Stage S1 (ingest) coerces types and parses dates explicitly rather than
+> letting pandas infer them, and stage S2 (validate) records every null as a tagged observation
+> instead of dropping the row. Nulls that are structural (a dividend has no quantity) are
+> allow-listed by `(file, column)`; anything else is written to `data_quality_report.json` with its
+> row reference. No row is ever silently discarded.
 """)
 
 code("""
@@ -280,8 +290,12 @@ clients, holdings to instruments, transactions to portfolios, facilities to port
 clients. We also check the reverse — parents with no children — and whether the client id that is
 denormalised onto `holdings` agrees with the one on `portfolios`.
 
-**Why it matters.** The pipeline will join these tables constantly. A single orphan row silently
-dropped by an inner join becomes a client whose risk we never report.
+**Why it matters.** Client reporting is built by joining these tables, and the bank is accountable
+for every number it puts in front of a client. An inner join that quietly drops an orphan position
+understates that client's wealth and can hide a breach — the kind of error that surfaces in a
+regulatory review rather than in testing. Reconciling the sum of positions back to the reported
+account value is the standard control for exactly this: if the parts do not add up to the whole,
+the whole is wrong and nothing built on it can be defended.
 
 **What we found.** **Referential integrity is perfect — zero orphans on every join, in both
 directions.** All 1,015 holdings map to the 24 portfolios; all 24 portfolios map to 20 clients;
@@ -292,6 +306,14 @@ reconciled the money: **the sum of `holdings.market_value_base` equals the `aum_
 `portfolios.csv` to within a cent for all 120 portfolio-snapshot pairs**, and the sum of
 `portfolios.aum_usd_current` equals `clients.total_aum_usd` for all 20 clients. Inner joins are
 safe here.
+
+> **Pipeline action.** Stage S2 (validate) runs these same checks and **fails closed**: if any
+> orphan, duplicate key or reconciliation break appears, the run raises with a diagnostic list
+> rather than publishing a partial bundle. The repo already has this shape in
+> `app/pipeline/sources.py` (`load_sources` raises `SourceValidationError` carrying
+> `SourceDiagnostic` rows); the two additions needed are the **AUM reconciliation** check
+> (`sum(holdings.market_value_base)` vs `portfolios.aum_<date>`, tolerance USD 0.01) and the
+> **quantity × price** check, neither of which is currently validated.
 """)
 
 code("""
@@ -388,8 +410,13 @@ md("""
 date, and which asset classes drove the change. Then we line the moves up against `event_log.csv`,
 which is the only authoritative record of what happened in the world in 2026.
 
-**Why it matters.** One snapshot describes a portfolio. Five snapshots explain it. Everything the
-product promises — "what happened and why" — lives in the comparison.
+**Why it matters.** Clients do not ask what their allocation is; they ask why their portfolio is
+down. Answering that needs at least two dated positions and a link to something that actually
+happened, which is why the event log is treated as the only authoritative source rather than
+letting a model improvise about geopolitics in front of a client. There is also a reporting
+obligation hiding here: performance and cash flow are not the same thing, and a rise in account
+value that is really a deposit must never be presented as a return. So the pipeline has to be able
+to say which part of a change was price, which was currency, and which was money moving.
 
 **What we found.** All 24 portfolios are present at all five snapshots, so there are no gaps to
 patch. The book went **USD 577.2m → 596.2m, +3.30%**, but that headline is misleading in two ways
@@ -410,7 +437,16 @@ Hormuz closed, Brent went from USD 72 to USD 104 and the VIX went from 17.8 to 3
 from there. Energy and shipping names did the opposite of the book: **Bara Nusantara Energy +35.9%
 and Pacific Orient Shipping +26.6% by 31 March alone**, with defence and aerospace +34.0% over the
 full period. Long-duration bonds were the persistent drag — the **US Treasury 2.375% of 2045 is down
-14.9%** as the 10-year yield moved 4.05% → 4.66% and US CPI went 2.7% → 4.0%.
+14.9%** as the 10-year yield moved 4.05% → 4.66% and US CPI went 2.7% → 4.0%. That is ordinary bond
+mathematics rather than a credit problem: a long-dated bond loses price when yields rise, and the
+longer the maturity the more it loses. It is also the single hardest thing to explain to an income
+client, which is why two of the RM notes are about exactly this.
+
+> **Pipeline action.** Stage S4 computes the three-way decomposition per client and per position
+> and publishes it as `change_report/<client_id>.json`. **Never expose a single "return" number
+> without its decomposition**, and never let the new-position component sit inside a performance
+> figure. Attribution must carry the `event_log` row id that supports it, using the existing
+> `event_log:<date>:<hash>` evidence key.
 """)
 
 code("""
@@ -580,9 +616,13 @@ md("""
 together) at every snapshot, and how much each allocation moved between the first and last snapshot.
 We also measure each client's return in their **own base currency**, not USD.
 
-**Why it matters.** A client's risk is the sum of their portfolios, not any one of them. And a
-European client reported in USD looks like they lost money in 2026 purely because the euro fell —
-that is a reporting artefact, not a loss they experienced.
+**Why it matters.** A bank owes its suitability assessment on the whole relationship, not on each
+account separately, so a client's real risk is the sum of their portfolios. Reporting currency
+matters just as much: a European client who earns, spends and pays tax in euros has not lost money
+because the dollar rose, and telling them otherwise damages trust for no reason. Drift also carries
+a governance meaning. Allocation that moved because markets moved is the bank's problem to correct;
+allocation that moved because the client instructed a trade is the client's decision, and the two
+belong in different queues with different paperwork.
 
 **What we found.** Two findings, and the second is the one to build on.
 
@@ -605,8 +645,15 @@ Priscilla has to have (RM notes N-007, N-016, N-028).
 
 The largest allocation drifts are all the new structured-product notes appearing from nothing:
 Abdullah Al-Mansoori 0 → 12.9%, Kim Do-Yoon 0 → 12.8%, Zhang Meiling 0 → 7.1%, Lau Chi Ming
-0 → 7.1%. These are deliberate client-directed subscriptions, not passive drift, and the pipeline
-should label them differently.
+0 → 7.1%. Every one has a matching `Structured Product Subscription` transaction whose narrative
+says the client asked for it, so these are **client-directed**, not passive drift — a different
+governance category even though the arithmetic is identical.
+
+> **Pipeline action.** Compute allocation at **household level in the client's base currency**, and
+> publish both `return_base_ccy_pct` and `return_usd_pct` in `curated_client_bundle` — never one
+> without the other. Tag each drift row `client_directed` when a transaction for that instrument
+> exists inside the period and `market_drift` otherwise. That flag decides whether the RM sees a
+> rebalancing prompt or a suitability review prompt.
 """)
 
 code("""
@@ -691,9 +738,15 @@ md("""
 `min_pct` / `max_pct` bands in `mandates.csv`, plus the single-position limit. Custody accounts are
 excluded because the bank does not manage them and they are not measured against a mandate.
 
-**Why it matters.** A breach is the most defensible alert a private bank can raise: it is a
-documented rule, a documented number, and a documented gap. It is also the first thing compliance
-will ask about.
+**Why it matters.** The mandate bands are the contract. Under the suitability regimes these
+booking centres work to — MiFID II style rules in Europe, the FinSA/FINMA framework in Switzerland,
+and the MAS conduct rules in Singapore — a bank that manages money against a stated risk profile
+must be able to show the portfolio actually matches that profile, and must document any deviation.
+A Conservative client sitting at 71% equity is not merely off-target; it is evidence that the
+assessed risk profile and the risk actually being run have come apart. That is a compliance
+exposure today and, if markets fall, a complaint the bank would struggle to defend. The operational
+distinction is drift versus client-directed: drift is the bank's to correct, while a documented
+instruction with a signed waiver on file is a different conversation entirely.
 
 **What we found.** **14 band breaches across 9 of the 20 clients** at 2026-08-26. Ranked by gap:
 
@@ -721,7 +774,17 @@ asked us not to change** (N-005).
 Separately, the Sustainable Balanced mandate carries binding exclusions, and **Aishah binti Rahman
 holds 21.3% of her sustainable mandate in instruments flagged `sustainability_excluded = Y`** —
 Global Energy Majors (11.13%) and Sunrise Palm Resources (10.17%). Note N-008 records that she
-believes the portfolio is fully aligned and was unaware of the energy fund.
+believes the portfolio is fully aligned and was unaware of the energy fund. An exclusion breach is
+stricter than a band breach: a band can be drifted through legitimately, whereas an exclusion is
+binary and the mandate documentation says it is binding.
+
+> **Pipeline action.** Two separate rules in stage S5. **`mandate_band_breach`** tests allocation
+> against `min_pct`/`max_pct` per managed portfolio, filtering out `service_model == "Custody"`.
+> **`mandate_exclusion_breach`** tests `sustainability_excluded == "Y"` against the mandate's
+> exclusion list and is always severity `high`, never "drift". Every emitted breach carries the
+> `mandates:<mandate_code>:<asset-class-slug>` evidence id plus the contributing
+> `holdings:<snapshot>:<portfolio>:<instrument>` ids, and a `waiver_note_id` field populated from
+> the RM notes when one exists — an alert that cannot see the waiver is a wrong alert.
 """)
 
 code("""
@@ -833,8 +896,14 @@ whichever named underlying performs worst. For risk purposes we therefore attrib
 notional to every named underlying**, and we say so — this is deliberately conservative and any
 number we publish must carry that caveat.
 
-**Why it matters.** This is the difference between a report and an insight. Nothing in the standard
-view tells Priscilla that Zhang Meiling has 22% of her wealth riding on one software company.
+**Why it matters.** Concentration limits exist because single-name risk is what actually destroys
+private wealth — not volatility, but one position going to zero. Two things defeat a standard
+position report. First, a structured product is booked as one line carrying the issuing bank's
+name, but economically you own whatever sits in the basket; a worst-of note behaves much more like
+selling insurance on every name in it than like holding a bond. Second, a client's shares, their
+bonds and their derivatives on the same company are three lines on the statement and one bet in
+reality — and if the issuer fails, all three fail together. Add household aggregation across
+accounts and the true number can be double what any single report shows.
 
 **What we found.** Four clients whose real single-issuer concentration only appears after this
 treatment, and — more striking — **two clients who carry double-digit exposure to a company they do
@@ -867,6 +936,15 @@ his household in one unlisted pre-IPO holding** that sits in a Custody account a
 measured against no mandate at all — and that holding is also the stale valuation from section 11.
 And Nordvind Industrial AB is held by two unrelated clients (CL-0003 at 18.4%, CL-0009 at 17.2%), so
 one single-name shock hits two households at once.
+
+> **Pipeline action.** Stage S3 builds two static reference maps that live in version control, not
+> in code comments: `lookthrough_map` (structured product id → list of underlying instrument ids,
+> derived by reading `instruments.underlying_reference`) and `issuer_map` (instrument id → issuer
+> key, grouping shares, bonds and derivatives on one company). Stage S4 then computes
+> `issuer_exposure_pct` at household level as direct holdings plus the **full notional** of every
+> note referencing that issuer. Publish `direct_pct` and `lookthrough_pct` as separate fields with
+> an explicit `attribution_basis: "worst_of_full_notional"` marker, so the conservative assumption
+> travels with the number and any consumer can see it.
 """)
 
 code("""
@@ -1008,9 +1086,15 @@ actually raise. We define three tiers from `holdings.liquidity_tier`:
 - **Sellable in days** — anything with `liquidity_tier = Daily`.
 - **Locked** — `Weekly`, `Monthly`, `Quarterly Gate` and `Illiquid`.
 
-**Why it matters.** A client can be rich and still unable to pay a tax bill. And the moment they
-sell to raise it, three other things change: their allocation, their collateral, and their tax
-position.
+**Why it matters.** Liquidity in private banking is a tiering question, not a yes-or-no. Cash is
+available today; listed funds and shares settle a couple of days after you sell; hedge funds
+typically redeem monthly with notice; semi-liquid private credit vehicles deal quarterly and the
+manager can pull a **gate** that limits how much of your redemption is actually met; private equity
+cannot be sold at all and, worse, **calls** money from you on its own schedule. So a client can be
+extremely wealthy and still unable to meet a dated bill. Forcing a sale into a bad market to hit a
+tax deadline is precisely the outcome an advisory relationship exists to prevent — a dated
+liability should be funded from assets deliberately matched to it, not from whatever happens to be
+easiest to sell that week.
 
 **What we found.** Across the book, USD 442.9m of the USD 596.2m is Daily; USD 87.9m is Illiquid and
 USD 20.1m sits behind a quarterly gate. **No client is insolvent, but nine of the twenty cannot meet
@@ -1037,7 +1121,17 @@ Two liquidity situations are worse in kind, not just degree:
   consecutive quarters. Her SGD assets fund USD obligations, and USDSGD moved from 1.290 to 1.352.
 - **Lau Chi Ming (CL-0014)** owes an HKD 60m (USD 7.7m) redevelopment contribution by mid-2027
   against USD 1.5m of cash, and his Lombard facility is at 69.4% LTV against a 70% trigger — so
-  selling collateral to raise the cash tightens the facility that is already almost breached.
+  selling collateral to raise the cash shrinks the lending value behind a facility that is already
+  almost breached. Liquidity and collateral cannot be solved independently for this client.
+
+> **Pipeline action.** Stage S3 maps `liquidity_tier` onto a settlement horizon in days
+> (`Daily → 2`, `Weekly → 7`, `Monthly → 30`, `Quarterly Gate → 90` with a `gated: true` flag,
+> `Illiquid → null`). Stage S4 computes `liquid_by_horizon` buckets and matches each
+> `planned_cash_needs` row to the earliest bucket that settles before `due_from`, weighting by
+> `certainty` (`Confirmed` = 1.0, `Likely` = 0.7, `Conditional`/`Aspirational` = 0.3 for the warn
+> threshold, and 1.0 for the stress case). Uncalled `commitments` are treated as a liability that
+> can be called at any time inside its `expected_call_window`, not as an asset. Gated positions
+> must **never** count toward funding a dated need — CL-0006 is the proof.
 """)
 
 code("""
@@ -1139,9 +1233,14 @@ md("""
 snapshots, against each facility's own margin-call trigger. LTV here is `drawn ÷ lending_value`,
 where lending value is market value after per-asset advance-rate haircuts — not raw market value.
 
-**Why it matters.** A margin call is the only alert in this dataset with a hard deadline attached.
-It also interacts with everything else: the assets you would sell to raise cash are the same assets
-pledged as collateral.
+**Why it matters.** Lombard lending is cash advanced against a pledged portfolio. The bank does not
+lend against market value — it applies an **advance rate**, or haircut, to each position according
+to how liquid and volatile it is, and the resulting **lending value** is the real collateral base.
+A diversified bond fund might be advanced at 90%, a single stock at 50%, an illiquid private fund
+at 0%. When drawn ÷ lending value crosses the margin-call trigger, the bank can demand more
+collateral or sell the client's assets, usually within days. That makes distance-to-trigger the
+only alert in this dataset with a hard clock on it. It is also doubly dangerous, because the same
+market fall that cuts lending value is when the client least wants to be a forced seller.
 
 **What we found.** Five facilities, USD-equivalent limits from SGD 6m to HKD 70m. **Two breached
 their trigger during the period and both were cured by markets rather than by any action.**
@@ -1166,7 +1265,17 @@ their trigger during the period and both were cured by markets rather than by an
 
 The reason the trend matters more than the level: CF-0002's LTV has risen at every observation
 (53.9 → 53.5 → 65.6 → 68.0 → 69.4) while CF-0003 and CF-0004 have been flat and comfortable
-throughout. The signal should be direction plus distance, not distance alone.
+throughout. The signal should be direction plus distance, not distance alone — a facility drifting
+toward its trigger over four consecutive readings is a conversation you can still have calmly,
+whereas one that arrives at the trigger is a conversation about selling this week.
+
+> **Pipeline action.** Stage S3 reshapes `credit_facilities` from its wide `<metric>_<date>` layout
+> into long form keyed by `(facility_id, snapshot_date)` — this is the only table in the dataset
+> that needs a wide-to-long transform, and doing it once at S3 keeps the date strings out of every
+> downstream query. Stage S4 computes `ltv_headroom_pp` (trigger − current LTV) and
+> `ltv_trend_direction` over the five snapshots. Lending value must be recomputed independently
+> from `holdings.market_value_base × advance_rate_pct` so the published figure can be traced to
+> positions rather than trusted from a summary column.
 """)
 
 code("""
@@ -1236,9 +1345,15 @@ a currency other than the one they are reported in and will spend in. Second, wh
 exposed to the transmission channels named in `event_log.csv` — with the Strait of Hormuz situation,
 which the event log records as **unresolved as of today**, as the worked example.
 
-**Why it matters.** Currency is the risk nobody asks about until it shows up in the return. And the
-event log is the bridge from "something happened in the world" to "this specific client is
-affected" — the only bridge we are allowed to use.
+**Why it matters.** Two exposures clients rarely ask about. **Currency**: a portfolio's job is to
+fund a life that will be lived in a particular currency, so a Japanese client retiring to Japan
+with 56% of his wealth outside the yen carries a real mismatch even if every holding performs
+well. `tax_domicile` rather than `country_of_residence` drives what a disposal actually costs, and
+in this book the two differ for most clients. **Events**: the point of a controlled event log is
+that the bank can say "this holding moved because of this event" in a form a compliance reviewer
+can audit, instead of a model free-associating about geopolitics in front of a client. The sharpest
+case is when a client's portfolio and their business are the same bet — a concentration no account
+statement can ever show, because half of it sits outside the bank.
 
 **What we found.**
 
@@ -1273,7 +1388,16 @@ the product gap, written down by the RM herself.
 Hartono is the mirror image and the more dangerous position: 45% energy exposure, a coal-mining
 family fortune, **and** a Lombard facility whose collateral is that same coal stock and which was in
 breach before the energy rally cured it. A Strait reopening hits his portfolio, his family business
-and his credit line simultaneously.
+and his credit line simultaneously. He also told the RM this account was meant to be the wealth
+*not* tied to the mine (N-001), which makes it a suitability conversation as well as a risk one.
+
+> **Pipeline action.** Stage S3 builds a third reference map, `transmission_map`, joining
+> `event_log.primary_transmission` channel keywords to instrument ids via `sector`, `region` and
+> the look-through map — curated by hand and version-controlled, because keyword matching on free
+> text is not defensible on its own. Stage S4 computes `channel_exposure_pct` per client per
+> channel and a `wealth_correlation` flag when the channel also matches
+> `clients.source_of_wealth`. Every event-driven claim published must cite its `event_log:` id;
+> **if no event row supports a statement, the pipeline must not emit it.**
 """)
 
 code("""
@@ -1389,10 +1513,14 @@ md("""
 client statement about their own portfolio, put that statement next to the number it is in tension
 with.
 
-**Why it matters.** This is the core product feature. Everything else in this notebook can be
-computed by a report. A gap between what a client believes and what they own is where the advice
-actually is — and stating it as a quotation next to a number is what makes it usable in a meeting
-rather than accusatory.
+**Why it matters.** This is where advice actually lives. A private bank's edge is not data, it is
+knowing the client, and the most valuable thing in the file is usually the gap between what a
+client believes about their money and what their money is doing. The notes also carry facts that
+exist in no structured field anywhere: a signed suitability waiver, a dealing restriction on a
+board member, a redemption gate that has not yet appeared in a valuation. A recommendation engine
+that cannot read them will confidently propose things that are unsuitable, unexecutable, or already
+agreed and on file. Presenting the gap as the client's own words beside the computed number is also
+what makes it usable in a meeting rather than accusatory.
 
 **What we found.** Nine notes contain a checkable client statement. All nine are contradicted or
 sharpened by the data. Six of the strongest:
@@ -1419,7 +1547,21 @@ pipeline would otherwise miss entirely:
 There is also one note that is a to-do rather than an observation: **N-028, dated 19 August, one
 week ago — Chalermchai Suphanburi asked whether he should move everything to deposits and Priscilla
 has not yet replied.** He is the retiring client who needs USD 1.45m a year from Q2 2027 and whose
-bonds are down 6.6%. That is the single most urgent unactioned item in the book.
+bonds are down 6.6%. Selling long bonds at a loss to sit in deposits would crystallise the loss and
+give up the yield that is supposed to fund his retirement — a classic capitulation at the wrong
+moment, and one an RM has a duty to talk through rather than execute. That is the single most
+urgent unactioned item in the book.
+
+> **Pipeline action.** Notes are a **first-class input, not decoration.** Stage S3 normalises
+> `rm_notes.json` into one row per note with parsed dates. Stage S4 attaches to each client a
+> `stated_beliefs` list (note id, quoted span, topic) and stage S5 pairs each belief with the
+> computed fact that confirms or contradicts it, emitting a `belief_gap` signal carrying both the
+> `rm_notes:<note_id>` evidence id and the contradicting fact id. Two derived flags must be
+> extracted and honoured everywhere downstream: **`waiver_on_file`** (suppresses or reclassifies a
+> breach alert) and **`dealing_restriction`** with its open window (suppresses any trade
+> recommendation on that instrument until the window opens). Extraction is assisted but
+> **RM-reviewed** — the notebook's table was built by reading all 28 notes by hand, and nothing in
+> this dataset justifies trusting an unreviewed parse of free text.
 """)
 
 code("""
