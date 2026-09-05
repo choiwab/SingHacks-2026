@@ -1,8 +1,20 @@
-# Julius Baer — Wealth Intelligence
+# Aurelis: Julius Baer Wealth Intelligence
 
-> **From Portfolio Monitoring to Intelligence: Reimagining Wealth Advisory** — Build an AI-powered wealth intelligence experience that transforms traditional portfolio monitoring into proactive, personalised, and explainable advisory insights.
+> **From Portfolio Monitoring to Intelligence: Reimagining Wealth Advisory** - Build an AI-powered wealth intelligence experience that transforms traditional portfolio monitoring into proactive, personalised, and explainable advisory insights.
 
 **SingHacks 2026**
+
+**Aurelis** is our answer: a Julius Baer-styled RM workbench where a deterministic data
+pipeline and a LangGraph agent flow turn the synthetic book into ranked priorities, verified
+meeting briefs, per-client agent memory (RM notes merged with connected Gmail and Calendar
+records), and evidence trails behind every claim. The RM can re-run the pipeline from the UI
+and watch the whole dashboard refresh. Quickstart:
+
+```bash
+uv sync --locked --all-groups
+pnpm install --frozen-lockfile
+pnpm dev          # FastAPI on :8000 + live dashboard on http://localhost:5173
+```
 
 ---
 
@@ -220,50 +232,57 @@ and add `--mcp-url http://127.0.0.1:8001/mcp` to the flow command. See
 [persistent memory and MCP](docs/PERSISTENT_MEMORY_MCP.md) for interaction imports, recall,
 review across restarts, and local-only security limits. External Gmail/Teams accounts are not connected.
 
-### Run the dashboard fixture preview
+### Run the live Aurelis dashboard
 
-The demo is a Fluent UI RM dashboard for Priscilla Ong, following the [Member 1 dashboard and UX brief](docs/PRD_TEAMS_RM_INTELLIGENCE.md).
-The home screen shows a top-five priority queue and a compact upcoming-meetings calendar.
-The persistent client switcher searches all 20 clients by name or ID.
-Each selected client has a profile, a preview of three facts in source order, an evidence drawer, and Overview, Insights, Data, and Memory tabs.
-The meeting brief leads from the client's statements and portfolio facts to an RM review checkpoint.
-An optional scenario rehearsal shows two precomputed Strait scenario ranges with their snapshot context and uncertainty.
-The dashboard currently runs against a frozen synthetic fixture while the frontend integration with the versioned Demo View Model API is being completed.
-The preview is explicitly labeled, and Approve, Edit, and Reject only simulate decisions for the current page session.
-No preview decisions are written to the real review ledger.
-See [the preview boundary and fixture provenance](frontend/preview/README.md).
-No API key or external service is required.
+The demo is a Fluent UI RM dashboard for Priscilla Ong, restyled to the Julius Baer brand
+(royal navy, Jost, sharp corners) and wired end to end to the live backend.
 
 ```bash
+uv sync --locked --all-groups
 pnpm install --frozen-lockfile
-pnpm dev:preview
+pnpm dev
 ```
 
-Open `http://127.0.0.1:5173`.
+Open `http://localhost:5173`. First boot seeds the pipeline run, generates and verifies all
+20 briefs, and imports the synthetic connected-memory fixture (Gmail and Calendar records for
+six clients); no API key or external service is required.
 
-For a short dashboard walkthrough:
+What the live dashboard shows:
 
-1. Search for `CL-0003` in the client switcher and select Margarethe Voss-Brenner, or select her meeting in the calendar.
-2. Inspect the fact preview, then find **You said / Data says** in **Overview** to compare her stated aversion to risk with 71.5% equity against a 30% limit.
-3. Open that comparison's **Why?** action to inspect the claim, calculation inputs, and exact source rows; press Escape to return to the same action.
-4. Review **What changed**, **Rules & money**, and **Planned cash needs**, including the EUR 3.4m inheritance-tax cash need.
-   Open its evidence to inspect the source dates and certainty.
-5. Open **Data** for grouped facts, or **Memory** and search `"safe and boring"` for the exact recorded phrase with highlighted matches and note evidence.
-6. Select **Review meeting brief** to reach the **RM checkpoint**, choose **Edit**, revise the opening, and choose **Save edit** or **Cancel edit**.
-7. Choose **Approve pre-read** to simulate approval and show **Approved by the RM**; use **Reject** to return a brief to **Needs review**.
-8. Optionally select Abdullah Al-Mansoori and open **Scenario rehearsal** to compare the Strait ranges and their evidence.
+* **Home** - a backend-ranked priority queue, the week's meetings pulled from connected
+  calendars, the two featured contrast personas (aggressive vs conservative) with allocation
+  donuts, and **Run pipeline / Reset to seed** controls showing the run id, data health, and
+  refresh time. Running the pipeline applies the update overlay, regenerates briefs, and
+  refreshes the whole dashboard in place.
+* **Meeting brief** (per client) - profile chips, allocation and change-since-snapshot charts,
+  summary-first fact cards with expandable "To confirm" checklists, verified **Agent insights**
+  with signal scores and change status, You said / Data says, planned cash needs, and an RM
+  checkpoint whose Approve / Edit / Reject decisions post to the real review ledger with the
+  pinned run id and brief version.
+* **Memory tab** - each client's agent memory: RM notes merged with connected Gmail and
+  Calendar records, searchable with highlighted matches; key-insight chips jump straight into
+  the search.
+* **Calendar & inbox** (mail icon in the rail) - the connected-sources surface: a day-grouped
+  agenda and a filterable message list across all clients, every row opening that client's
+  brief.
+* **Why?** everywhere - every claim, chart, and insight opens an evidence drawer tracing to
+  exact source rows, memory excerpts, and calculation inputs.
 
-Saved wording and review status survive navigation between clients and screens in the current page session.
-The calendar labels saved edits and approvals **Ready**, while the authorship badge distinguishes **Edited by the RM** from **Approved by the RM**.
-Reloading resets these visible states; preview decisions are never persisted.
+For a short walkthrough: open Margarethe Voss-Brenner (CL-0003) from the persona strip,
+compare **You said / Data says** (her stated risk aversion against 71.5% equity vs a 30%
+limit), open its **Why?**, review **Agent insights** and the EUR 3.4m inheritance-tax cash
+need, search **Memory** for `"safe and boring"`, then approve the brief at the RM checkpoint.
+Back on Home, select **Run pipeline** and watch the run id and briefs refresh. Ravi
+Chandrasekaran (CL-0002) is the aggressive counterpart, with a hardcoded **Pitch deck** per
+persona.
 
-The controlled incremental-update demonstration in the PRD still requires frontend integration with Member 3's API and versioned Demo View Model.
-**Planned cash needs** renders the supplied deadline facts in their original order.
-Private-fund commitments and open follow-ups are not available.
-Ranked insights, per-insight questions and update states, the two-minute summary, discussion topics, data health, refresh and generation timestamps, and meeting purposes require upstream projection fields.
-The UI discloses these gaps instead of inferring them from confidence, fact kinds, or raw evidence.
-The Insights tab labels the supplied opening as an opening, not as a separate generated question.
-The language label reflects the client's reporting preference; some clients have English fallback openings, while Margarethe's opening is German.
+### Fixture preview mode
+
+`pnpm dev:preview` serves the same screens against a frozen synthetic fixture
+(`frontend/preview/dashboard.json`) with simulated, non-persisted reviews; it is explicitly
+labeled and never touches the live API or ledger. See
+[the preview boundary and fixture provenance](frontend/preview/README.md). Scenario rehearsal
+(two precomputed Strait ranges) currently ships in preview mode only.
 
 Run the automated checks with:
 
@@ -300,21 +319,27 @@ checkpoints. No trades or client communications are sent.
 
 The older `scripts.member_2_demo --update` is retained as a labelled fixture-replay regression
 example; it is separate from the data-directory command above and uses a fixture-only verifier.
-The optional Member 3 pipeline bridge persists generated packs and edits; its full verifier
-still needs to be connected before it can grant approval.
+The Member 3 pipeline bridge is wired into the FastAPI app: it generates packs from the pinned
+curated bundle, persists them in the ledger, and verifies them with the full Evidence Gate, so
+briefs reach the UI verified and approvable. Generation and verification rederive from the
+same pinned bundle. The demo's connected records (Gmail and Calendar) are a labelled synthetic
+fixture imported into the durable memory store; live OAuth connectors remain opt-in.
 
 [ADR 0002](docs/adr/0002-split-pipeline-along-data-team-seam.md) splits analytics, pipeline plumbing, and agent-generated prose between their owners.
 The old `GET /api/monday-brief` endpoint and generated projection models have been removed.
-The pipeline now exposes `GET /api/app`, `POST /api/reviews`, and a SQLite ledger through the
-versioned Demo View Model and review-action contracts. The frontend still needs to migrate
-from its historical preview model to those live contracts.
-Generated TypeScript types describe the live API; preview types describe the frozen fixture.
+The live API now exposes `GET /api/app` (the versioned Demo View Model with per-client views,
+verified insights, memory, ranking, calendar, and data health), `GET /api/clients/{id}/memory`
+(merged per-client agent memory with source availability), `GET /api/communications`
+(cross-client calendar and mail records), `POST /api/demo/update` (RM-triggered pipeline runs:
+apply the update overlay or reset to the seed run), `POST /api/reviews`, and
+`GET /api/clients/{id}/history`, backed by the SQLite review ledger and durable memory store.
 
-React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and scenario rehearsal inside a shared Fluent UI shell.
+React 19, TypeScript, Vite, and React Router render the RM home, selected-client dashboard, and the connected calendar/inbox inside a shared Fluent UI shell.
+In live mode the frontend consumes the Demo View Model through a presentation adapter
+(`frontend/src/live/adapter.ts`) that maps typed facts, brief sections, and memory records
+into the screens, humanizes fallback claim wording, and never recalculates financial content.
 `pnpm dev:preview` explicitly enables a Vite fixture server at `/preview/dashboard` and a non-persistent simulated review endpoint at `/preview/reviews`.
-The handwritten preview types preserve the historical UI shape until the frontend consumes the published replacement contract.
-The frontend does not recalculate or generate financial content.
-Browser tests exercise this fixture preview and separately verify the live API's unavailable state.
+Browser tests exercise the fixture preview and separately verify that live mode renders from the backend without touching preview fixtures.
 
 Create a normal optimized frontend build with `pnpm build`.
 To inspect an optimized fixture preview, use `pnpm build:preview` followed by `pnpm preview`.
