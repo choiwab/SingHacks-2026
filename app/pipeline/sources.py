@@ -1,21 +1,45 @@
-"""Validated construction behind the Monday Brief interface."""
+"""Source loading, structural validation, and content hashing for the raw dataset."""
 
 from __future__ import annotations
 
 import json
 import math
 from datetime import date
+from hashlib import sha256
 from pathlib import Path
 from typing import Any, cast
 
 import pandas as pd
-from pydantic import ValidationError
 
-from app.pipeline import TABLE_NAMES, _build_projection
-from app.wealth_intelligence.errors import ProjectionBuildError, ProjectionDiagnostic
-from app.wealth_intelligence.models import MondayBriefProjection
+from app.pipeline.errors import SourceDiagnostic, SourceValidationError
 
 BASELINE = "2025-12-31"
+
+TABLE_NAMES = (
+    "clients",
+    "credit_facilities",
+    "event_log",
+    "holdings",
+    "mandates",
+    "market_context",
+    "planned_cash_needs",
+    "portfolios",
+)
+
+SOURCE_FILES = (
+    "clients.csv",
+    "portfolios.csv",
+    "holdings.csv",
+    "instruments.csv",
+    "transactions.csv",
+    "mandates.csv",
+    "commitments.csv",
+    "planned_cash_needs.csv",
+    "credit_facilities.csv",
+    "market_context.csv",
+    "event_log.csv",
+    "rm_notes.json",
+)
 
 REQUIRED_COLUMNS: dict[str, set[str]] = {
     "clients": {
@@ -108,6 +132,19 @@ DATE_COLUMNS: dict[str, tuple[str, ...]] = {
 }
 
 
+def source_versions(source_dir: Path) -> tuple[dict[str, str], list[str]]:
+    """Return content hashes and readable diagnostics for every expected source."""
+    versions: dict[str, str] = {}
+    issues: list[str] = []
+    for name in SOURCE_FILES:
+        path = source_dir / name
+        try:
+            versions[name] = sha256(path.read_bytes()).hexdigest()
+        except OSError as exc:
+            issues.append(f"{name}: {exc.strerror or 'unreadable'}")
+    return versions, issues
+
+
 def _diagnostic(
     file: str,
     code: str,
@@ -115,15 +152,15 @@ def _diagnostic(
     *,
     row: int | None = None,
     field: str | None = None,
-) -> ProjectionDiagnostic:
-    return ProjectionDiagnostic(file=file, code=code, message=message, row=row, field=field)
+) -> SourceDiagnostic:
+    return SourceDiagnostic(file=file, code=code, message=message, row=row, field=field)
 
 
 def _load_sources(
     source_dir: Path,
-) -> tuple[dict[str, pd.DataFrame], list[dict[str, Any]], list[ProjectionDiagnostic]]:
+) -> tuple[dict[str, pd.DataFrame], list[dict[str, Any]], list[SourceDiagnostic]]:
     tables: dict[str, pd.DataFrame] = {}
-    diagnostics: list[ProjectionDiagnostic] = []
+    diagnostics: list[SourceDiagnostic] = []
     for name in TABLE_NAMES:
         path = source_dir / f"{name}.csv"
         try:
@@ -156,7 +193,7 @@ def _duplicates(
     frame: pd.DataFrame,
     file: str,
     field: str,
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     if field not in frame:
         return
@@ -177,7 +214,7 @@ def _orphans(
     file: str,
     field: str,
     valid: set[str],
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     if field not in frame:
         return
@@ -195,7 +232,7 @@ def _orphans(
 
 
 def _validate_numeric_columns(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     for name, fields in NUMERIC_COLUMNS.items():
         frame = tables[name]
@@ -215,7 +252,7 @@ def _validate_numeric_columns(
 
 
 def _validate_date_columns(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     for name, fields in DATE_COLUMNS.items():
         frame = tables[name]
@@ -234,7 +271,7 @@ def _validate_date_columns(
 
 
 def _validate_scalar_columns(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     _validate_numeric_columns(tables, diagnostics)
     _validate_date_columns(tables, diagnostics)
@@ -244,7 +281,7 @@ def _duplicate_composite(
     frame: pd.DataFrame,
     file: str,
     fields: list[str],
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     for index in frame.index[frame.duplicated(fields, keep=False)]:
         identity = ":".join(str(frame.at[index, field]) for field in fields)
@@ -271,7 +308,7 @@ def _has_fx_path(market: pd.DataFrame, currency: str, snapshot: str) -> bool:
 
 
 def _validate_required_columns(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     for name, required in REQUIRED_COLUMNS.items():
         frame = tables.get(name)
@@ -289,7 +326,7 @@ def _validate_required_columns(
 
 
 def _validate_unique_keys(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     holdings = tables["holdings"]
     mandates = tables["mandates"]
@@ -335,7 +372,7 @@ def _validate_unique_keys(
 
 
 def _validate_foreign_keys(
-    tables: dict[str, pd.DataFrame], diagnostics: list[ProjectionDiagnostic]
+    tables: dict[str, pd.DataFrame], diagnostics: list[SourceDiagnostic]
 ) -> None:
     clients = tables["clients"]
     portfolios = tables["portfolios"]
@@ -360,7 +397,7 @@ def _validate_foreign_keys(
 def _validate_notes(
     notes: list[dict[str, Any]],
     clients: pd.DataFrame,
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     client_ids = set(clients["client_id"].astype(str))
     note_ids: set[str] = set()
@@ -409,7 +446,7 @@ def _validate_portfolio_snapshots(
     holdings: pd.DataFrame,
     clients: pd.DataFrame,
     snapshot: str,
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     client_ids = set(clients["client_id"].astype(str))
     holding_client_ids = holdings["client_id"].astype(str)
@@ -451,7 +488,7 @@ def _validate_portfolio_snapshots(
 def _validate_fx_quotes(
     tables: dict[str, pd.DataFrame],
     snapshot: str,
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     holdings = tables["holdings"]
     needs = tables["planned_cash_needs"]
@@ -488,7 +525,7 @@ def _validate_sources(
     tables: dict[str, pd.DataFrame],
     notes: list[dict[str, Any]],
     as_of: date,
-    diagnostics: list[ProjectionDiagnostic],
+    diagnostics: list[SourceDiagnostic],
 ) -> None:
     _validate_required_columns(tables, diagnostics)
     if diagnostics:
@@ -503,142 +540,13 @@ def _validate_sources(
     _validate_fx_quotes(tables, snapshot, diagnostics)
 
 
-def _fact_kind(fact_id: str) -> str:
-    key = fact_id.rsplit(":", 1)[-1]
-    if key.startswith("change-"):
-        return "change"
-    return {"mandate-gap": "mandate_gap", "profile": "profile"}.get(key, key)
-
-
-def _validate_ranked_client_sections(
-    raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]
-) -> None:
-    ranked_clients = {priority["client_id"] for priority in raw["ranking"]}
-    for section in ("facts", "pre_reads", "scenarios"):
-        section_clients = set(raw[section])
-        for client_id in sorted(ranked_clients - section_clients):
-            diagnostics.append(
-                _diagnostic(
-                    "projection",
-                    "missing_client_projection",
-                    f"{client_id} is ranked but absent from {section}",
-                )
-            )
-
-
-def _validate_fact_references(
-    raw: dict[str, Any],
-    evidence_ids: set[str],
-    diagnostics: list[ProjectionDiagnostic],
-) -> None:
-    for client_id, client_facts in raw["facts"].items():
-        for fact in client_facts:
-            fact["kind"] = _fact_kind(fact["id"])
-            for citation in [*fact["source_rows"], *fact["event_ids"]]:
-                if citation not in evidence_ids:
-                    diagnostics.append(
-                        _diagnostic(
-                            "projection",
-                            "unresolved_citation",
-                            f"{client_id} fact references {citation!r}",
-                        )
-                    )
-
-
-def _validate_pre_read_references(
-    raw: dict[str, Any],
-    valid_citations: set[str],
-    diagnostics: list[ProjectionDiagnostic],
-) -> None:
-    cited_groups = []
-    for pre_read in raw["pre_reads"].values():
-        cited_groups.extend(pre_read["what_changed"])
-        cited_groups.extend(pre_read["rules_money"])
-        cited_groups.extend([pre_read["gap"], pre_read["opening"], pre_read["uncertainty"]])
-        cited_groups.extend(pre_read["beliefs"])
-        cited_groups.extend(pre_read["workflow"])
-    for item in cited_groups:
-        for citation in item["citations"]:
-            if citation not in valid_citations:
-                diagnostics.append(
-                    _diagnostic("projection", "unresolved_citation", f"unknown {citation!r}")
-                )
-
-
-def _validate_scenario_ranges(raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]) -> None:
-    for client_id, scenarios in raw["scenarios"].items():
-        for scenario_name, scenario in scenarios.items():
-            numeric = (
-                scenario["portfolio_value"],
-                scenario["low_delta"],
-                scenario["high_delta"],
-                scenario["low_pct"],
-                scenario["high_pct"],
-            )
-            if not all(math.isfinite(float(value)) for value in numeric):
-                diagnostics.append(
-                    _diagnostic(
-                        "projection",
-                        "non_finite_scenario",
-                        f"{client_id} {scenario_name} contains a non-finite range",
-                    )
-                )
-            if (
-                scenario["low_delta"] > scenario["high_delta"]
-                or scenario["low_pct"] > scenario["high_pct"]
-            ):
-                diagnostics.append(
-                    _diagnostic(
-                        "projection",
-                        "invalid_scenario_range",
-                        f"{client_id} {scenario_name} has an unordered range",
-                    )
-                )
-
-
-def _validate_references(raw: dict[str, Any], diagnostics: list[ProjectionDiagnostic]) -> None:
-    evidence_ids = set(raw["evidence"])
-    fact_ids = {fact["id"] for client_facts in raw["facts"].values() for fact in client_facts}
-    _validate_ranked_client_sections(raw, diagnostics)
-    _validate_fact_references(raw, evidence_ids, diagnostics)
-    _validate_pre_read_references(raw, evidence_ids | fact_ids, diagnostics)
-    _validate_scenario_ranges(raw, diagnostics)
-
-
-def build_monday_brief(source_dir: Path, *, as_of: date) -> MondayBriefProjection:
-    """Build a fully validated projection or raise one aggregated error."""
+def load_sources(
+    source_dir: Path, *, as_of: date
+) -> tuple[dict[str, pd.DataFrame], list[dict[str, Any]]]:
+    """Load every raw source and validate it, or raise one aggregated error."""
     source_dir = Path(source_dir)
     tables, notes, diagnostics = _load_sources(source_dir)
     _validate_sources(tables, notes, as_of, diagnostics)
     if diagnostics:
-        raise ProjectionBuildError(diagnostics)
-    try:
-        raw = _build_projection(tables, notes, as_of)
-        _validate_references(raw, diagnostics)
-        if diagnostics:
-            raise ProjectionBuildError(diagnostics)
-        return MondayBriefProjection.model_validate(raw)
-    except ValidationError as exc:
-        for error in exc.errors(include_url=False):
-            diagnostics.append(
-                _diagnostic(
-                    "projection",
-                    "contract_validation",
-                    error["msg"],
-                    field=".".join(str(part) for part in error["loc"]),
-                )
-            )
-        raise ProjectionBuildError(diagnostics) from exc
-    except ProjectionBuildError:
-        raise
-    except (KeyError, IndexError, TypeError, ValueError, ZeroDivisionError) as exc:
-        diagnostics.append(_diagnostic("projection", "build_failed", str(exc)))
-        raise ProjectionBuildError(diagnostics) from exc
-
-
-def save_projection(projection: MondayBriefProjection, destination: Path) -> None:
-    """Write an optional diagnostic snapshot; runtime callers choose if and where."""
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    temporary = destination.with_suffix(f"{destination.suffix}.tmp")
-    temporary.write_text(projection.model_dump_json(indent=2), encoding="utf-8")
-    temporary.replace(destination)
+        raise SourceValidationError(diagnostics)
+    return tables, notes
