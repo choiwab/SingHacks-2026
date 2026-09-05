@@ -6,7 +6,7 @@ from typing import Literal, Self
 
 from pydantic import AwareDatetime, Field, model_validator
 
-from app.wealth_intelligence.models import ContractModel
+from app.pipeline.schemas import ContractModel
 
 Source = Literal["gmail", "teams", "notes", "calendar"]
 SOURCES: tuple[Source, ...] = ("gmail", "teams", "notes", "calendar")

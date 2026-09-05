@@ -1,4 +1,4 @@
-"""Projection build diagnostics."""
+"""Source validation diagnostics."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True, slots=True)
-class ProjectionDiagnostic:
+class SourceDiagnostic:
     file: str
     code: str
     message: str
@@ -22,9 +22,9 @@ class ProjectionDiagnostic:
         return f"{location}: {self.code}: {self.message}"
 
 
-class ProjectionBuildError(ValueError):
-    """Raised once with every source or contract problem found in a build."""
+class SourceValidationError(ValueError):
+    """Raised once with every source problem found in a load."""
 
-    def __init__(self, diagnostics: list[ProjectionDiagnostic]) -> None:
+    def __init__(self, diagnostics: list[SourceDiagnostic]) -> None:
         self.diagnostics = tuple(diagnostics)
-        super().__init__("Projection build failed:\n" + "\n".join(map(str, diagnostics)))
+        super().__init__("Source validation failed:\n" + "\n".join(map(str, diagnostics)))

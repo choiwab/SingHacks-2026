@@ -2,7 +2,8 @@
 
 The hard migration from `app/client_flow` is complete. All three agents and graph controls live
 here; communication replay and TF-IDF retrieval live in `app/mcp`. There are no compatibility exports.
-The existing Monday Brief API and frontend remain operational independently of this new graph.
+The graph runs independently of the dashboard. The incoming data-team migration removed the
+Monday Brief API; the frontend still needs the replacement API/view-model integration.
 
 ## Run the offline example
 
@@ -57,8 +58,11 @@ citations look like `gmail:record#contenthash:start-end`: `start` and `end` inde
 state. The verifier can reconstruct hashes with `record_content()` and `fingerprint()`.
 
 The old raw-source helper, selected-client adapter, citation traversal and pre-read gate have moved
-to `app/wealth_intelligence/{source_inspection,client_artifacts,evidence,legacy_verification}.py`.
-Their existing rules are preserved for the data team. `legacy_verification` does **not** validate
+to `app/pipeline/{source_inspection,client_artifacts,evidence,legacy_verification}.py`.
+The shared Fact/Evidence contracts live in `app/pipeline/schemas.py`; calculators remain in
+`app/analytics`. Raw calculator records do not yet carry the typed Fact `kind` discriminator;
+Member 3's final curated loader must publish the typed contract, not pass raw dictionaries directly.
+`legacy_verification` does **not** validate
 the new meeting pack and is not wired into the graph.
 
 ## Review and update

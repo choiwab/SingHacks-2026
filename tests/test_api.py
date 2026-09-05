@@ -1,12 +1,13 @@
 import asyncio
 import json
-from datetime import date
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import httpx
 
 from app.main import create_app
-from app.wealth_intelligence import build_monday_brief
+from app.pipeline.schemas import ReviewRequest
+from app.store import ReviewLedger
 
 DATA = Path(__file__).resolve().parents[1] / "data"
 
@@ -21,67 +22,39 @@ def send(app, method: str, path: str, **kwargs) -> httpx.Response:
     return asyncio.run(request())
 
 
-def test_app_factory_has_no_build_or_write_side_effects(tmp_path) -> None:
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
-    app = create_app(
-        source_dir=tmp_path,
-        database=":memory:",
-        projection=projection,
-        save_diagnostic=False,
-    )
+def test_app_factory_has_no_read_or_write_side_effects(tmp_path) -> None:
+    app = create_app(source_dir=tmp_path, database=tmp_path / "reviews.sqlite3")
 
-    assert not hasattr(app.state, "projection")
+    assert not hasattr(app.state, "client_ids")
+    assert not hasattr(app.state, "review_ledger")
     assert list(tmp_path.iterdir()) == []
 
 
-def test_home_health_and_typed_projection_are_available(tmp_path) -> None:
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
-    frontend = tmp_path / "frontend"
-    frontend.mkdir()
-    (frontend / "index.html").write_text(
-        "<main>Calls to make. Meetings to prepare.</main>", encoding="utf-8"
-    )
-    app = create_app(
-        source_dir=tmp_path,
-        database=":memory:",
-        projection=projection,
-        save_diagnostic=False,
-        frontend_dist=frontend,
-    )
+def test_health_reports_as_of_and_old_projection_route_is_gone(tmp_path) -> None:
+    app = create_app(source_dir=DATA, database=":memory:")
 
-    home = send(app, "GET", "/")
     health = send(app, "GET", "/api/health")
-    data = send(app, "GET", "/api/monday-brief")
-    old_endpoint = send(app, "GET", "/api/app")
+    projection = send(app, "GET", "/api/monday-brief")
 
-    assert home.status_code == 200
-    assert "Calls to make. Meetings to prepare." in home.text
     assert health.json() == {"status": "ok", "as_of": "2026-08-26"}
-    assert data.status_code == 200
-    assert data.json()["schema_version"] == 1
-    assert len(data.json()["ranking"]) == 20
-    assert old_endpoint.status_code == 404
+    assert projection.status_code == 404
 
 
-def test_frontend_falls_back_to_index_for_client_routes(tmp_path) -> None:
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
+def test_frontend_serves_index_and_falls_back_for_client_routes(tmp_path) -> None:
     frontend = tmp_path / "frontend"
     assets = frontend / "assets"
     assets.mkdir(parents=True)
     (frontend / "index.html").write_text("<main id='root'></main>", encoding="utf-8")
     (assets / "app.js").write_text("console.log('ready')", encoding="utf-8")
-    app = create_app(
-        source_dir=tmp_path,
-        database=":memory:",
-        projection=projection,
-        save_diagnostic=False,
-        frontend_dist=frontend,
-    )
+    app = create_app(source_dir=DATA, database=":memory:", frontend_dist=frontend)
 
-    route = send(app, "GET", "/clients/CL-0003/pre-read")
+    home = send(app, "GET", "/")
+    route = send(app, "GET", "/clients/CL-0003")
     asset = send(app, "GET", "/assets/app.js")
-    unknown_api = send(app, "GET", "/api/not-a-route")
+    unknown_api = send(app, "GET", "/api/unknown")
 
+    assert home.status_code == 200
+    assert "id='root'" in home.text
     assert route.status_code == 200
     assert "id='root'" in route.text
     assert asset.status_code == 200
@@ -90,14 +63,8 @@ def test_frontend_falls_back_to_index_for_client_routes(tmp_path) -> None:
 
 
 def test_review_is_persisted_to_sqlite(tmp_path) -> None:
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
     database = tmp_path / "reviews.sqlite3"
-    app = create_app(
-        source_dir=tmp_path,
-        database=database,
-        projection=projection,
-        save_diagnostic=False,
-    )
+    app = create_app(source_dir=DATA, database=database)
 
     response = send(
         app,
@@ -111,16 +78,12 @@ def test_review_is_persisted_to_sqlite(tmp_path) -> None:
     assert response.json()["review"]["rm"] == "Priscilla Ong"
     assert response.json()["review"]["review_id"]
     assert database.exists()
+    stored = {record.review_id: record for record in ReviewLedger(database).list()}
+    assert stored[response.json()["review"]["review_id"]].client_id == "CL-0003"
 
 
 def test_review_rejects_unknown_client_and_action(tmp_path) -> None:
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
-    app = create_app(
-        source_dir=tmp_path,
-        database=":memory:",
-        projection=projection,
-        save_diagnostic=False,
-    )
+    app = create_app(source_dir=DATA, database=":memory:")
 
     missing = send(
         app,
@@ -139,34 +102,37 @@ def test_review_rejects_unknown_client_and_action(tmp_path) -> None:
     assert invalid.status_code == 422
 
 
-def test_legacy_log_is_imported_once_and_left_untouched(tmp_path) -> None:
-    generated = tmp_path / "generated"
-    generated.mkdir()
-    legacy = generated / "review_log.json"
-    legacy_payload = [
-        {
-            "client_id": "CL-0003",
-            "action": "Approve",
-            "text": "Original",
-            "rm": "Priscilla Ong",
-            "timestamp": "2026-08-26T01:00:00+00:00",
-        }
-    ]
-    legacy.write_text(json.dumps(legacy_payload), encoding="utf-8")
-    original = legacy.read_bytes()
-    projection = build_monday_brief(DATA, as_of=date(2026, 8, 26))
-    app = create_app(
-        source_dir=tmp_path,
-        database=generated / "reviews.sqlite3",
-        projection=projection,
-        save_diagnostic=False,
+def test_review_ledger_accepts_concurrent_writes(tmp_path) -> None:
+    ledger = ReviewLedger(tmp_path / "reviews.sqlite3")
+    request = ReviewRequest(client_id="CL-0003", action="Edit", text="Reviewed")
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        records = list(pool.map(lambda _: ledger.append(request, rm="Priscilla Ong"), range(12)))
+
+    assert len({record.review_id for record in records}) == 12
+    assert len(ledger.list()) == 12
+
+
+def test_legacy_import_is_transactional_and_idempotent(tmp_path) -> None:
+    source = tmp_path / "review_log.json"
+    source.write_text(
+        json.dumps(
+            [
+                {
+                    "client_id": "CL-0003",
+                    "action": "Approve",
+                    "text": "Looks good",
+                    "rm": "Priscilla Ong",
+                    "timestamp": "2026-08-26T01:00:00+00:00",
+                }
+            ]
+        ),
+        encoding="utf-8",
     )
+    ledger = ReviewLedger(":memory:")
 
-    async def start_twice() -> None:
-        async with app.router.lifespan_context(app):
-            assert len(app.state.review_ledger.list()) == 1
-        async with app.router.lifespan_context(app):
-            assert len(app.state.review_ledger.list()) == 1
-
-    asyncio.run(start_twice())
-    assert legacy.read_bytes() == original
+    assert ledger.import_legacy_json(source) == 1
+    assert ledger.import_legacy_json(source) == 0
+    assert len(ledger.list()) == 1
+    assert source.exists()
+    ledger.close()

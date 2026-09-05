@@ -10,7 +10,7 @@ from urllib.request import Request, urlopen
 from pydantic import Field
 
 from app.agents.contracts import MeetingPack
-from app.wealth_intelligence.models import ContractModel
+from app.pipeline.schemas import ContractModel
 
 
 class Wording(ContractModel):

@@ -9,7 +9,7 @@ from typing import Any, Literal, Self
 
 from pydantic import Field, model_validator
 
-from app.wealth_intelligence.models import ContractModel, Evidence, Fact
+from app.pipeline.schemas import ContractModel, Evidence, Fact
 
 
 def fingerprint(value: Any) -> str:
