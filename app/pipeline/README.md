@@ -1,5 +1,9 @@
 # Pipeline integration
 
+The default analytics provider now implements the reviewed EDA specification. See
+[`docs/DATA_PIPELINE.md`](../../docs/DATA_PIPELINE.md) for raw-source ingestion, financial
+guardrails, automatic agent consumption, caching and execution commands.
+
 Member 3 publishes typed JSON artifacts. Member 2 consumes the plain Python loader functions
 below and owns any LangChain tool wrappers. Financial formulas and verification remain Member 4's
 responsibility. Loading an artifact never runs analytics, writes a brief, or calls an agent.

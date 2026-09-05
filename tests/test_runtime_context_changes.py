@@ -119,10 +119,16 @@ def test_transaction_only_update_replaces_brief_from_current_evidence(tmp_path):
     report = service.store.load_change_report("CL-0003")
     assert report.processing_mode == "incremental_update"
     assert report.changed_context_sections == ["transactions"]
-    assert report.changed_fact_ids == report.affected_signal_ids == []
-    assert service.store.load_fact_bundle("CL-0003", run_id=seed.run_id).facts == (
-        service.store.load_fact_bundle("CL-0003", run_id=updated.run_id).facts
+    assert all(
+        identifier.startswith("CL-0003:fact:fees.financing_interest")
+        for identifier in report.changed_fact_ids
     )
+    assert report.affected_signal_ids == []
+    before_facts = service.store.load_fact_bundle("CL-0003", run_id=seed.run_id).facts
+    after_facts = service.store.load_fact_bundle("CL-0003", run_id=updated.run_id).facts
+    assert {fact.id: fact.value for fact in before_facts} == {
+        fact.id: fact.value for fact in after_facts
+    }
     previous = service.ledger.get_brief("CL-0003", seed.run_id)
     current = service.ledger.get_brief("CL-0003", updated.run_id)
     assert previous and current

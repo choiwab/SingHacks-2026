@@ -11,7 +11,8 @@ from pathlib import Path
 from threading import RLock
 from typing import Any
 
-from app.pipeline.features import AnalyticsProvider, legacy_analytics
+from app.analytics.phase_a import phase_a_analytics
+from app.pipeline.features import AnalyticsProvider
 from app.pipeline.graph_adapter import AgentHooks, execute_client, verify_brief
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.publish import point_latest, read_latest
@@ -32,7 +33,7 @@ class PipelineRuntime:
         source_dir: Path = DEFAULT_SOURCE_DIR,
         as_of: date = DEFAULT_AS_OF,
         overlay_dir: Path | None = None,
-        analytics: AnalyticsProvider = legacy_analytics,
+        analytics: AnalyticsProvider = phase_a_analytics,
         agents: AgentHooks | None = None,
     ):
         self.store, self.ledger = store, ledger

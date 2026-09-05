@@ -6,7 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from app.pipeline.agent_inputs import load_curated_bundle, load_dataset_notes
+from app.pipeline.agent_inputs import load_dataset_notes
+from app.pipeline.agent_inputs import load_legacy_curated_bundle as load_curated_bundle
 from app.pipeline.errors import SourceValidationError
 
 DATA = Path(__file__).resolve().parents[1] / "data"

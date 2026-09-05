@@ -1,11 +1,12 @@
 """Legacy adaptation publishes only sourced numbers, including KYC deadlines."""
 
+from app.pipeline.features import legacy_analytics
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.runner import run_pipeline
 
 
 def test_all_published_facts_have_resolvable_evidence_and_kyc_deadlines_are_sourced(tmp_path):
-    manifest = run_pipeline(curated_dir=tmp_path)
+    manifest = run_pipeline(curated_dir=tmp_path, analytics=legacy_analytics)
     assert len(manifest.client_ids) == 20
     store = ArtifactStore(tmp_path)
     evidence = store.load_evidence_map().entries
@@ -53,7 +54,7 @@ def test_actual_zero_cash_need_amount_is_retained_with_source_evidence(tmp_path)
         writer.writeheader()
         writer.writerow(row)
     root = tmp_path / "curated"
-    run_pipeline(curated_dir=root, overlay=overlay)
+    run_pipeline(curated_dir=root, overlay=overlay, analytics=legacy_analytics)
     store = ArtifactStore(root)
     facts = {fact.id: fact for fact in store.load_fact_bundle("CL-0003").facts}
     amount = facts["CL-0003:fact:deadline:amount"]

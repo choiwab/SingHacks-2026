@@ -1,21 +1,13 @@
-"""Analytics adapters. Formulas remain owned by app.analytics.
-
-The legacy adapter is transitional: it exposes existing analytics numerics as single Facts.
-Member 4 supplies the Phase A provider for new Signal definitions and historical runs.
-"""
+"""Analytics provider contract and explicit legacy compatibility adapter."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timedelta
 from numbers import Real
 from typing import Protocol
 
-import pandas as pd
-
-from app.analytics.facts import AS_OF, _tokens, fact_engine
-from app.pipeline.evidence import evidence_id, slug
-from app.pipeline.schemas import Fact, FactBundle, Signal, SignalSet
+from app.analytics.facts import AS_OF, fact_engine
+from app.pipeline.schemas import Fact, FactBundle, SignalSet
 from app.pipeline.sources import _has_fx_path
 from app.pipeline.stages.clean import CleanedSources
 
