@@ -3,7 +3,6 @@ import {
   Body1,
   Body1Strong,
   Caption1,
-  Link,
   MessageBar,
   MessageBarBody,
   MessageBarTitle,
@@ -40,7 +39,7 @@ const useStyles = makeStyles({
   },
   columns: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 5fr) minmax(0, 7fr)",
+    gridTemplateColumns: "minmax(0, 2fr) minmax(0, 3fr)",
     columnGap: tokens.spacingHorizontalXL,
     rowGap: tokens.spacingVerticalXL,
     alignItems: "start",
@@ -55,6 +54,12 @@ const useStyles = makeStyles({
     paddingBlock: tokens.spacingVerticalL,
     paddingInline: tokens.spacingHorizontalL,
   },
+  panelHead: {
+    display: "flex",
+    alignItems: "baseline",
+    justifyContent: "space-between",
+    columnGap: tokens.spacingHorizontalM,
+  },
   list: {
     display: "flex",
     flexDirection: "column",
@@ -62,30 +67,71 @@ const useStyles = makeStyles({
     padding: 0,
     listStyleType: "none",
   },
+  dayLabel: {
+    marginTop: tokens.spacingVerticalM,
+  },
+  // A row is one click target: the whole record opens the client's brief.
   row: {
     display: "flex",
     flexDirection: "column",
-    rowGap: tokens.spacingVerticalXS,
+    alignItems: "stretch",
+    rowGap: tokens.spacingVerticalXXS,
+    width: "100%",
+    textAlign: "start",
+    cursor: "pointer",
+    backgroundColor: "transparent",
+    border: "none",
     borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
     paddingBlock: tokens.spacingVerticalM,
+    paddingInline: 0,
+    transitionProperty: "background-color",
+    transitionDuration: "180ms",
+    transitionTimingFunction: "ease",
+    ":hover": { backgroundColor: tokens.colorNeutralBackground2 },
+  },
+  meetingRow: {
+    display: "grid",
+    gridTemplateColumns: "3.5rem minmax(0, 1fr)",
+    columnGap: tokens.spacingHorizontalM,
+    alignItems: "baseline",
+  },
+  time: {
+    fontVariantNumeric: "tabular-nums",
+    color: tokens.colorBrandForeground1,
+    fontWeight: 500,
+  },
+  meetingText: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXXS,
+    minWidth: 0,
   },
   rowTop: {
     display: "flex",
     alignItems: "baseline",
     justifyContent: "space-between",
     columnGap: tokens.spacingHorizontalM,
-    flexWrap: "wrap",
   },
-  snippet: {
-    color: tokens.colorNeutralForeground2,
-    whiteSpace: "pre-line",
+  title: {
+    minWidth: 0,
     overflowWrap: "anywhere",
+  },
+  sourceTag: {
+    flexShrink: 0,
   },
   meta: {
     color: tokens.colorNeutralForeground3,
   },
-  dayLabel: {
-    marginTop: tokens.spacingVerticalM,
+  snippet: {
+    color: tokens.colorNeutralForeground2,
+    overflowWrap: "anywhere",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  },
+  empty: {
+    color: tokens.colorNeutralForeground3,
   },
 });
 
@@ -102,8 +148,7 @@ function recordDate(record: CommunicationRecord): string {
 }
 
 function formatDay(iso: string): string {
-  const date = new Date(`${iso}T00:00:00Z`);
-  return date.toLocaleDateString("en-SG", {
+  return new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-SG", {
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -113,18 +158,12 @@ function formatDay(iso: string): string {
 
 function formatTime(iso: string | null | undefined): string {
   if (!iso) return "";
-  const date = new Date(iso);
-  return date.toLocaleTimeString("en-SG", {
+  return new Date(iso).toLocaleTimeString("en-SG", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
     timeZone: "Asia/Singapore",
   });
-}
-
-function snippet(text: string, limit = 260): string {
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit).trimEnd()}…`;
 }
 
 /** Body without the connector header lines (Subject/From/Scheduled/Location). */
@@ -135,52 +174,86 @@ function bodyLines(text: string): string {
       (line) =>
         !/^(Subject|From|To|Meeting|Scheduled|Location):/.test(line.trim()),
     )
-    .join("\n")
+    .join(" ")
     .trim();
 }
 
-function RecordRow({ record }: { record: CommunicationRecord }) {
-  const styles = useStyles();
-  const navigate = useNavigate();
-  const isMeeting = record.source === "calendar";
+function recordTitle(record: CommunicationRecord): string {
   const firstLine = record.text.split("\n")[0] ?? "";
-  const title = isMeeting
-    ? firstLine.replace(/^Meeting:\s*/, "") || "Meeting"
-    : firstLine.replace(/^Subject:\s*/, "") || "Message";
+  if (record.source === "calendar")
+    return firstLine.replace(/^Meeting:\s*/, "") || "Meeting";
+  if (record.source === "notes") {
+    const body = bodyLines(record.text);
+    return body.length > 72 ? `${body.slice(0, 72).trimEnd()}…` : body;
+  }
+  return firstLine.replace(/^Subject:\s*/, "") || "Message";
+}
+
+function MeetingRow({
+  record,
+  open,
+}: {
+  record: CommunicationRecord;
+  open: () => void;
+}) {
+  const styles = useStyles();
   return (
-    <li className={styles.row}>
-      <div className={styles.rowTop}>
-        <Body1Strong>{title}</Body1Strong>
-        <Badge appearance="tint" color={isMeeting ? "brand" : "informative"}>
-          {SOURCE_LABEL[record.source] ?? record.source}
-        </Badge>
-      </div>
-      <Caption1 className={styles.meta}>
-        {formatDay(recordDate(record))}
-        {isMeeting && record.scheduled_at
-          ? ` · ${formatTime(record.scheduled_at)}`
-          : ""}
-        {" · "}
-        <Link
-          as="button"
-          type="button"
-          onClick={() => navigate(`/clients/${record.client_id}/pre-read`)}
-        >
-          {record.client_name ?? record.client_id}
-        </Link>
-        {record.participants.length > 0
-          ? ` · ${record.participants.join(", ")}`
-          : ""}
-      </Caption1>
-      {isMeeting && record.scheduled_at && (
+    <li>
+      <button type="button" className={styles.row} onClick={open}>
+        <span className={styles.meetingRow}>
+          <Body1Strong className={styles.time}>
+            {formatTime(record.scheduled_at)}
+          </Body1Strong>
+          <span className={styles.meetingText}>
+            <Body1Strong className={styles.title}>
+              {recordTitle(record)}
+            </Body1Strong>
+            <Caption1 className={styles.meta}>
+              {record.client_name ?? record.client_id}
+            </Caption1>
+          </span>
+        </span>
+      </button>
+    </li>
+  );
+}
+
+function MessageRow({
+  record,
+  showSource,
+  open,
+}: {
+  record: CommunicationRecord;
+  showSource: boolean;
+  open: () => void;
+}) {
+  const styles = useStyles();
+  const snippet = bodyLines(record.text);
+  return (
+    <li>
+      <button type="button" className={styles.row} onClick={open}>
+        <span className={styles.rowTop}>
+          <Body1Strong className={styles.title}>
+            {recordTitle(record)}
+          </Body1Strong>
+          {showSource && (
+            <Badge
+              appearance="tint"
+              color="informative"
+              className={styles.sourceTag}
+            >
+              {SOURCE_LABEL[record.source] ?? record.source}
+            </Badge>
+          )}
+        </span>
         <Caption1 className={styles.meta}>
-          {formatTime(record.scheduled_at)} SGT ·{" "}
-          {/^Location: /m.test(record.text)
-            ? record.text.match(/^Location: (.*)$/m)?.[1]
-            : "No location"}
+          {formatDay(recordDate(record))} ·{" "}
+          {record.client_name ?? record.client_id}
         </Caption1>
-      )}
-      <Body1 className={styles.snippet}>{snippet(bodyLines(record.text))}</Body1>
+        {record.source !== "notes" && (
+          <Body1 className={styles.snippet}>{snippet}</Body1>
+        )}
+      </button>
     </li>
   );
 }
@@ -193,6 +266,7 @@ function RecordRow({ record }: { record: CommunicationRecord }) {
 export function Connected() {
   const styles = useStyles();
   const surfaces = useSurfaceStyles();
+  const navigate = useNavigate();
   const [records, setRecords] = useState<CommunicationRecord[] | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<string>("all");
@@ -217,17 +291,22 @@ export function Connected() {
     };
   }, []);
 
-  const meetings = useMemo(
-    () =>
-      (records ?? [])
-        .filter((record) => record.source === "calendar")
-        .sort((a, b) =>
-          (a.scheduled_at ?? a.occurred_at).localeCompare(
-            b.scheduled_at ?? b.occurred_at,
-          ),
+  const days = useMemo(() => {
+    const meetings = (records ?? [])
+      .filter((record) => record.source === "calendar")
+      .sort((a, b) =>
+        (a.scheduled_at ?? a.occurred_at).localeCompare(
+          b.scheduled_at ?? b.occurred_at,
         ),
-    [records],
-  );
+      );
+    const grouped = new Map<string, CommunicationRecord[]>();
+    for (const meeting of meetings) {
+      const day = recordDate(meeting);
+      grouped.set(day, [...(grouped.get(day) ?? []), meeting]);
+    }
+    return [...grouped.entries()];
+  }, [records]);
+
   const messages = useMemo(
     () =>
       (records ?? [])
@@ -236,6 +315,10 @@ export function Connected() {
         .sort((a, b) => b.occurred_at.localeCompare(a.occurred_at)),
     [records, filter],
   );
+  const meetingCount = days.reduce((total, [, rows]) => total + rows.length, 0);
+
+  const open = (record: CommunicationRecord) => () =>
+    navigate(`/clients/${record.client_id}/pre-read`);
 
   if (isPreview) {
     return (
@@ -256,9 +339,6 @@ export function Connected() {
       <header>
         <Eyebrow>Connected sources</Eyebrow>
         <h1 className={styles.heading}>Calendar & inbox</h1>
-        <Caption1 className={styles.meta}>
-          From each client's agent memory: RM notes, mail, and meetings.
-        </Caption1>
       </header>
       {error && (
         <MessageBar intent="error" role="alert">
@@ -277,21 +357,44 @@ export function Connected() {
             className={mergeClasses(surfaces.surface, styles.panel)}
             aria-label="Upcoming meetings"
           >
-            <Eyebrow>Calendar</Eyebrow>
-            {meetings.length === 0 && (
-              <Body1>No meetings in connected calendars.</Body1>
+            <div className={styles.panelHead}>
+              <Eyebrow>Calendar</Eyebrow>
+              <Caption1 className={styles.meta}>
+                {meetingCount} meeting{meetingCount === 1 ? "" : "s"}
+              </Caption1>
+            </div>
+            {meetingCount === 0 && (
+              <Body1 className={styles.empty}>
+                No meetings in connected calendars.
+              </Body1>
             )}
-            <ul className={styles.list}>
-              {meetings.map((record) => (
-                <RecordRow key={record.id} record={record} />
-              ))}
-            </ul>
+            {days.map(([day, rows]) => (
+              <div key={day}>
+                <Caption1 className={mergeClasses(styles.meta, styles.dayLabel)}>
+                  {formatDay(day)}
+                </Caption1>
+                <ul className={styles.list}>
+                  {rows.map((record) => (
+                    <MeetingRow
+                      key={record.id}
+                      record={record}
+                      open={open(record)}
+                    />
+                  ))}
+                </ul>
+              </div>
+            ))}
           </section>
           <section
             className={mergeClasses(surfaces.surface, styles.panel)}
             aria-label="Inbox"
           >
-            <Eyebrow>Inbox</Eyebrow>
+            <div className={styles.panelHead}>
+              <Eyebrow>Inbox</Eyebrow>
+              <Caption1 className={styles.meta}>
+                {messages.length} message{messages.length === 1 ? "" : "s"}
+              </Caption1>
+            </div>
             <TabList
               selectedValue={filter}
               onTabSelect={(_, data) => setFilter(String(data.value))}
@@ -302,11 +405,18 @@ export function Connected() {
               <Tab value="notes">RM notes</Tab>
             </TabList>
             {messages.length === 0 && (
-              <Body1>No messages for this filter.</Body1>
+              <Body1 className={styles.empty}>
+                No messages for this filter.
+              </Body1>
             )}
             <ul className={styles.list}>
               {messages.map((record) => (
-                <RecordRow key={record.id} record={record} />
+                <MessageRow
+                  key={record.id}
+                  record={record}
+                  showSource={filter === "all"}
+                  open={open(record)}
+                />
               ))}
             </ul>
           </section>
