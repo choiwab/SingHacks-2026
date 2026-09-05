@@ -1,8 +1,70 @@
+import {
+  Body1,
+  Caption1,
+  Card,
+  Link,
+  mergeClasses,
+  Subtitle2,
+  Title2,
+  Title3,
+  makeStyles,
+  ToggleButton,
+  tokens,
+} from "@fluentui/react-components";
 import { useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import type { MondayBriefProjection, ScenarioKey } from "./contracts";
 import { CitedList, WhyButton } from "./shared";
+
+const useStyles = makeStyles({
+  header: {
+    display: "grid",
+    gap: tokens.spacingVerticalL,
+    paddingTop: tokens.spacingVerticalXL,
+    paddingBottom: tokens.spacingVerticalXL,
+  },
+  copy: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: tokens.spacingVerticalS,
+    minWidth: 0,
+  },
+  title: { maxWidth: "none", letterSpacing: "normal" },
+  muted: { color: tokens.colorNeutralForeground3 },
+  result: {
+    display: "grid",
+    gap: tokens.spacingHorizontalXXL,
+    padding: tokens.spacingHorizontalXL,
+    "@container main (min-width: 48rem)": {
+      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+      alignItems: "center",
+    },
+  },
+  range: { margin: 0, fontVariantNumeric: "tabular-nums" },
+  amount: { whiteSpace: "nowrap" },
+  visual: { minWidth: 0, paddingBottom: tokens.spacingVerticalXS },
+  disclaimer: {
+    display: "block",
+    marginTop: "2.2rem",
+    color: tokens.colorNeutralForeground3,
+  },
+  detail: {
+    display: "flex",
+    flexDirection: "column",
+    gap: tokens.spacingVerticalM,
+    paddingTop: tokens.spacingVerticalXXL,
+  },
+  toggle: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: tokens.spacingHorizontalS,
+  },
+  option: {
+    minHeight: "44px",
+  },
+});
 
 function money(value: number, currency: string): string {
   const sign = value >= 0 ? "+" : "−";
@@ -19,6 +81,7 @@ export function Scenario({
 }: {
   projection: MondayBriefProjection;
 }) {
+  const styles = useStyles();
   const { clientId = "" } = useParams();
   const navigate = useNavigate();
   const [scenarioKey, setScenarioKey] = useState<ScenarioKey>("reopens");
@@ -31,13 +94,18 @@ export function Scenario({
         to="/"
         replace
         state={{
-          notice: `Client ${clientId || "requested"} was not found. Showing the Monday list.`,
+          notice: `Client ${clientId || "requested"} was not found. Showing the dashboard.`,
         }}
       />
     );
   }
 
   const scenario = pair[scenarioKey];
+  const valueRange = `${money(scenario.low_delta, scenario.currency)} to ${money(scenario.high_delta, scenario.currency)}`;
+  const percentRange = `${percent(scenario.low_pct)} to ${percent(scenario.high_pct)} of the snapshot portfolio`;
+  const baseline = `Portfolio baseline: ${scenario.currency} ${scenario.portfolio_value.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} · as of ${projection.as_of}.`;
+  const disclaimer = scenario.disclaimer;
+  const resultSummary = `${preRead.name} · ${scenario.name}: ${valueRange} (${percentRange}). ${baseline} ${disclaimer}`;
   const scale = (value: number) =>
     Math.max(0, Math.min(100, ((value + 20) / 40) * 100));
   const left = scale(scenario.low_pct);
@@ -49,64 +117,85 @@ export function Scenario({
       aria-labelledby="scenario-title"
     >
       <div className="screen-kicker">
-        <button
-          className="back-link"
+        <Link
+          as="button"
           type="button"
           onClick={() => navigate(`/clients/${clientId}/pre-read`)}
         >
           ← Pre-read
-        </button>
+        </Link>
         <p>
-          <span>Feature 02</span> Evidence-backed Scenario Rehearsal
+          <strong>Scenario rehearsal</strong>
         </p>
       </div>
 
-      <header className="scenario-heading">
-        <div>
-          <p className="eyebrow accent">Precomputed · {preRead.name}</p>
-          <h1 id="scenario-title">Rehearse the Strait conversation.</h1>
+      <header className={styles.header}>
+        <div className={styles.copy}>
+          <Caption1 className={styles.muted}>{preRead.name}</Caption1>
+          <Title3 as="h1" id="scenario-title" className={styles.title}>
+            Rehearse the Strait conversation
+          </Title3>
         </div>
-        <div className="scenario-toggle" role="group" aria-label="Scenario">
-          <button
-            type="button"
-            aria-pressed={scenarioKey === "reopens"}
+        <div className={styles.toggle} role="group" aria-label="Scenario">
+          <ToggleButton
+            className={styles.option}
+            appearance={scenarioKey === "reopens" ? "primary" : "secondary"}
+            checked={scenarioKey === "reopens"}
             onClick={() => setScenarioKey("reopens")}
           >
             Strait reopens
-          </button>
-          <button
-            type="button"
-            aria-pressed={scenarioKey === "escalates"}
+          </ToggleButton>
+          <ToggleButton
+            className={styles.option}
+            appearance={scenarioKey === "escalates" ? "primary" : "secondary"}
+            checked={scenarioKey === "escalates"}
             onClick={() => setScenarioKey("escalates")}
           >
             Strait escalates
-          </button>
+          </ToggleButton>
         </div>
       </header>
 
-      <section className="scenario-result" aria-labelledby="scenario-name">
-        <div className="range-copy">
-          <p className="scenario-label" id="scenario-name">
+      <p className="scenario-announcement" role="status" aria-atomic="true">
+        {resultSummary}
+      </p>
+
+      <Card
+        role="region"
+        className={styles.result}
+        aria-labelledby="scenario-name"
+      >
+        <div className={styles.copy}>
+          <Subtitle2 as="h2" className="scenario-label" id="scenario-name">
             {scenario.name}
-          </p>
-          <p className="range-value">
-            {money(scenario.low_delta, scenario.currency)} to{" "}
-            {money(scenario.high_delta, scenario.currency)}
-          </p>
-          <p className="range-percent">
-            {percent(scenario.low_pct)} to {percent(scenario.high_pct)} of
-            today&apos;s portfolio
-          </p>
+          </Subtitle2>
+          <Title2 as="p" className={mergeClasses("range-value", styles.range)}>
+            <span className={styles.amount}>
+              {money(scenario.low_delta, scenario.currency)}
+            </span>{" "}
+            to{" "}
+            <span className={styles.amount}>
+              {money(scenario.high_delta, scenario.currency)}
+            </span>
+          </Title2>
+          <Body1 className={mergeClasses("range-percent", styles.muted)}>
+            {percentRange}
+          </Body1>
+          <Caption1 className={mergeClasses("scenario-baseline", styles.muted)}>
+            {baseline}
+          </Caption1>
           <WhyButton
             citations={scenario.citations}
             clientId={clientId}
+            claim={resultSummary}
             children="Why this range?"
           />
         </div>
-        <div className="range-visual">
+        <div className={styles.visual}>
           <div
             className="range-axis"
-            aria-label="Estimated portfolio change range from negative twenty to positive twenty percent"
+            role="img"
+            aria-label={`${scenario.name}: ${percentRange}. ${baseline} ${disclaimer} Scale: −20% to +20%.`}
           >
             <span className="axis-start">−20%</span>
             <span className="axis-zero">0</span>
@@ -120,27 +209,21 @@ export function Scenario({
               }}
             />
           </div>
-          <p>
-            {scenario.disclaimer.replace(
-              "Precomputed range, ",
-              "Estimated range · ",
-            )}
-          </p>
+          <Caption1 className={styles.disclaimer}>{disclaimer}</Caption1>
         </div>
-      </section>
+      </Card>
 
       <section
-        className="scenario-detail"
+        className={styles.detail}
         aria-labelledby="scenario-detail-title"
       >
-        <div className="block-heading">
-          <p>Talk through</p>
-          <h2 id="scenario-detail-title">What changes</h2>
-        </div>
+        <Subtitle2 as="h2" id="scenario-detail-title">
+          What changes
+        </Subtitle2>
         <CitedList
           items={scenario.bullets}
           clientId={clientId}
-          className="scenario-bullets"
+          evidenceContext={`${preRead.name} · ${scenario.name}. ${baseline} ${disclaimer}`}
         />
       </section>
     </section>

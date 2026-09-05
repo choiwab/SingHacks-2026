@@ -127,6 +127,37 @@ export const projectionFixture: MondayBriefProjection = {
   facts: {
     "CL-0003": [
       {
+        id: "CL-0003:fact:profile",
+        kind: "profile",
+        what: "Margarethe Voss-Brenner has a Conservative profile.",
+        numbers: {
+          name: "Margarethe Voss-Brenner",
+          currency: "EUR",
+          language: "German",
+          residence: "Singapore",
+          booking_centre: "Singapore",
+          risk_tolerance_score: 2,
+          life_stage: "Recently widowed",
+        },
+        source_rows: ["clients:CL-0003"],
+        event_ids: [],
+        confidence: "high",
+      },
+      {
+        id: "CL-0003:fact:deadline",
+        kind: "deadline",
+        what: "German inheritance tax instalment starts in 36 days.",
+        numbers: {
+          days: 36,
+          amount: 3_400_000,
+          currency: "EUR",
+          coverage_pct: 527.5,
+        },
+        source_rows: ["holding:1", "planned_cash_needs:CN-004"],
+        event_ids: [],
+        confidence: "high",
+      },
+      {
         id: "CL-0003:fact:gap",
         kind: "mandate_gap",
         what: "Equity is above the mandate limit.",
@@ -163,12 +194,34 @@ export const projectionFixture: MondayBriefProjection = {
     ],
   },
   evidence: {
+    "clients:CL-0003": {
+      id: "clients:CL-0003",
+      kind: "Clients",
+      title: "Client record",
+      source: "data/clients.csv",
+      record: { risk_profile: "Conservative" },
+    },
     "holding:1": {
       id: "holding:1",
       kind: "Holding",
       title: "Current equity holding",
       source: "data/holdings.csv",
       record: { market_value_base: 7_150_000 },
+    },
+    "planned_cash_needs:CN-004": {
+      id: "planned_cash_needs:CN-004",
+      kind: "Planned Cash Needs",
+      title: "German inheritance tax instalment",
+      source: "data/planned_cash_needs.csv",
+      record: {
+        need_id: "CN-004",
+        description: "German inheritance tax instalment",
+        currency: "EUR",
+        amount: 3_400_000,
+        due_from: "2026-10-01",
+        due_to: "2026-12-31",
+        certainty: "Confirmed",
+      },
     },
     "event:1": {
       id: "event:1",
@@ -179,10 +232,29 @@ export const projectionFixture: MondayBriefProjection = {
     },
     "note:1": {
       id: "note:1",
-      kind: "Note",
-      title: "RM note",
+      kind: "RM note",
+      title: "Meeting on 2026-02-16",
       source: "data/rm_notes.json",
-      record: { note: "Keep it safe." },
+      record: {
+        client_id: "CL-0003",
+        note_date: "2026-02-16",
+        channel: "Meeting",
+        rm_name: "Priscilla Ong",
+        note: "Keep it safe.",
+      },
+    },
+    "note:2": {
+      id: "note:2",
+      kind: "RM note",
+      title: "Call on 2026-03-02",
+      source: "data/rm_notes.json",
+      record: {
+        client_id: "CL-0003",
+        note_date: "2026-03-02",
+        channel: "Call",
+        rm_name: "Priscilla Ong",
+        note: "Asked about the Berlin apartment lease.",
+      },
     },
   },
 };

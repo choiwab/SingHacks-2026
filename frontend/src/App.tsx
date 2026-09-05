@@ -1,22 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  Button,
+  FluentProvider,
+  MessageBar,
+  MessageBarActions,
+  MessageBarBody,
+  MessageBarTitle,
+  Spinner,
+  teamsLightTheme,
+} from "@fluentui/react-components";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Navigate,
   Route,
   Routes,
   useLocation,
-  useNavigate,
+  useParams,
 } from "react-router-dom";
 
-import { getMondayBrief } from "./api";
+import { getMondayBrief, isPreview } from "./api";
+import { AppShell } from "./Shell";
 import { EvidenceProvider } from "./evidence";
+import type { Authorship } from "./evidence";
 import type { MondayBriefProjection } from "./contracts";
-import { MondayList } from "./MondayList";
+import { Home } from "./Home";
 import { PreRead } from "./PreRead";
 import { Scenario } from "./Scenario";
 
-function Header({ projection }: { projection: MondayBriefProjection }) {
-  const navigate = useNavigate();
+function useRoute(projection: MondayBriefProjection) {
   const { pathname } = useLocation();
+  const previousPath = useRef(pathname);
   const route = pathname.endsWith("/scenario")
     ? "scenario"
     : pathname.endsWith("/pre-read")
@@ -25,71 +37,96 @@ function Header({ projection }: { projection: MondayBriefProjection }) {
   const clientId = pathname.match(/^\/clients\/([^/]+)\//)?.[1];
   const selectedClient =
     clientId && projection.pre_reads[clientId] ? clientId : null;
+  const clientName = selectedClient
+    ? projection.pre_reads[selectedClient].name
+    : null;
 
   useEffect(() => {
     const titles = {
-      list: "Monday list",
+      list: "RM dashboard",
       "pre-read": "Pre-read",
       scenario: "Scenario rehearsal",
     };
-    document.title = `${titles[route]} | Wealth Intelligence`;
-    window.scrollTo({ top: 0, behavior: "auto" });
-  }, [pathname, route]);
+    document.title = [clientName, titles[route], "Wealth Intelligence"]
+      .filter(Boolean)
+      .join(" | ");
+  }, [clientName, route]);
 
-  return (
-    <header className="topbar">
-      <button className="brand" type="button" onClick={() => navigate("/")}>
-        Wealth Intelligence
-      </button>
-      <nav className="product-nav" aria-label="Three screen workflow">
-        <button
-          type="button"
-          aria-current={route === "list" ? "page" : undefined}
-          onClick={() => navigate("/")}
-        >
-          Monday list
-        </button>
-        <button
-          type="button"
-          disabled={!selectedClient}
-          aria-current={route === "pre-read" ? "page" : undefined}
-          onClick={() =>
-            selectedClient && navigate(`/clients/${selectedClient}/pre-read`)
-          }
-        >
-          Pre-read
-        </button>
-        <button
-          type="button"
-          disabled={!selectedClient}
-          aria-current={route === "scenario" ? "page" : undefined}
-          onClick={() =>
-            selectedClient && navigate(`/clients/${selectedClient}/scenario`)
-          }
-        >
-          Scenario
-        </button>
-      </nav>
-      <p className="rm-context">
-        Priscilla Ong · Asia desk · Data as of Wed 26 Aug 2026
-      </p>
-    </header>
-  );
+  useEffect(() => {
+    const main = document.getElementById("main");
+    main?.scrollTo({ top: 0, behavior: "auto" });
+    // Enter the new screen after navigation without stealing focus on load.
+    if (previousPath.current !== pathname) main?.focus({ preventScroll: true });
+    previousPath.current = pathname;
+  }, [pathname]);
+
+  return { route, selectedClient } as const;
+}
+
+/**
+ * React Router keeps one PreRead instance alive across `:clientId` changes, so
+ * the key remounts it and stops one client's edit, receipt, or open tab from
+ * being shown under the next client's name.
+ */
+function PreReadRoute(props: {
+  projection: MondayBriefProjection;
+  reviews: Record<string, Authorship>;
+  savedOpenings: Record<string, string>;
+  onReviewed: (clientId: string, state: Authorship, text: string) => void;
+}) {
+  const { clientId = "" } = useParams();
+  return <PreRead key={clientId} {...props} />;
 }
 
 function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
+  const { route, selectedClient } = useRoute(projection);
+  // The RM's review decisions live above the routes so the compact calendar and
+  // the dashboard header agree on which briefs are ready.
+  const [reviews, setReviews] = useState<Record<string, Authorship>>({});
+  const [savedOpenings, setSavedOpenings] = useState<Record<string, string>>(
+    {},
+  );
+
   return (
     <EvidenceProvider projection={projection}>
       <a className="skip-link" href="#main">
         Skip to main content
       </a>
-      <Header projection={projection} />
-      <main id="main">
+      <AppShell
+        projection={projection}
+        selectedClient={selectedClient}
+        route={route}
+      >
+        {isPreview && (
+          <MessageBar intent="info" role="note" aria-label="Fixture preview">
+            <MessageBarBody>
+              <MessageBarTitle>Fixture preview</MessageBarTitle>
+              Frozen data from 26 August 2026. Review actions are simulated and
+              are not saved.
+            </MessageBarBody>
+          </MessageBar>
+        )}
         <Routes>
-          <Route path="/" element={<MondayList projection={projection} />} />
+          <Route
+            path="/"
+            element={<Home projection={projection} reviews={reviews} />}
+          />
           <Route
             path="/clients/:clientId/pre-read"
-            element={<PreRead projection={projection} />}
+            element={
+              <PreReadRoute
+                projection={projection}
+                reviews={reviews}
+                savedOpenings={savedOpenings}
+                onReviewed={(clientId, state, text) => {
+                  setReviews((current) => ({ ...current, [clientId]: state }));
+                  setSavedOpenings((current) => ({
+                    ...current,
+                    [clientId]: text,
+                  }));
+                }}
+              />
+            }
           />
           <Route
             path="/clients/:clientId/scenario"
@@ -102,13 +139,13 @@ function RoutedApp({ projection }: { projection: MondayBriefProjection }) {
                 to="/"
                 replace
                 state={{
-                  notice: "That page was not found. Showing the Monday list.",
+                  notice: "Page not found. Showing the dashboard.",
                 }}
               />
             }
           />
         </Routes>
-      </main>
+      </AppShell>
     </EvidenceProvider>
   );
 }
@@ -119,6 +156,19 @@ export function App() {
   );
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const statusRef = useRef<HTMLElement>(null);
+  const retryRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (attempt === 0) return;
+    // Follow an explicit retry through loading, another failure, or recovery.
+    const target = projection
+      ? document.getElementById("main")
+      : error
+        ? retryRef.current
+        : statusRef.current;
+    target?.focus({ preventScroll: true });
+  }, [attempt, error, projection]);
 
   useEffect(() => {
     let active = true;
@@ -131,7 +181,7 @@ export function App() {
           setError(
             reason instanceof Error
               ? reason.message
-              : "The projection could not be loaded.",
+              : "Could not reach the server.",
           );
       });
     return () => {
@@ -140,23 +190,45 @@ export function App() {
   }, [attempt]);
 
   const status = useMemo(() => {
-    if (!error) return <p role="status">Preparing the Monday list…</p>;
+    if (!error)
+      return (
+        <Spinner
+          role="status"
+          label="Loading the dashboard…"
+          labelPosition="below"
+        />
+      );
     return (
-      <div role="alert">
-        <p>{error}</p>
-        <button
-          type="button"
-          onClick={() => {
-            setError("");
-            setAttempt((value) => value + 1);
-          }}
-        >
-          Try again
-        </button>
-      </div>
+      <MessageBar intent="error" role="alert" className="app-status-message">
+        <MessageBarBody>
+          <MessageBarTitle>The dashboard did not load.</MessageBarTitle>
+          {error}
+        </MessageBarBody>
+        <MessageBarActions>
+          <Button
+            ref={retryRef}
+            appearance="primary"
+            onClick={() => {
+              setError("");
+              setAttempt((value) => value + 1);
+            }}
+          >
+            Try again
+          </Button>
+        </MessageBarActions>
+      </MessageBar>
     );
   }, [error]);
 
-  if (!projection) return <main className="app-status">{status}</main>;
-  return <RoutedApp projection={projection} />;
+  return (
+    <FluentProvider theme={teamsLightTheme} className="fluent-root">
+      {projection ? (
+        <RoutedApp projection={projection} />
+      ) : (
+        <main className="app-status" ref={statusRef} tabIndex={-1}>
+          {status}
+        </main>
+      )}
+    </FluentProvider>
+  );
 }
