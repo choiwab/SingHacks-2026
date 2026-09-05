@@ -1,18 +1,19 @@
 """Opt-in offline Member 2 generation over immutable Member 3 artifacts.
 
-This connects generation only. It does not supply missing financial Signals or a
+This connects generation and candidate edits. It does not supply financial Signals or a
 passing evidence gate. Communication loaders must return complete pinned snapshots.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
+from copy import deepcopy
 from datetime import date, datetime
 from typing import Any, cast
 
 from app.agents.briefing import rm_briefing_agent
 from app.agents.context import CommunicationLoader, context_agent
-from app.agents.contracts import CuratedClientBundle, Signal
+from app.agents.contracts import CuratedClientBundle, MeetingPack, Signal
 from app.agents.state import AgentState
 from app.agents.wealth import wealth_intelligence_agent
 from app.mcp.records import SOURCES, ConnectedContext
@@ -27,6 +28,33 @@ def disconnected(client_id: str, as_of: datetime, revision: str) -> ConnectedCon
     return ConnectedContext(
         records=[], sources={source: "Not connected" for source in SOURCES}, retrieval_log=[]
     )
+
+
+def project_pack(pack: MeetingPack) -> dict[str, Any]:
+    """Derive all presentation copies and identity from the authoritative pack."""
+    content = pack.model_dump(mode="json")
+    return {
+        "pack": content,
+        "pack_version": pack.version,
+        "meeting_brief": {"sections": deepcopy(content["brief"])},
+        "insights": deepcopy(content["insights"]),
+        "memory_card": deepcopy(content["memory_card"]),
+    }
+
+
+def edit_pack(body: dict[str, Any], claim_id: str, text: str) -> dict[str, Any]:
+    """Apply M2's opening/talking-point edit rules to a persisted candidate copy."""
+    pack = MeetingPack.model_validate(body.get("pack"))
+    if body.get("pack_version") != pack.version:
+        raise ValueError("Stored meeting pack version does not match its content")
+    if not text.strip() or len(text) > 2000:
+        raise ValueError("Edited text must contain 1 to 2000 characters")
+    editable = {claim.id: claim for claim in [pack.brief.opening, *pack.brief.talking_points]}
+    if claim_id not in editable:
+        raise KeyError("Only the opening and talking point claim IDs may be edited")
+    editable[claim_id].text = text
+    editable[claim_id].authorship = "rm"
+    return {**deepcopy(body), **project_pack(pack)}
 
 
 def member2_hooks(
@@ -103,11 +131,7 @@ def member2_hooks(
         pack = state.get("pack") or {}
         context = state.get("connected_context", {})
         return {
-            "meeting_brief": {"sections": pack["brief"]},
-            "insights": pack["insights"],
-            "memory_card": pack["memory_card"],
-            "pack": pack,
-            "pack_version": state.get("pack_version"),
+            **project_pack(MeetingPack.model_validate(pack)),
             "trace": state.get("trace", []),
             "memory_index": state.get("memory_index"),
             "section_versions": state.get("section_versions"),
@@ -118,4 +142,4 @@ def member2_hooks(
             "context_issues": list(initial.get("context_issues", [])),
         }
 
-    return AgentHooks(generator=generate)
+    return AgentHooks(generator=generate, edit=edit_pack)

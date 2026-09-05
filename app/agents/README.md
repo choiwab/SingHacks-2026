@@ -164,6 +164,9 @@ mapping and verifier remain required. Nonempty Signals require an explicitly sup
 `signal_adapter`; this adapter never invents scores, topics or uncertainty wording.
 
 With current legacy analytics, all 20 clients produce deterministic candidate packs.
-All 20 remain unverified. The existing lifecycle caches by financial run;
-independent communication refresh and pack-aware review edits require additional integration
-before enabling full interactive reviews.
+All 20 remain unverified. Edits use claim IDs through `ReviewRequest.section`: only the
+opening and talking points may change. The adapter marks RM authorship, rebuilds the
+canonical pack hash and projections, and synchronously verifies the complete edited pack
+and persisted communication context. Prior brief versions remain in the ledger.
+The existing lifecycle caches by financial run; independent communication refresh still
+requires additional integration.

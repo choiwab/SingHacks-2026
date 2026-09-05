@@ -77,3 +77,83 @@ def test_real_offline_seed_update_persists_generation_without_approving_unverifi
     restored.prepare_current()
     reloaded = restored.ledger.get_brief("CL-0003", update.run_id)
     assert reloaded is not None and reloaded.body == after.body
+
+    # Editing after a restart requires the pack adapter, never the legacy section editor.
+    request = ReviewRequest(
+        client_id="CL-0003",
+        run_id=update.run_id,
+        brief_version=1,
+        action="Edit",
+        section="opening",
+        text="Could we discuss your priorities?",
+    )
+    with pytest.raises(ValueError, match="configured agent adapter"):
+        restored.review(request)
+    seen = []
+
+    def failing_gate(state):
+        from app.agents.contracts import MeetingPack
+
+        pack = MeetingPack.model_validate(state["pack"])
+        assert state["pack_version"] == pack.version
+        assert state["meeting_brief"]["sections"] == pack.brief.model_dump(mode="json")
+        assert state["memory_index"] == after.body["memory_index"]
+        assert state["connected_context"] == after.body["connected_context"]
+        seen.append(pack)
+        return {
+            "verification_report": {
+                "passed": False,
+                "errors": ["Explicit failing test gate"],
+                "pack_version": pack.version,
+            }
+        }
+
+    from dataclasses import replace
+
+    assert runtime.agents is not None
+    runtime.agents = replace(runtime.agents, verifier=failing_gate)
+    with pytest.raises(KeyError, match="Only the opening"):
+        runtime.review(request.model_copy(update={"section": "summary"}))
+    result = runtime.review(request)
+    edited = ledger.get_brief("CL-0003", update.run_id)
+    assert edited is not None and edited.brief_version == 2
+    assert result["verification_report"]["passed"] is False
+    assert len(seen) == 1
+    assert edited.body["pack_version"] != after.body["pack_version"]
+    assert edited.body["pack"]["brief"]["opening"]["text"] == request.text
+    assert edited.body["pack"]["brief"]["opening"]["authorship"] == "rm"
+    original = ledger.get_brief("CL-0003", update.run_id, 1)
+    assert original is not None and original.body == after.body
+    with pytest.raises(ValueError, match="not passed verification"):
+        runtime.review(request.model_copy(update={"action": "Approve", "brief_version": 2}))
+    with pytest.raises(ValueError, match="no longer current"):
+        runtime.review(request)
+
+
+def test_pack_editor_changes_only_named_talking_point_and_preserves_source_artifacts():
+    from copy import deepcopy
+
+    from app.agents.contracts import MeetingPack
+    from app.pipeline.member2_bridge import edit_pack, project_pack
+
+    pack = MeetingPack.model_validate_json((FIXTURES / "golden.initial.json").read_text())
+    body = {**project_pack(pack), "memory_index": {"chunks": {"fixture": "unchanged"}}}
+    original = deepcopy(body)
+    target = pack.brief.talking_points[0].id
+    edited = edit_pack(body, target, "Could we review this finding together?")
+    assert body == original
+    updated_pack = MeetingPack.model_validate(edited["pack"])
+    assert edited["pack_version"] == updated_pack.version != pack.version
+    for before, after in zip(pack.claims(), updated_pack.claims(), strict=True):
+        if before.id == target:
+            assert after.text == "Could we review this finding together?"
+            assert after.authorship == "rm"
+            assert after.citations == before.citations
+        else:
+            assert after == before
+    assert edited["memory_index"] == original["memory_index"]
+    for readonly in (pack.brief.summary[0].id, pack.brief.questions[0].id):
+        with pytest.raises(KeyError, match="Only the opening"):
+            edit_pack(body, readonly, "Invalid edit")
+    with pytest.raises(ValueError, match="does not match"):
+        edit_pack({**body, "pack_version": "stale"}, target, "Invalid edit")

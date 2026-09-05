@@ -40,6 +40,7 @@ class AgentHooks:
     briefing: Node = rm_briefing_agent
     verifier: Node | None = None
     generator: Node | None = None
+    edit: Callable[[dict[str, Any], str, str], dict[str, Any]] | None = None
 
 
 def _state(store: ArtifactStore, client_id: str, run_id: str) -> ArtifactFlowState:
@@ -105,6 +106,25 @@ def verify_brief(
 ) -> dict[str, Any]:
     """Synchronously reverify a complete brief or generation envelope after an edit."""
     state = _state(store, client_id, run_id)
+    # Preserve the full persisted generation envelope, while pinning source artifacts above.
+    state.update(
+        cast(
+            ArtifactFlowState,
+            {
+                key: deepcopy(brief[key])
+                for key in (
+                    "pack",
+                    "pack_version",
+                    "memory_index",
+                    "section_versions",
+                    "input_versions",
+                    "connected_sources",
+                    "retrieval_log",
+                )
+                if key in brief
+            },
+        )
+    )
     state["meeting_brief"] = deepcopy(brief.get("meeting_brief", brief))
     if "meeting_brief" in brief:
         state["connected_context"] = deepcopy(brief.get("connected_context", []))
