@@ -54,11 +54,16 @@ def test_actual_sources_reach_review_with_discrepancy_and_temporal_evidence():
     assert result["verification"]["passed"]
     assert [item["node"] for item in result["trace"]] == ["context", "wealth", "briefing", "verify"]
     insights = result["pack"]["insights"]
-    suitability = next(item for item in insights if item["signal_id"].endswith(":suitability"))
-    assert "71.5% against a 30% maximum" in suitability["why_it_matters"]["text"]
-    assert "not make any changes" in suitability["why_it_matters"]["text"]
-    assert "not investment returns" in str(result["pack"]["brief"]["uncertainty"])
-    assert "Event-log association" in str(result["pack"]["brief"]["uncertainty"])
+    mandate = next(
+        item for item in insights if "mandate_band_breach:pf-0005-equity" in item["signal_id"]
+    )
+    facts = {fact["id"]: fact for fact in result["bundle"]["facts"]}
+    allocation = facts[mandate["facts"][0]["citations"][0]]
+    assert allocation["value"] == pytest.approx(71.46060337753747)
+    assert allocation["inputs"]["max_pct"] == 30
+    assert "not make any changes" in mandate["why_it_matters"]["text"]
+    assert "not total investment returns" in str(result["pack"]["brief"]["uncertainty"])
+    assert "not proof of causation" in str(result["pack"]["brief"]["uncertainty"])
     assert all(
         record["provenance"] == "dataset" for record in result["connected_context"]["records"]
     )

@@ -6,6 +6,7 @@ import pytest
 
 from app.agents import generation
 from app.mcp.connectors import replay_records
+from app.pipeline.features import legacy_analytics
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.member2_bridge import member2_hooks
 from app.pipeline.runtime import PipelineRuntime
@@ -33,7 +34,10 @@ def test_real_offline_seed_update_persists_generation_without_approving_unverifi
 
     ledger = ReviewLedger(tmp_path / "ledger.sqlite")
     runtime = PipelineRuntime(
-        store, ledger, agents=member2_hooks(store, load_communications=communications)
+        store,
+        ledger,
+        analytics=legacy_analytics,
+        agents=member2_hooks(store, load_communications=communications),
     )
     seed = runtime.seed()
     assert len(seed.client_ids) == 20
