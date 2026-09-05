@@ -1,6 +1,25 @@
 import { expect, test } from "@playwright/test";
+import { projectionFixture } from "../src/test/fixture";
 
-test("judge demo path remains navigable and responsive", async ({ page }) => {
+test("disconnected dashboard shows the API error without fabricated data", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page.getByRole("alert")).toContainText("Not found");
+  await expect(page.getByRole("button", { name: "Try again" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Margarethe Voss-Brenner/ }),
+  ).toHaveCount(0);
+});
+
+test("fixture-driven UI remains navigable with the live review API", async ({
+  page,
+}) => {
+  // The data-team cutover removed the projection API. Exercise the retained
+  // screens with the explicit UI fixture; review persistence is not mocked.
+  await page.route("**/api/monday-brief", (route) =>
+    route.fulfill({ json: projectionFixture }),
+  );
   await page.goto("/");
   await page.getByRole("button", { name: /Margarethe Voss-Brenner/ }).click();
   await page.getByRole("button", { name: "Why?" }).first().click();

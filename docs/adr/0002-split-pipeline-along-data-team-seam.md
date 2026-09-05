@@ -10,4 +10,6 @@ The original `app/pipeline.py` computed facts, extracted beliefs from RM notes, 
 ## Consequences
 
 - `app/analytics/` contains code that visibly predates the package; that is intentional, not a misplaced file.
-- `GET /api/monday-brief`, its projection models, and the Monday Brief frontend consumers were removed with the prose code rather than kept as a parallel path.
+- `GET /api/monday-brief` and its projection API models were removed with the prose code rather than kept as a parallel path. The legacy frontend screens remain while the new dashboard integration is built.
+- Those retained screens use an explicitly transitional frontend view model in `frontend/src/contracts.ts`, not names that no longer exist in OpenAPI. Active review API types remain generated, preserving ADR-0001 for live endpoints. This does not restore the removed endpoint or connect the screens to the agent flow.
+- Browser checks distinguish the real API's disconnected state from a fixture-driven UI flow with real review persistence. The latter checks rendering, navigation, evidence, and reviews; it is not an end-to-end test of agent-generated dashboard data.
