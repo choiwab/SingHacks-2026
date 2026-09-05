@@ -5,6 +5,7 @@ import {
   Button,
   Body1Strong,
   Caption1,
+  Link,
   SearchBox,
   Subtitle2,
   makeStyles,
@@ -19,8 +20,9 @@ import type {
   ProjectionFact,
   RankedClient,
 } from "./contracts";
+import { citesFact } from "./live/adapter";
 import { useNavigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { AUTHORSHIP } from "./evidence";
 import type { Authorship } from "./evidence";
@@ -174,6 +176,20 @@ const useStyles = makeStyles({
   cardAction: {
     alignSelf: "flex-start",
     marginBlockStart: "auto",
+  },
+  caveats: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXS,
+    alignItems: "flex-start",
+  },
+  caveatList: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalXS,
+    margin: 0,
+    paddingInlineStart: "1.1rem",
+    color: tokens.colorNeutralForeground3,
   },
   empty: {
     color: tokens.colorNeutralForeground3,
@@ -554,24 +570,67 @@ function displayedFacts(facts: ProjectionFact[]) {
   return facts.filter((fact) => fact.kind !== "profile");
 }
 
+function splitSentences(text: string): string[] {
+  return text
+    .split(/(?<=\.)\s+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Pipeline caveats behind a summary-first disclosure: a single short check
+ * renders inline; anything longer collapses into a bulleted checklist so the
+ * card leads with the fact, not the methodology.
+ */
+function FactCaveats({ caveats }: { caveats: string[] }) {
+  const styles = useStyles();
+  const [open, setOpen] = useState(false);
+  const bullets = caveats.flatMap(splitSentences);
+  if (bullets.length === 0) return null;
+  if (bullets.length === 1) return <Caption1>To confirm: {bullets[0]}</Caption1>;
+  return (
+    <div className={styles.caveats}>
+      <Link
+        as="button"
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {open
+          ? "Hide checks"
+          : `To confirm · ${bullets.length} checks before advising`}
+      </Link>
+      {open && (
+        <ul className={styles.caveatList} aria-label="Checks before advising">
+          {bullets.map((bullet) => (
+            <li key={bullet}>
+              <Caption1>{bullet}</Caption1>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 function FactCard({
   fact,
   clientId,
   clientName,
   authorship,
-  uncertainty,
+  caveats = [],
 }: {
   fact: ProjectionFact;
   clientId: string;
   clientName: string;
   authorship: Authorship;
-  uncertainty?: string;
+  caveats?: string[];
 }) {
   const styles = useStyles();
   const surfaces = useSurfaceStyles();
   const claim = [
     `${clientName} · ${FACT_GROUP[fact.kind]} · ${fact.what}`,
-    uncertainty ? `To confirm: ${uncertainty}` : undefined,
+    caveats.length > 0 ? `To confirm: ${caveats.join(" ")}` : undefined,
   ]
     .filter(Boolean)
     .join(" ");
@@ -583,7 +642,7 @@ function FactCard({
       <Subtitle2 as="h3">{fact.what}</Subtitle2>
       <MeasureBar fact={fact} />
       <Caption1>Confidence: {fact.confidence}</Caption1>
-      {uncertainty ? <Caption1>To confirm: {uncertainty}</Caption1> : null}
+      <FactCaveats caveats={caveats} />
       <div className={styles.cardAction}>
         <WhyButton
           citations={[fact.id]}
@@ -596,6 +655,21 @@ function FactCard({
   );
 }
 
+/** Caveat claims that address this fact, preview and live id shapes alike. */
+function factCaveats(
+  fact: ProjectionFact,
+  preRead: ClientPreRead,
+  uncertaintyClaims?: { text: string; citations: string[] }[],
+): string[] {
+  const claims = uncertaintyClaims ?? [preRead.uncertainty];
+  return claims
+    .filter(
+      (claim) =>
+        claim.citations.includes(fact.id) || citesFact(claim.citations, fact.id),
+    )
+    .map((claim) => claim.text);
+}
+
 /**
  * Show the first three facts without claiming a priority the projection lacks.
  */
@@ -603,10 +677,12 @@ export function FactPreview({
   preRead,
   facts,
   authorship,
+  uncertaintyClaims,
 }: {
   preRead: ClientPreRead;
   facts: ProjectionFact[];
   authorship: Authorship;
+  uncertaintyClaims?: { text: string; citations: string[] }[];
 }) {
   const styles = useStyles();
   const preview = displayedFacts(facts).slice(0, 3);
@@ -633,11 +709,7 @@ export function FactPreview({
               clientId={preRead.client_id}
               clientName={preRead.name}
               authorship={authorship}
-              uncertainty={
-                preRead.uncertainty.citations.includes(fact.id)
-                  ? preRead.uncertainty.text
-                  : undefined
-              }
+              caveats={factCaveats(fact, preRead, uncertaintyClaims)}
             />
           ))}
         </div>
@@ -653,10 +725,12 @@ export function InsightsPanel({
   preRead,
   facts,
   authorship,
+  uncertaintyClaims,
 }: {
   preRead: ClientPreRead;
   facts: ProjectionFact[];
   authorship: Authorship;
+  uncertaintyClaims?: { text: string; citations: string[] }[];
 }) {
   const styles = useStyles();
   const rest = displayedFacts(facts).slice(3);
@@ -680,11 +754,7 @@ export function InsightsPanel({
                 clientId={preRead.client_id}
                 clientName={preRead.name}
                 authorship={authorship}
-                uncertainty={
-                  preRead.uncertainty.citations.includes(fact.id)
-                    ? preRead.uncertainty.text
-                    : undefined
-                }
+                caveats={factCaveats(fact, preRead, uncertaintyClaims)}
               />
             ))}
           </div>

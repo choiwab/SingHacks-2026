@@ -137,6 +137,26 @@ export interface LiveState {
   verified: Record<string, boolean>;
   insights: Record<string, LiveInsight[]>;
   memoryRecords: Record<string, CommunicationRecord[]>;
+  /** Per-signal caveat claims, kept separate so cards match only their own. */
+  uncertaintyClaims: Record<string, CitedText[]>;
+}
+
+/**
+ * Whether a citation addresses this fact, directly or via a sibling numeric
+ * field of the same concept (…:mandate-gap:gap_pct cites …:mandate-gap:*).
+ */
+export function citesFact(citations: string[], factId: string): boolean {
+  const factSegments = factId.split(":");
+  const factBase = factSegments.slice(0, -1).join(":");
+  return citations.some((citation) => {
+    if (citation === factId) return true;
+    const segments = citation.split(":");
+    return (
+      segments.length >= 4 &&
+      segments.length === factSegments.length &&
+      segments.slice(0, -1).join(":") === factBase
+    );
+  });
 }
 
 export type AppProjection = MondayBriefProjection & { live?: LiveState };
@@ -233,17 +253,66 @@ function adaptFacts(view: LiveClientView): MondayBriefProjection["facts"][string
   return facts as unknown as MondayBriefProjection["facts"][string];
 }
 
-function cited(claim: LiveClaim): CitedText {
-  return { text: claim.text, citations: claim.citations ?? [] };
+/** Nicer names for the typed-fact fields the backend cites verbatim. */
+const FIELD_LABEL: Record<string, string> = {
+  "deadline.amount": "Planned cash need",
+  "deadline.amount_in_portfolio_currency": "Cash need in portfolio currency",
+  "deadline.days": "Days until cash need",
+  "deadline.daily_liquid": "Daily-liquid assets",
+  "deadline.coverage_pct": "Liquidity coverage",
+  "facility.ltv_pct": "Facility LTV",
+  "facility.trigger_pct": "Margin-call trigger",
+  "facility.gap_pct": "LTV headroom",
+  "concentration.value": "Largest position value",
+  "concentration.weight_pct": "Largest position weight",
+  "mandate-gap.actual_pct": "Actual allocation",
+  "mandate-gap.limit_pct": "Mandate limit",
+  "mandate-gap.gap_pct": "Mandate gap",
+};
+
+const RAW_FIELD =
+  /([a-z][a-z0-9-]*)\.([a-z][a-z0-9_]*):\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(\s[A-Z]{3})?\.?/g;
+
+/**
+ * Facts without an authored description reach briefs as "kind.field: value"
+ * (sometimes embedded mid-sentence, sometimes in exponent notation); rewrite
+ * every occurrence into a readable label with a formatted value.
+ */
+export function humanizeClaimText(text: string): string {
+  return text.replace(RAW_FIELD, (_match, kind, field, number, currency) => {
+    const key = `${kind}.${field}`;
+    const label =
+      FIELD_LABEL[key] ??
+      (() => {
+        const words = `${kind} ${field}`
+          .replaceAll("-", " ")
+          .replaceAll("_", " ");
+        return words.charAt(0).toUpperCase() + words.slice(1);
+      })();
+    const numeric = Number(number);
+    const value = currency
+      ? `${String(currency).trim()} ${numeric.toLocaleString("en-SG")}`
+      : field.endsWith("_pct")
+        ? `${numeric}%`
+        : field === "days"
+          ? `${numeric} days`
+          : numeric.toLocaleString("en-SG");
+    return `${label}: ${value}.`;
+  });
 }
 
-function mergedUncertainty(claims: LiveClaim[]): CitedText {
+function cited(claim: LiveClaim): CitedText {
+  return { text: humanizeClaimText(claim.text), citations: claim.citations ?? [] };
+}
+
+/**
+ * The pre-read type carries one uncertainty entry; the first claim stands in
+ * for it while the full per-signal list travels on LiveState.uncertaintyClaims.
+ */
+function leadUncertainty(claims: LiveClaim[]): CitedText {
   if (claims.length === 0)
     return { text: "No open uncertainty recorded.", citations: [] };
-  return {
-    text: claims.map((claim) => claim.text).join(" "),
-    citations: [...new Set(claims.flatMap((claim) => claim.citations ?? []))],
-  };
+  return cited(claims[0]);
 }
 
 function noteIdOf(claimId: string): string {
@@ -286,14 +355,16 @@ function adaptPreRead(view: LiveClientView): ClientPreRead {
     gap: {
       id: advice?.id ?? `${view.header.client_id}:gap`,
       belief: gapMatch?.[2] ?? "No recorded client statement.",
-      data: gapMatch?.[1] ?? view.insights[0]?.facts[0]?.text ?? "",
+      data: humanizeClaimText(
+        gapMatch?.[1] ?? view.insights[0]?.facts[0]?.text ?? "",
+      ),
       citations: advice?.citations ?? [],
     },
     rules_money: (sections?.talking_points ?? []).map(cited),
     opening: sections?.opening
       ? cited(sections.opening)
       : { text: "No opening prepared.", citations: [] },
-    uncertainty: mergedUncertainty(sections?.uncertainty ?? []),
+    uncertainty: leadUncertainty(sections?.uncertainty ?? []),
     beliefs,
     workflow: [],
   };
@@ -358,10 +429,11 @@ function fallbackRanking(viewModel: DemoViewModel): RankedClient[] {
         components: { gap: 0, deadline: 0, consequence: score },
         meeting: null,
         meeting_source: null,
-        reason:
+        reason: humanizeClaimText(
           claimText(top?.why_it_matters) ??
-          top?.facts[0]?.text ??
-          "No open signals this run.",
+            top?.facts[0]?.text ??
+            "No open signals this run.",
+        ),
         urgency: (score >= 100 ? "now" : score >= 60 ? "soon" : "watch") as
           | "now"
           | "soon"
@@ -416,6 +488,7 @@ export function adaptViewModel(viewModel: DemoViewModel): AppProjection {
     verified: {},
     insights: {},
     memoryRecords: {},
+    uncertaintyClaims: {},
   };
   for (const [clientId, view] of Object.entries(viewModel.clients)) {
     const records = communicationRecords(view.memory_tab);
@@ -425,8 +498,26 @@ export function adaptViewModel(viewModel: DemoViewModel): AppProjection {
     live.briefVersions[clientId] = view.brief_version;
     live.briefStatus[clientId] = view.brief_status;
     live.verified[clientId] = Boolean(view.verification?.passed);
-    live.insights[clientId] = view.insights ?? [];
+    live.insights[clientId] = (view.insights ?? []).map((insight) => ({
+      ...insight,
+      why_it_matters:
+        typeof insight.why_it_matters === "object" && insight.why_it_matters
+          ? {
+              ...insight.why_it_matters,
+              text: humanizeClaimText(insight.why_it_matters.text),
+            }
+          : insight.why_it_matters
+            ? humanizeClaimText(insight.why_it_matters)
+            : insight.why_it_matters,
+      facts: insight.facts.map((claim) => ({
+        ...claim,
+        text: humanizeClaimText(claim.text),
+      })),
+    }));
     live.memoryRecords[clientId] = records;
+    live.uncertaintyClaims[clientId] = (
+      view.meeting_brief?.sections.uncertainty ?? []
+    ).map(cited);
   }
   for (const [chunkId, entry] of Object.entries(
     viewModel.connected_evidence ?? {},

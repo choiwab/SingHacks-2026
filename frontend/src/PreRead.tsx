@@ -349,7 +349,12 @@ export function PreRead({
 
       {persona && <PortfolioBand persona={persona} />}
 
-      <FactPreview preRead={preRead} facts={facts} authorship={reviewState} />
+      <FactPreview
+        preRead={preRead}
+        facts={facts}
+        authorship={reviewState}
+        uncertaintyClaims={projection.live?.uncertaintyClaims[clientId]}
+      />
 
       {persona && (
         <KeywordChips
@@ -399,6 +404,7 @@ export function PreRead({
             }}
             facts={facts}
             authorship={reviewState}
+            uncertaintyClaims={projection.live?.uncertaintyClaims[clientId]}
           />
         )}
         {tab === "data" && (
@@ -509,15 +515,27 @@ export function PreRead({
             </BriefSection>
 
             <BriefSection title="Uncertainty">
-              <Body1 className={styles.prose}>{preRead.uncertainty.text}</Body1>
-              <div className={styles.actions}>
-                <WhyButton
-                  citations={preRead.uncertainty.citations}
+              {projection.live?.uncertaintyClaims[clientId]?.length ? (
+                <CitedList
+                  items={projection.live.uncertaintyClaims[clientId]}
                   clientId={clientId}
-                  claim={preRead.uncertainty.text}
                   authorship={reviewState}
                 />
-              </div>
+              ) : (
+                <>
+                  <Body1 className={styles.prose}>
+                    {preRead.uncertainty.text}
+                  </Body1>
+                  <div className={styles.actions}>
+                    <WhyButton
+                      citations={preRead.uncertainty.citations}
+                      clientId={clientId}
+                      claim={preRead.uncertainty.text}
+                      authorship={reviewState}
+                    />
+                  </div>
+                </>
+              )}
             </BriefSection>
 
             <BriefSection title="Where you left off">
