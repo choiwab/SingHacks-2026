@@ -310,3 +310,26 @@ it("blocks repeated updates during a request and retains a recoverable error", a
     ).getByText("Ask about the revised plans."),
   ).toBeVisible();
 });
+
+it("withholds comparison when a newer version was saved after the workspace loaded", async () => {
+  const value = history();
+  value.versions.unshift({
+    ...version(model.run_id, "A newer saved opening"),
+    brief_version: 2,
+  });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response(value)));
+  render(
+    <BriefHistoryPanel
+      client={client}
+      runId={model.run_id}
+      onModelChange={vi.fn()}
+    />,
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "History and the current Brief version differ",
+  );
+  expect(screen.queryByText("A newer saved opening")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("article", { name: "Current Meeting Brief" }),
+  ).not.toBeInTheDocument();
+});

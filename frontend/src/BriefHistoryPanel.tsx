@@ -193,11 +193,11 @@ function HistorySession({
       });
     return () => controller.abort();
   }, [client.header.client_id, runId, attempt]);
-  const current = history?.versions.find(
-    (version) =>
-      version.run_id === runId &&
-      version.brief_version === client.brief_version,
-  );
+  const latest = history?.versions[0];
+  const current =
+    latest?.run_id === runId && latest.brief_version === client.brief_version
+      ? latest
+      : undefined;
   const prior =
     history?.versions.filter(
       (version) => versionKey(version) !== (current && versionKey(current)),
