@@ -6,7 +6,7 @@ import type {
 
 export const isPreview = import.meta.env.MODE === "preview";
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
     ...init,
@@ -54,6 +54,32 @@ export async function saveReview(
     throw new Error("Review actions are not available in this dashboard yet.");
   }
   return request<ReviewResponse>("/preview/reviews", {
+    method: "POST",
+    body: JSON.stringify(review),
+  });
+}
+
+export async function getDemoViewModel(): Promise<
+  import("./live-contracts").DemoViewModel
+> {
+  const model =
+    await request<import("./live-contracts").DemoViewModel>("/api/app");
+  if (
+    !model ||
+    typeof model.run_id !== "string" ||
+    !model.clients ||
+    Array.isArray(model.clients)
+  ) {
+    throw new Error("The server returned an incompatible Demo View Model.");
+  }
+  return model;
+}
+export async function saveLiveReview(
+  review: import("./contracts").ReviewActionRequest,
+): Promise<import("./contracts").ReviewActionResponse> {
+  if (isPreview)
+    throw new Error("Live reviews are unavailable in fixture preview.");
+  return request("/api/reviews", {
     method: "POST",
     body: JSON.stringify(review),
   });
