@@ -20,9 +20,11 @@ test("meeting preparation persists reviews and recovers from stale and failed ed
     page.getByRole("heading", { name: "Since we last spoke" }),
   ).toBeVisible();
   await expect(
-    page.getByText("Could we review your planned payment together?", {
-      exact: true,
-    }),
+    page
+      .getByRole("region", { name: "Meeting Brief", exact: true })
+      .getByText("Could we review your planned payment together?", {
+        exact: true,
+      }),
   ).toBeVisible();
 
   const interaction = page.locator("article").filter({
@@ -61,9 +63,11 @@ test("meeting preparation persists reviews and recovers from stale and failed ed
     .getByRole("button", { name: "Save edited version", exact: true })
     .click();
   await expect(
-    page.getByText("Could we confirm the available funding together?", {
-      exact: true,
-    }),
+    page
+      .getByRole("region", { name: "Meeting Brief", exact: true })
+      .getByText("Could we confirm the available funding together?", {
+        exact: true,
+      }),
   ).toBeVisible();
   await expect(
     page.getByText("Reviewed meeting pack", { exact: true }),
@@ -83,9 +87,11 @@ test("meeting preparation persists reviews and recovers from stale and failed ed
     .getByRole("button", { name: "Reload current version", exact: true })
     .click();
   await expect(
-    staleTab.getByText("Could we confirm the available funding together?", {
-      exact: true,
-    }),
+    staleTab
+      .getByRole("region", { name: "Meeting Brief", exact: true })
+      .getByText("Could we confirm the available funding together?", {
+        exact: true,
+      }),
   ).toBeVisible();
   await staleTab.close();
 
@@ -97,9 +103,11 @@ test("meeting preparation persists reviews and recovers from stale and failed ed
   ).toBeTruthy();
   await page.reload();
   await expect(
-    page.getByText("Could we review the earlier payment date together?", {
-      exact: true,
-    }),
+    page
+      .getByRole("region", { name: "Meeting Brief", exact: true })
+      .getByText("Could we review the earlier payment date together?", {
+        exact: true,
+      }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Edit wording", exact: true }).click();
   await page

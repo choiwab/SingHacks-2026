@@ -6,6 +6,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LiveDashboard } from "./LiveDashboard";
 import type { DemoViewModel } from "./live-contracts";
 vi.hoisted(() => vi.stubEnv("MODE", "development"));
+// History has dedicated component/API coverage; isolate these review-boundary tests.
+vi.mock("./brief-history-api", () => ({
+  getBriefHistory: async (clientId: string, runId: string) => ({
+    client_id: clientId,
+    run_id: runId,
+    versions: [],
+  }),
+  controlledUpdate: vi.fn(),
+}));
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();

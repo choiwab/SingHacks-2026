@@ -10,6 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { getDemoViewModel, saveLiveReview } from "./api";
+import { BriefHistoryPanel } from "./BriefHistoryPanel";
 import {
   briefSections,
   claim,
@@ -267,7 +268,6 @@ function ClientWorkspace({
         </span>
       </header>
       <Continuity client={client} model={model} />
-      {/* BriefHistoryPanel mounts here after its stacked change. */}
       <section className="live-brief" aria-labelledby="brief-title">
         <div className="live-section-heading">
           <span className="live-eyebrow">Preparation for the conversation</span>
@@ -397,6 +397,14 @@ function ClientWorkspace({
           </Button>
         </div>
       </section>
+      <BriefHistoryPanel
+        client={client}
+        runId={model.run_id}
+        refreshedAt={model.refreshed_at}
+        onModelChange={onModelChange}
+        busy={busy || editing}
+        onBusyChange={setBusy}
+      />
       <section className="live-details" aria-label="Data health and Evidence">
         <h2>Data health and Evidence</h2>
         {(client.context_issues ?? []).map((issue, index) => (
