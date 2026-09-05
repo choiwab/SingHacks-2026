@@ -10,14 +10,20 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, HTMLResponse
 
-from app.pipeline.actions import DemoUpdateRequest, ReviewActionRequest, ReviewActionResponse
+from app.pipeline.actions import (
+    CommunicationRefreshRequest,
+    CommunicationRefreshResponse,
+    DemoUpdateRequest,
+    ReviewActionRequest,
+    ReviewActionResponse,
+)
 from app.pipeline.api_schemas import DemoViewModel
 from app.pipeline.features import AnalyticsProvider, legacy_analytics
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.history import ClientHistory, load_client_history
 from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
 from app.pipeline.publish import read_latest
-from app.pipeline.runtime import PipelineRuntime
+from app.pipeline.runtime import CommunicationRefreshUnavailable, PipelineRuntime
 from app.pipeline.schemas import ReviewRequest
 from app.pipeline.view_model import build_view_model
 from app.store import ReviewLedger
@@ -106,6 +112,26 @@ def create_app(
                 return view(runtime, updating=True)
         except ValueError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    @application.post(
+        "/api/clients/{client_id}/refresh", response_model=CommunicationRefreshResponse
+    )
+    def refresh_communications(
+        client_id: str, payload: CommunicationRefreshRequest, request: Request
+    ) -> CommunicationRefreshResponse:
+        runtime: PipelineRuntime = request.app.state.pipeline_runtime
+        try:
+            return CommunicationRefreshResponse.model_validate(
+                runtime.refresh_communications(
+                    client_id, run_id=payload.run_id, brief_version=payload.brief_version
+                )
+            )
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        except CommunicationRefreshUnavailable as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     @application.post("/api/reviews", response_model=ReviewActionResponse)
     def review(payload: ReviewActionRequest, request: Request) -> ReviewActionResponse:

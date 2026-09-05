@@ -34,3 +34,17 @@ class ReviewActionResponse(ContractModel):
 
 class DemoUpdateRequest(ContractModel):
     action: Literal["apply", "reset"]
+
+
+class CommunicationRefreshRequest(ContractModel):
+    run_id: Annotated[str, Field(pattern=r"^[a-f0-9]{12}$")]
+    brief_version: Annotated[int, Field(ge=1)]
+
+
+class CommunicationRefreshResponse(ContractModel):
+    client_id: str
+    run_id: str
+    brief_version: int
+    communication_revision: str
+    changed: bool
+    verification_report: dict[str, Any]

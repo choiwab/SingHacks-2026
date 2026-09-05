@@ -21,6 +21,10 @@ from app.pipeline.verification_state import verification_passed
 from app.store import ReviewLedger
 
 
+class CommunicationRefreshUnavailable(RuntimeError):
+    """A connector snapshot or candidate could not be safely refreshed."""
+
+
 class PipelineRuntime:
     """Serialize mutations across threads/processes; reads consume committed state only."""
 
@@ -137,6 +141,77 @@ class PipelineRuntime:
                 verification_report=verification,
                 brief_version=1,
             )
+
+    def refresh_communications(
+        self, client_id: str, *, run_id: str, brief_version: int
+    ) -> dict[str, Any]:
+        """Pin one connector snapshot and append a client version without a financial rerun."""
+        with self._mutation():
+            manifest = self.store.load_manifest()
+            if run_id != manifest.run_id:
+                raise ValueError("Refresh run is no longer current")
+            if client_id not in manifest.client_ids:
+                raise KeyError("Client not found")
+            current = self.ledger.get_brief(client_id, run_id)
+            if current is None or current.brief_version != brief_version:
+                raise ValueError("Brief version is no longer current")
+            hooks = self.agents
+            if hooks is None or hooks.communications is None or hooks.generator is None:
+                raise ValueError("Communication refresh requires the configured agent adapter")
+            try:
+                snapshot = hooks.communications(client_id, manifest.as_of, run_id)
+                if snapshot.client_id != client_id or snapshot.as_of != manifest.as_of:
+                    raise ValueError("Communication snapshot client/date mismatch")
+            except (ValueError, OSError):
+                raise CommunicationRefreshUnavailable(
+                    "Communication snapshot unavailable or invalid"
+                ) from None
+            changed = current.body.get("communication_revision") != snapshot.revision
+            if changed:
+                try:
+                    output = execute_client(
+                        self.store,
+                        client_id,
+                        run_id,
+                        agents=hooks,
+                        communication_snapshot=snapshot,
+                    )
+                    if not output.get("meeting_brief"):
+                        raise ValueError("Generation did not produce a candidate brief")
+                    if output.get("communication_revision") != snapshot.revision:
+                        raise ValueError("Generation did not use the pinned communication snapshot")
+                except (ValueError, OSError):
+                    raise CommunicationRefreshUnavailable(
+                        "Communication candidate unavailable or invalid"
+                    ) from None
+                version = current.brief_version + 1
+                body = {key: value for key, value in output.items() if key != "verification_report"}
+                report = {**output["verification_report"], "brief_version": version}
+                body["trace"] = [
+                    *body.get("trace", []),
+                    {
+                        "node": "communication_refresh",
+                        "communication_revision": snapshot.revision,
+                        "prior_brief_version": current.brief_version,
+                        "brief_version": version,
+                        "verification_passed": verification_passed(report),
+                    },
+                ]
+                current = self.ledger.store_brief(
+                    client_id=client_id,
+                    run_id=run_id,
+                    brief_version=version,
+                    body=body,
+                    verification_report=report,
+                )
+            return {
+                "client_id": client_id,
+                "run_id": run_id,
+                "brief_version": current.brief_version,
+                "communication_revision": snapshot.revision,
+                "changed": changed,
+                "verification_report": current.verification_report,
+            }
 
     def review(self, request: ReviewRequest) -> dict[str, Any]:
         with self._mutation():

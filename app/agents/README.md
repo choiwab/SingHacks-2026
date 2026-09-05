@@ -153,8 +153,8 @@ reviewable expected artifacts, not a substitute for the data team's final Eviden
 `app.pipeline.member2_bridge.member2_hooks(store, load_communications=...)` connects the
 three deterministic generation nodes to M3's persisted lifecycle. Pass its result as `agents`
 to `PipelineRuntime` or `create_app`. The default loader explicitly reports every communication
-source as not connected. A supplied loader must choose complete snapshots by the immutable
-run ID, not mutable global state. The demo's authored communications only cover CL-0003.
+source as not connected. A supplied loader must return complete client-scoped snapshots for the requested
+as-of date. Seed captures a snapshot; explicit communication refresh captures a newer one. The demo's authored communications only cover CL-0003.
 
 The bridge preserves the full candidate pack and hash, MemoryIndex snapshot, exact communication
 records, source statuses, retrieval log and generation traces in the ledger. Review remains
@@ -168,5 +168,8 @@ All 20 remain unverified. Edits use claim IDs through `ReviewRequest.section`: o
 opening and talking points may change. The adapter marks RM authorship, rebuilds the
 canonical pack hash and projections, and synchronously verifies the complete edited pack
 and persisted communication context. Prior brief versions remain in the ledger.
-The existing lifecycle caches by financial run; independent communication refresh still
-requires additional integration.
+Independent communication refresh is available through `POST /api/clients/{client_id}/refresh`
+with the current financial run and brief version. The exact snapshot is persisted separately
+from financial run identity; unchanged polling does not regenerate. See
+[the pipeline refresh contract](../pipeline/README.md#communication-only-refresh) for reset,
+versioning and failure behavior.
