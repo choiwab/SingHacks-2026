@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import fcntl
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from copy import deepcopy
-from datetime import date
+from datetime import UTC, date, datetime, time
 from pathlib import Path
 from threading import RLock
 from typing import Any
 
 from app.analytics.phase_a import phase_a_analytics
+from app.mcp.records import ConnectedContext
 from app.pipeline.features import AnalyticsProvider
 from app.pipeline.graph_adapter import AgentHooks, execute_client, verify_brief
 from app.pipeline.loaders import ArtifactStore
@@ -35,11 +36,13 @@ class PipelineRuntime:
         overlay_dir: Path | None = None,
         analytics: AnalyticsProvider = phase_a_analytics,
         agents: AgentHooks | None = None,
+        load_communications: Callable[[str, datetime, str], ConnectedContext] | None = None,
     ):
         self.store, self.ledger = store, ledger
         self.source_dir, self.as_of = source_dir, as_of
         self.overlay_dir = overlay_dir or source_dir / "fixtures/update"
         self.analytics, self.agents = analytics, agents
+        self.load_communications = load_communications
         self.lock = RLock()
 
     @contextmanager
@@ -111,19 +114,34 @@ class PipelineRuntime:
         for client_id in manifest.client_ids:
             existing = self.ledger.get_brief(client_id, manifest.run_id)
             strict_generation = bool(self.agents and self.agents.generator and self.agents.verifier)
-            if existing is not None:
-                if not strict_generation:
-                    continue
-                checked = verify_brief(
-                    self.store,
+            memory_changed = False
+            if existing is not None and self.load_communications is not None:
+                context = self.load_communications(
                     client_id,
+                    datetime.combine(manifest.as_of, time.min, tzinfo=UTC),
                     manifest.run_id,
-                    existing.body,
-                    verifier=self.agents.verifier,
-                    brief_version=existing.brief_version,
                 )
-                if verification_passed(checked):
+                saved = existing.body.get("connected_context", [])
+                if isinstance(saved, dict):
+                    saved = saved.get("records", [])
+                memory_changed = saved != [r.model_dump(mode="json") for r in context.records]
+            if existing is not None:
+                # Preserve explicit RM edits; their evidence stays tied to that version.
+                if existing.origin == "rm_edited":
                     continue
+                if not memory_changed:
+                    if not strict_generation:
+                        continue
+                    checked = verify_brief(
+                        self.store,
+                        client_id,
+                        manifest.run_id,
+                        existing.body,
+                        verifier=self.agents.verifier,
+                        brief_version=existing.brief_version,
+                    )
+                    if verification_passed(checked):
+                        continue
             version = existing.brief_version + 1 if existing else 1
             report = self.store.load_change_report(client_id, run_id=manifest.run_id)
             previous_brief = (
@@ -131,7 +149,12 @@ class PipelineRuntime:
                 if report.prior_run_id
                 else None
             )
-            if report.processing_mode == "no_material_change" and previous_brief and not existing:
+            if (
+                report.processing_mode == "no_material_change"
+                and previous_brief
+                and not existing
+                and self.load_communications is None
+            ):
                 body = deepcopy(previous_brief.body)
                 verification = verify_brief(
                     self.store,

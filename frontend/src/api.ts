@@ -1,8 +1,16 @@
 import type {
-  MondayBriefProjection,
+  ReviewActionRequest,
+  ReviewActionResponse,
   ReviewRequest,
   ReviewResponse,
 } from "./contracts";
+import {
+  adaptViewModel,
+  isDemoViewModel,
+  type AppProjection,
+  type CommunicationRecord,
+  type DemoViewModel,
+} from "./live/adapter";
 
 export const isPreview = import.meta.env.MODE === "preview";
 
@@ -28,33 +36,70 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function getMondayBrief(): Promise<MondayBriefProjection> {
-  const projection = await request<MondayBriefProjection>(
-    isPreview ? "/preview/dashboard" : "/api/app",
-  );
-  // The current live API returns DemoViewModel, which these preview screens
-  // cannot render. Keep the unavailable state until that consumer is migrated.
-  if (
-    !projection ||
-    !Array.isArray(projection.ranking) ||
-    !projection.pre_reads ||
-    !projection.facts ||
-    !projection.scenarios ||
-    !projection.evidence
-  ) {
+export async function getMondayBrief(): Promise<AppProjection> {
+  if (isPreview) {
+    return request<AppProjection>("/preview/dashboard");
+  }
+  const viewModel = await request<DemoViewModel>("/api/app");
+  if (!isDemoViewModel(viewModel)) {
     throw new Error("The dashboard API is not available yet.");
   }
-  return projection;
+  return adaptViewModel(viewModel);
+}
+
+/** RM-triggered pipeline run: apply the update overlay or reset to the seed. */
+export async function runPipeline(
+  action: "apply" | "reset",
+): Promise<AppProjection> {
+  const viewModel = await request<DemoViewModel>("/api/demo/update", {
+    method: "POST",
+    body: JSON.stringify({ action }),
+  });
+  return adaptViewModel(viewModel);
+}
+
+export async function getClientMemory(clientId: string): Promise<{
+  client_id: string;
+  as_of: string;
+  records: CommunicationRecord[];
+  sources: Record<string, string>;
+}> {
+  return request(`/api/clients/${clientId}/memory`);
+}
+
+export async function getCommunications(source?: string): Promise<{
+  as_of: string;
+  records: CommunicationRecord[];
+}> {
+  const query = source ? `?source=${encodeURIComponent(source)}` : "";
+  return request(`/api/communications${query}`);
 }
 
 export async function saveReview(
   review: ReviewRequest,
+  live?: { runId: string; briefVersion: number },
 ): Promise<ReviewResponse> {
-  if (!isPreview) {
-    throw new Error("Review actions are not available in this dashboard yet.");
+  if (isPreview) {
+    return request<ReviewResponse>("/preview/reviews", {
+      method: "POST",
+      body: JSON.stringify(review),
+    });
   }
-  return request<ReviewResponse>("/preview/reviews", {
+  if (!live) {
+    throw new Error("Review actions need a loaded live run.");
+  }
+  const payload: ReviewActionRequest = {
+    client_id: review.client_id,
+    action: review.action,
+    text: review.text,
+    section: review.action === "Edit" ? "opening" : null,
+    reason: null,
+    run_id: live.runId,
+    brief_version: live.briefVersion,
+  };
+  const response = await request<ReviewActionResponse>("/api/reviews", {
     method: "POST",
-    body: JSON.stringify(review),
+    body: JSON.stringify(payload),
   });
+  return { review: response.review };
 }

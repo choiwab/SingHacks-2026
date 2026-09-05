@@ -26,6 +26,8 @@ import { flushSync } from "react-dom";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
 
 import { isPreview, saveReview } from "./api";
+import { claimText } from "./live/adapter";
+import type { AppProjection, LiveInsight } from "./live/adapter";
 import {
   CompactCalendar,
   DashboardHeader,
@@ -35,7 +37,7 @@ import {
   PlannedCashNeeds,
   FactPreview,
 } from "./ClientDashboard";
-import type { MondayBriefProjection, ReviewAction } from "./contracts";
+import type { ReviewAction } from "./contracts";
 import { getPersona } from "./demo/personas";
 import type { Authorship } from "./evidence";
 import { KeywordChips, LifeEvents, PortfolioBand } from "./PersonaPanels";
@@ -130,13 +132,52 @@ function BriefSection({
   );
 }
 
+/** Ranked agent insights from the live pipeline run, with evidence trails. */
+function AgentInsights({
+  insights,
+  clientId,
+  authorship,
+}: {
+  insights: LiveInsight[];
+  clientId: string;
+  authorship: Authorship;
+}) {
+  const surfaces = useSurfaceStyles();
+  if (insights.length === 0)
+    return <Body1>No verified insights for this run.</Body1>;
+  return (
+    <ul className="agent-insights" aria-label="Agent insights">
+      {insights.map((insight) => (
+        <li key={insight.signal_id} className={surfaces.surface}>
+          <Eyebrow>
+            Signal score {insight.score}
+            {insight.change_status ? ` · ${insight.change_status}` : ""}
+          </Eyebrow>
+          {claimText(insight.why_it_matters) && (
+            <Body1Strong>{claimText(insight.why_it_matters)}</Body1Strong>
+          )}
+          {insight.facts.slice(0, 2).map((claim) => (
+            <Body1 key={claim.id}>{claim.text}</Body1>
+          ))}
+          <WhyButton
+            citations={insight.facts.flatMap((claim) => claim.citations ?? [])}
+            clientId={clientId}
+            claim={claimText(insight.why_it_matters) ?? insight.facts[0]?.text}
+            authorship={authorship}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function PreRead({
   projection,
   reviews,
   savedOpenings,
   onReviewed,
 }: {
-  projection: MondayBriefProjection;
+  projection: AppProjection;
   reviews: Record<string, Authorship>;
   savedOpenings: Record<string, string>;
   onReviewed: (clientId: string, state: Authorship, text: string) => void;
@@ -208,7 +249,15 @@ export function PreRead({
     setReviewError(null);
     try {
       const text = action === "Edit" ? editedOpening.trim() : currentOpening;
-      const response = await saveReview({ client_id: clientId, action, text });
+      const response = await saveReview(
+        { client_id: clientId, action, text },
+        projection.live
+          ? {
+              runId: projection.live.runId,
+              briefVersion: projection.live.briefVersions[clientId] ?? 1,
+            }
+          : undefined,
+      );
       if (action === "Edit") {
         const restoreFocus = editPanel.current?.contains(
           document.activeElement,
@@ -284,6 +333,7 @@ export function PreRead({
           ranked={rankedClient}
           facts={facts}
           asOf={projection.as_of}
+          health={projection.live?.dataHealth}
           reviewState={reviewState}
           onReviewBrief={() => {
             // Commit the longer brief before measuring the checkpoint position.
@@ -368,9 +418,20 @@ export function PreRead({
         )}
         {tab === "overview" && (
           <div className={styles.brief}>
-            <Caption1 className={styles.unavailableNote}>
-              Summary, discussion topics, and suggested questions unavailable.
-            </Caption1>
+            {!projection.live && (
+              <Caption1 className={styles.unavailableNote}>
+                Summary, discussion topics, and suggested questions unavailable.
+              </Caption1>
+            )}
+            {projection.live && (
+              <BriefSection title="Agent insights">
+                <AgentInsights
+                  insights={projection.live.insights[clientId] ?? []}
+                  clientId={clientId}
+                  authorship={reviewState}
+                />
+              </BriefSection>
+            )}
             {persona && (
               <BriefSection title="Life & next steps">
                 <LifeEvents persona={persona} />
@@ -606,13 +667,15 @@ export function PreRead({
             {receipt}
           </p>
         )}
-        <Link
-          as="button"
-          type="button"
-          onClick={() => navigate(`/clients/${clientId}/scenario`)}
-        >
-          Strait scenarios →
-        </Link>
+        {projection.scenarios[clientId] && (
+          <Link
+            as="button"
+            type="button"
+            onClick={() => navigate(`/clients/${clientId}/scenario`)}
+          >
+            Strait scenarios →
+          </Link>
+        )}
       </div>
       {toast && (
         <MessageBar

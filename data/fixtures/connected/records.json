@@ -1,0 +1,332 @@
+[
+  {
+    "id": "gmail:demo-cl-0001-1",
+    "client_id": "CL-0001",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Hartono Wijaya Kusuma",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Property deposit and portfolio diversification\nFrom: Hartono Wijaya Kusuma\n\nPriscilla, please keep the legacy family shareholding out of any proposed sales. I would like income ideas for the part of my wealth outside the mining business, while keeping the Bukit Timah deposit in view.",
+    "topics": [
+      "Property deposit and portfolio diversification"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0001-2",
+    "client_id": "CL-0001",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Hartono Wijaya Kusuma",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Property deposit and portfolio diversification\nFrom: Priscilla Ong\n\nI will prepare a liquidity plan for the early 2027 property deposit and show how the shipping and energy note overlaps with the family business. We can discuss alternatives without assuming a sale of the legacy shares.",
+    "topics": [
+      "Property deposit and portfolio diversification"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0001-1",
+    "client_id": "CL-0001",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-27T10:30:00+08:00",
+    "participants": [
+      "Hartono Wijaya Kusuma",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: Property deposit and portfolio diversification\nScheduled: 2026-08-27T10:30:00+08:00 to 2026-08-27T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "Property deposit and portfolio diversification"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0002-1",
+    "client_id": "CL-0002",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Ravi Chandrasekaran",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Lombard headroom before the secondary sale\nFrom: Ravi Chandrasekaran\n\nPriscilla, the Q4 secondary sale is still the plan. I remain positive on technology and do not want to sell listed positions ahead of it. Please send an updated view of the facility after the additional pre-IPO investment.",
+    "topics": [
+      "Lombard headroom before the secondary sale"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0002-2",
+    "client_id": "CL-0002",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Ravi Chandrasekaran",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Lombard headroom before the secondary sale\nFrom: Priscilla Ong\n\nThe additional draw increases utilisation while technology collateral remains volatile. Let us review the LTV trigger, available headroom and a contingency if the secondary sale is delayed before considering any further borrowing.",
+    "topics": [
+      "Lombard headroom before the secondary sale"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0002-1",
+    "client_id": "CL-0002",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-28T10:30:00+08:00",
+    "participants": [
+      "Ravi Chandrasekaran",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: Lombard headroom before the secondary sale\nScheduled: 2026-08-28T10:30:00+08:00 to 2026-08-28T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "Lombard headroom before the secondary sale"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0003-1",
+    "client_id": "CL-0003",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Margarethe Voss-Brenner",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Inherited portfolio and inheritance tax reserve\nFrom: Margarethe Voss-Brenner\n\nDear Priscilla, I still find the inherited holdings difficult to understand. Please explain the risks simply and show me the safe and boring options we discussed, without making changes before we speak.",
+    "topics": [
+      "Inherited portfolio and inheritance tax reserve"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0003-2",
+    "client_id": "CL-0003",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Margarethe Voss-Brenner",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Inherited portfolio and inheritance tax reserve\nFrom: Priscilla Ong\n\nI will prepare a plain-language review of the inherited portfolio against your Conservative profile. We should also discuss reserving EUR liquidity for the approximately EUR 3.4 million German inheritance tax instalment before year end and confirm timing with your tax adviser.",
+    "topics": [
+      "Inherited portfolio and inheritance tax reserve"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0003-1",
+    "client_id": "CL-0003",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-29T10:30:00+08:00",
+    "participants": [
+      "Margarethe Voss-Brenner",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: Inherited portfolio and inheritance tax reserve\nScheduled: 2026-08-29T10:30:00+08:00 to 2026-08-29T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "Inherited portfolio and inheritance tax reserve"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0004-1",
+    "client_id": "CL-0004",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Chalermchai Suphanburi",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Retirement income and the deposit question\nFrom: Chalermchai Suphanburi\n\nPriscilla, after reading the article on rates I wonder whether deposits would be simpler. Can the portfolio support the income we discussed when I retire in Q2 2027 without using capital?",
+    "topics": [
+      "Retirement income and the deposit question"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0004-2",
+    "client_id": "CL-0004",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Chalermchai Suphanburi",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Retirement income and the deposit question\nFrom: Priscilla Ong\n\nI will compare the income and liquidity implications of the current holdings and deposits, and explain why bond prices can fall. We should review the USD 1.45 million annual income objective alongside the planned handover to your daughter.",
+    "topics": [
+      "Retirement income and the deposit question"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0004-1",
+    "client_id": "CL-0004",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-30T10:30:00+08:00",
+    "participants": [
+      "Chalermchai Suphanburi",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: Retirement income and the deposit question\nScheduled: 2026-08-30T10:30:00+08:00 to 2026-08-30T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "Retirement income and the deposit question"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0005-1",
+    "client_id": "CL-0005",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Aishah binti Rahman",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Sustainability policy review\nFrom: Aishah binti Rahman\n\nPriscilla, I understood the portfolio to be aligned with our family sustainability policy. Please explain the energy fund and show the Sunrise Palm family holding separately in the review.",
+    "topics": [
+      "Sustainability policy review"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0005-2",
+    "client_id": "CL-0005",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Aishah binti Rahman",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: Sustainability policy review\nFrom: Priscilla Ong\n\nI will map the holdings against the 2024 policy and identify where the energy exposure needs discussion. We should agree how to treat the legacy family position within the mandate before discussing changes.",
+    "topics": [
+      "Sustainability policy review"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0005-1",
+    "client_id": "CL-0005",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-31T10:30:00+08:00",
+    "participants": [
+      "Aishah binti Rahman",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: Sustainability policy review\nScheduled: 2026-08-31T10:30:00+08:00 to 2026-08-31T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "Sustainability policy review"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0006-1",
+    "client_id": "CL-0006",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-24T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Nguyen Thi Bao Tran",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: USD obligations and the private credit redemption\nFrom: Nguyen Thi Bao Tran\n\nPriscilla, please confirm what we can rely on for the capital calls and the first US tuition payment. I had not expected the private credit redemption to be restricted, and most of my assets are in Singapore dollars.",
+    "topics": [
+      "USD obligations and the private credit redemption"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "gmail:demo-cl-0006-2",
+    "client_id": "CL-0006",
+    "source": "gmail",
+    "version": "1",
+    "occurred_at": "2026-08-25T02:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "participants": [
+      "Nguyen Thi Bao Tran",
+      "Priscilla Ong"
+    ],
+    "text": "Subject: USD obligations and the private credit redemption\nFrom: Priscilla Ong\n\nI will prepare a USD liquidity schedule for the capital calls and tuition, with the gated redemption shown separately from available cash. We can review currency conversion options and confirm payment dates together.",
+    "topics": [
+      "USD obligations and the private credit redemption"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  },
+  {
+    "id": "calendar:demo-cl-0006-1",
+    "client_id": "CL-0006",
+    "source": "calendar",
+    "version": "1",
+    "occurred_at": "2026-08-25T03:00:00Z",
+    "retrieved_at": "2026-08-25T09:00:00Z",
+    "scheduled_at": "2026-08-27T10:30:00+08:00",
+    "participants": [
+      "Nguyen Thi Bao Tran",
+      "Priscilla Ong"
+    ],
+    "text": "Meeting: USD obligations and the private credit redemption\nScheduled: 2026-08-27T10:30:00+08:00 to 2026-08-27T11:15:00+08:00\nLocation: Singapore client meeting room",
+    "topics": [
+      "USD obligations and the private credit redemption"
+    ],
+    "provenance": "synthetic_fixture",
+    "availability": "Cached"
+  }
+]

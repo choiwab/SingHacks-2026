@@ -13,13 +13,13 @@ from typing import Any, cast
 
 from app.agents.briefing import rm_briefing_agent
 from app.agents.context import CommunicationLoader, context_agent
-from app.pipeline.agent_inputs import note_topics
 from app.agents.contracts import CuratedClientBundle, MeetingPack, Signal, fingerprint
 from app.agents.state import AgentState
 from app.agents.verification import verify_meeting_pack
 from app.agents.wealth import wealth_intelligence_agent
 from app.analytics.signals import build_signals
 from app.mcp.records import SOURCES, CommunicationRecord, ConnectedContext
+from app.pipeline.agent_inputs import note_topics
 from app.pipeline.generation_state import ClientFlowState
 from app.pipeline.graph_adapter import AgentHooks
 from app.pipeline.loaders import ArtifactStore
@@ -198,30 +198,9 @@ def member2_hooks(
         def load_bundle(client: str, as_of: date, revision: str) -> CuratedClientBundle:
             if (client, revision) != (client_id, run_id):
                 raise ValueError("Generation must use the pinned client and run")
-            facts = store.load_fact_bundle(client, run_id=revision)
-            signals = store.load_signal_set(client, run_id=revision)
-            if signals.signals and signal_adapter is None:
-                raise ValueError("Finalized Member 4 Signal mapping is not connected")
-            mapped = (
-                [Signal.model_validate(signal_adapter(s)) for s in signals.signals]
-                if signal_adapter is not None
-                else []
-            )
-            evidence = store.load_evidence_map(run_id=revision)
-            quality = store.load_data_quality_report(run_id=revision, client_id=client)
-            return CuratedClientBundle(
-                client_id=client,
-                as_of=as_of,
-                version=revision,
-                facts=facts.facts,
-                signals=mapped,
-                evidence={
-                    key: entry
-                    for key, entry in evidence.entries.items()
-                    if entry.record.get("client_id") in (None, client)
-                },
-                quality_issues=[f.message for f in quality.findings if f.severity == "error"],
-            )
+            # Generation and verification must rederive from identical content,
+            # so both sides share the one pinned bundle builder above.
+            return bundle(client, as_of, revision)
 
         state: AgentState = {
             "run_id": run_id,
@@ -275,10 +254,16 @@ def member2_hooks(
         as_of = date.fromisoformat(state["as_of"])
         connected = ConnectedContext(
             records=cast(Any, state.get("connected_context") or []),
-            sources=cast(Any, state.get("connected_sources") or disconnected("", as_of, "").sources),
+            sources=cast(
+                Any,
+                state.get("connected_sources")
+                or disconnected("", datetime.combine(as_of, time.min, tzinfo=UTC), "").sources,
+            ),
             retrieval_log=cast(Any, state.get("retrieval_log") or []),
         )
-        report = verify_meeting_pack(pack, bundle(state["client_id"], as_of, state["run_id"]), connected)
+        report = verify_meeting_pack(
+            pack, bundle(state["client_id"], as_of, state["run_id"]), connected
+        )
         return {
             "verification_report": {
                 "passed": report.passed,

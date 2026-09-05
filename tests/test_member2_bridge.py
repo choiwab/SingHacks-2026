@@ -47,10 +47,13 @@ def test_real_offline_seed_update_persists_generation_without_approving_unverifi
         assert brief.body["pack"]["client_id"] == client
         assert brief.body["pack"]["generation_mode"] == "deterministic"
         assert brief.body["pack_version"]
-        assert brief.body["insights"] == []  # No invented financial Signals.
+        assert len(brief.body["insights"]) == 3  # Derived from the pinned legacy Facts.
+        fact_ids = {fact.id for fact in store.load_fact_bundle(client, run_id=seed.run_id).facts}
+        for insight in brief.body["insights"]:
+            assert all(set(claim["citations"]) <= fact_ids for claim in insight["facts"])
         assert brief.body["memory_index"]["client_id"] == client
         assert [item["node"] for item in brief.body["trace"]] == ["context", "wealth", "briefing"]
-        assert brief.verification_report["passed"] is False
+        assert brief.verification_report["passed"] is True
         assert (
             "Phase A Signal definitions are not connected; legacy Facts only."
             in brief.body["context_issues"]
@@ -60,12 +63,10 @@ def test_real_offline_seed_update_persists_generation_without_approving_unverifi
             assert set(brief.body["connected_sources"].values()) == {"Not connected"}
     before = ledger.get_brief("CL-0003", seed.run_id)
     assert before is not None and before.body["connected_context"]
-    with pytest.raises(ValueError, match="not passed verification"):
-        runtime.review(
-            ReviewRequest(
-                client_id="CL-0003", run_id=seed.run_id, brief_version=1, action="Approve"
-            )
-        )
+    approved = runtime.review(
+        ReviewRequest(client_id="CL-0003", run_id=seed.run_id, brief_version=1, action="Approve")
+    )
+    assert approved["verification_report"]["passed"] is True
     update = runtime.update()
     assert len(ledger.list_briefs(update.run_id)) == 20
     after = ledger.get_brief("CL-0003", update.run_id)

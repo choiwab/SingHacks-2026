@@ -2,9 +2,11 @@ import {
   Badge,
   Body1,
   Body1Strong,
+  Button,
   Caption1,
   MessageBar,
   MessageBarBody,
+  Spinner,
   Subtitle2,
   Title2,
   makeStyles,
@@ -17,6 +19,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { CompactCalendar, briefState } from "./ClientDashboard";
 import { DonutChart } from "./charts";
 import type { MondayBriefProjection, RankedClient } from "./contracts";
+import type { LiveState } from "./live/adapter";
 import { FEATURED_PERSONAS } from "./demo/personas";
 import type { Authorship } from "./evidence";
 import { Eyebrow, useSurfaceStyles } from "./shared";
@@ -49,6 +52,17 @@ const useStyles = makeStyles({
     letterSpacing: "-0.01em",
   },
   muted: { color: tokens.colorNeutralForeground3 },
+  pipelineBar: {
+    display: "flex",
+    flexDirection: "column",
+    rowGap: tokens.spacingVerticalS,
+    marginTop: tokens.spacingVerticalS,
+  },
+  pipelineActions: {
+    display: "flex",
+    columnGap: tokens.spacingHorizontalS,
+    flexWrap: "wrap",
+  },
   section: {
     display: "flex",
     flexDirection: "column",
@@ -336,9 +350,15 @@ function PersonaStrip({
 export function Home({
   projection,
   reviews,
+  onRunPipeline,
+  pipelineBusy = false,
+  pipelineError = "",
 }: {
-  projection: MondayBriefProjection;
+  projection: MondayBriefProjection & { live?: LiveState };
   reviews: Record<string, Authorship>;
+  onRunPipeline?: (action: "apply" | "reset") => void;
+  pipelineBusy?: boolean;
+  pipelineError?: string;
 }) {
   const styles = useStyles();
   const navigate = useNavigate();
@@ -378,6 +398,40 @@ export function Home({
         <Caption1 className={styles.muted}>
           Ranked by {projection.ranking_formula}
         </Caption1>
+        {projection.live && onRunPipeline && (
+          <div className={styles.pipelineBar}>
+            <Caption1 className={styles.muted} role="status" aria-atomic="true">
+              Run {projection.live.runId} · {projection.live.dataHealth} ·
+              refreshed{" "}
+              {new Date(projection.live.refreshedAt).toLocaleTimeString(
+                "en-SG",
+                { hour: "2-digit", minute: "2-digit", hour12: false },
+              )}
+            </Caption1>
+            <div className={styles.pipelineActions}>
+              <Button
+                appearance="primary"
+                disabled={pipelineBusy}
+                icon={pipelineBusy ? <Spinner size="tiny" /> : undefined}
+                onClick={() => onRunPipeline("apply")}
+              >
+                {pipelineBusy ? "Running pipeline…" : "Run pipeline"}
+              </Button>
+              <Button
+                appearance="secondary"
+                disabled={pipelineBusy}
+                onClick={() => onRunPipeline("reset")}
+              >
+                Reset to seed
+              </Button>
+            </div>
+            {pipelineError && (
+              <MessageBar intent="error" role="alert">
+                <MessageBarBody>{pipelineError}</MessageBarBody>
+              </MessageBar>
+            )}
+          </div>
+        )}
       </header>
 
       <div className={styles.section}>

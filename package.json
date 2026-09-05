@@ -27,7 +27,8 @@
     "pipeline:seed": "uv run python -m app.pipeline seed",
     "pipeline:update": "uv run python -m app.pipeline update",
     "pipeline:reset": "uv run python -m app.pipeline reset",
-    "pipeline:diff": "uv run python -m app.pipeline diff"
+    "pipeline:diff": "uv run python -m app.pipeline diff",
+    "memory:seed": "uv run python -m scripts.seed_demo_memory"
   },
   "dependencies": {
     "@fluentui/react-components": "^9.74.7",

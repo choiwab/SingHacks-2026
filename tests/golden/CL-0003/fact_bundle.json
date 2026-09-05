@@ -1,6 +1,15 @@
 {
   "as_of": "2026-08-26",
   "client_id": "CL-0003",
+  "descriptions": {
+    "CL-0003:fact:change-1:delta": "Global Luxury and Consumer Brands Fund position value changed by EUR -532,400 between 2025-12-31 and 2026-08-26.",
+    "CL-0003:fact:change-2:delta": "US Technology Leaders Fund position value changed by EUR 400,589 between 2025-12-31 and 2026-08-26.",
+    "CL-0003:fact:change-3:delta": "EUR Investment Grade Bond Fund position value changed by EUR -138,000 between 2025-12-31 and 2026-08-26.",
+    "CL-0003:fact:concentration:weight_pct": "Connected positions represent 26.1% of the portfolio.",
+    "CL-0003:fact:deadline:days": "German inheritance tax instalment of EUR 3,400,000 starts in 36 days. Daily-liquid holdings total EUR 17,934,556, before collateral and other commitments.",
+    "CL-0003:fact:mandate-gap:actual_pct": "Equity is 71.5% against a 30% maximum.",
+    "CL-0003:fact:profile:risk_tolerance_score": "Margarethe Voss-Brenner has a Conservative profile."
+  },
   "facts": [
     {
       "as_of": "2026-08-26",

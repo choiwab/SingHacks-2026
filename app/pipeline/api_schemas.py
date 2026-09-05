@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import Field, JsonValue
 
+from app.mcp.records import CommunicationRecord, ConnectedContext
 from app.pipeline.schemas import (
     ChangeReport,
     ContractModel,
@@ -54,12 +55,36 @@ class ClientView(ContractModel):
     context_issues: list[str] = Field(default_factory=list)
 
 
+class ClientMemory(ConnectedContext):
+    client_id: str
+    as_of: datetime
+
+
+class NamedCommunicationRecord(CommunicationRecord):
+    client_name: str
+
+
+class CommunicationsResponse(ContractModel):
+    as_of: datetime
+    records: list[NamedCommunicationRecord]
+
+
+class ClientRanking(ContractModel):
+    client_id: str
+    name: str
+    score: float
+    urgency: Literal["now", "soon", "watch"]
+    meeting: str | None
+    reason: str
+
+
 class DemoViewModel(ContractModel):
     as_of: date
     run_id: str
     refreshed_at: datetime
     data_health: Literal["Current", "Stale", "Updating", "Needs confirmation"]
     clients: dict[str, ClientView]
+    ranking: list[ClientRanking] = Field(default_factory=list)
     calendar: list[dict[str, JsonValue]] = Field(default_factory=list)
     evidence: dict[str, Evidence] = Field(default_factory=dict)
     connected_evidence: dict[str, dict[str, JsonValue]] = Field(

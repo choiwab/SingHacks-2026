@@ -7,15 +7,65 @@ Those records are returned unchanged; this layer never invents meeting dates.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
-from app.pipeline.api_schemas import ClientHeader, ClientView, DataTab, DemoViewModel
+from app.pipeline.api_schemas import ClientHeader, ClientRanking, ClientView, DataTab, DemoViewModel
 from app.pipeline.loaders import ArtifactStore
+from app.pipeline.member2_bridge import derive_signals
 from app.pipeline.schemas import ChangeReport, Fact
 from app.pipeline.verification_state import verification_passed
 from app.store import ReviewLedger
+
+LEGACY_SIGNAL_NOTICE = "Phase A Signal definitions are not connected; legacy Facts only."
+
+
+def _blocking_context(issues: list[str]) -> bool:
+    # M2 derives verified signals from the pinned legacy Facts; retain the notice for audit.
+    return any(issue != LEGACY_SIGNAL_NOTICE for issue in issues)
+
+
+def _ranking(
+    client: ClientView, facts: list[Fact], signals: list[Any], calendar: list[dict[str, Any]]
+) -> ClientRanking:
+    """Priority is the maximum existing signal component (0-100), with ties by client ID.
+
+    Legacy runs rebuild the same scorer's components from pinned Facts. Urgency uses
+    the scorer's existing 65/45 thresholds. Meetings display Singapore local time.
+    """
+    derived = derive_signals(client.header.client_id, facts) if not signals else []
+    drivers = [(signal.priority_score, signal.id) for signal in signals] or [
+        (signal.score, signal.id) for signal in derived
+    ]
+    score, driver = max(drivers, default=(0.0, ""))
+    reasons = {
+        "suitability": "Mandate alignment and concentration lead the review.",
+        "funding": "The next funding deadline leads the review.",
+        "portfolio-change": "Portfolio changes and their consequences lead the review.",
+    }
+    meetings = sorted(
+        datetime.fromisoformat(item["scheduled_at"])
+        for item in calendar
+        if item.get("client_id") == client.header.client_id and item.get("scheduled_at")
+    )
+    return ClientRanking(
+        client_id=client.header.client_id,
+        name=client.header.client_name,
+        score=float(score),
+        urgency="now" if score >= 65 else "soon" if score >= 45 else "watch",
+        meeting=meetings[0].astimezone(ZoneInfo("Asia/Singapore")).strftime("%a %H:%M")
+        if meetings
+        else None,
+        reason=reasons.get(
+            driver.rsplit(":", 1)[-1],
+            f"Signal {driver} leads the review."
+            if driver
+            else "No scored signal is available for review.",
+        ),
+    )
 
 
 def _has_text(value: Any) -> bool:
@@ -192,11 +242,12 @@ def build_view_model(
     clients: dict[str, ClientView] = {}
     calendar: list[dict[str, Any]] = []
     calendar_seen: set[str] = set()
+    ranking: list[ClientRanking] = []
     references: dict[str, set[str]] = {}
     connected_records: dict[str, dict[str, Any]] = {}
     reviews = ledger.list(manifest.run_id)
     needs_confirmation = (
-        bool(manifest.context_issues)
+        _blocking_context(manifest.context_issues)
         or store.load_data_quality_report(run_id=manifest.run_id).has_errors
     )
     for client_id in manifest.client_ids:
@@ -211,7 +262,7 @@ def build_view_model(
         context_issues = list(manifest.context_issues) + body.get("context_issues", [])
         verified = verification_passed(verification)
         failed = persisted is not None and not verified
-        client_unconfirmed = failed or quality.has_errors or bool(context_issues)
+        client_unconfirmed = failed or quality.has_errors or _blocking_context(context_issues)
         needs_confirmation = needs_confirmation or client_unconfirmed
         brief = body.get("meeting_brief")
         applicable_reviews = [
@@ -272,6 +323,7 @@ def build_view_model(
             verification=verification,
             context_issues=context_issues,
         )
+        ranking.append(_ranking(clients[client_id], facts.facts, signals.signals, calendar))
         references.update({fact.id: set(fact.evidence_ids) for fact in facts.facts})
         for signal in signals.signals:
             references[signal.id] = set(signal.evidence_ids)
@@ -293,6 +345,7 @@ def build_view_model(
         data_health=health,
         clients=clients,
         calendar=calendar,
+        ranking=sorted(ranking, key=lambda item: (-item.score, item.client_id)),
         reviews=reviews,
     )
     requested = _references(result.model_dump(mode="json"))
