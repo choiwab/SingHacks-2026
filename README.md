@@ -214,6 +214,12 @@ See [the sample inspection](docs/SAMPLE_CLIENT_FLOW.md) and
 [the agent integration guide](app/agents/README.md) for evidence, limitations and review/resume.
 The other four dataset snapshot dates can also be supplied through `--as-of`.
 
+The CLI now persists memory, graph checkpoints, and review state in `data/generated/memory/`.
+To use the live read-only MCP transport, start `uv run python -m app.mcp.server --transport streamable-http`
+and add `--mcp-url http://127.0.0.1:8001/mcp` to the flow command. See
+[persistent memory and MCP](docs/PERSISTENT_MEMORY_MCP.md) for interaction imports, recall,
+review across restarts, and local-only security limits. External Gmail/Teams accounts are not connected.
+
 ### Frontend development
 
 The retained React screens are not yet connected to this Meeting Brief output. The old

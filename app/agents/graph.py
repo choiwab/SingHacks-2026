@@ -29,6 +29,19 @@ def build_agent_flow(
 ):
     """No default passing gate: Member 4 must supply the verifier (or a labelled test double)."""
 
+    load_context = partial(
+        context_agent,
+        load_bundle=load_bundle,
+        load_communications=load_communications,
+        generation_policy="v1:openai" if live_generation else "v1:deterministic",
+    )
+
+    def inputs_current(state: AgentState) -> bool:
+        current = load_context(state)
+        return not current.get("context_failed") and current.get("input_versions") == state.get(
+            "input_versions"
+        )
+
     def verify(state: AgentState) -> dict[str, Any]:
         publish_reviews(state, record_review)
         pack = MeetingPack.model_validate(state.get("pack"))
@@ -71,19 +84,11 @@ def build_agent_flow(
         return needs_confirmation(state)
 
     graph = StateGraph(AgentState)
-    graph.add_node(
-        "context",
-        partial(
-            context_agent,
-            load_bundle=load_bundle,
-            load_communications=load_communications,
-            generation_policy="v1:openai" if live_generation else "v1:deterministic",
-        ),
-    )
+    graph.add_node("context", load_context)
     graph.add_node("wealth", wealth_intelligence_agent)
     graph.add_node("briefing", partial(rm_briefing_agent, live=live_generation))
     graph.add_node("verify", verify)
-    graph.add_node("human_review", human_review)
+    graph.add_node("human_review", partial(human_review, check_current=inputs_current))
     graph.add_node("finalize", finish)
     graph.add_node("needs_confirmation", stop)
     graph.add_node("reuse", reuse)

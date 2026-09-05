@@ -30,7 +30,10 @@ For interactive in-process review, use `build_data_flow(Path("data"))` from
 `scripts.run_client_flow`, keep its graph and client-specific thread, and resume using the review
 example below. Reinvoke that same graph after editing a **copy** of the source dataset to exercise
 updates. Content hashes, not the revision label, determine whether data changed. The CLI is a
-single-run inspection tool, not a durable review server or background monitor.
+durable inspection/review runner using SQLite; it is not a background monitor. See
+[persistent memory and MCP](../../docs/PERSISTENT_MEMORY_MCP.md) for restart-safe execution,
+local interaction imports, and the live server. The `build_data_flow()` helper above remains
+in-memory; `persistent_data_flow()` is the durable runtime.
 
 ## Retained fixture-replay example
 
@@ -127,13 +130,14 @@ altering financial values or scores. Unchanged content preserves its actual prio
 Member 3 should expose `pack`, `pack_version`, `status`, `issues`, `verification`, `connected_context`,
 `last_approved`, and relevant traces through its view-model adapter. For `needs_confirmation`, show
 the failed claim/reason and label `last_approved` as an older version with an update warning. Never
-present the failed candidate as meeting-ready. No new dashboard or persistence API was added here.
+present the failed candidate as meeting-ready. No new dashboard API was added here.
 
 `record_review` receives stable event IDs and may be retried during graph resume. Upsert rather than
 append blindly. If the sink fails, the graph does not finalize the approval. New review requests must
-include the current pack version. Use a separate thread per client. Trace/history are kept in memory
-for the small hackathon session; durable history, retention and concurrent request serialization belong
-to Member 3's storage/API layer.
+include the current pack version. Use a separate thread per client. The shared review node now
+rechecks input versions after resume and refreshes changed/unavailable inputs without accepting
+the decision. The durable runtime persists trace/history and the retrieval index with SQLite;
+retention and concurrent request serialization remain outside this single-writer demo.
 
 ## Optional OpenAI generation
 
@@ -157,9 +161,11 @@ a gate failure pauses the graph, without triggering a rewrite. The example's fro
 will normally reject novel model wording: supply Member 4's real verifier for live integration.
 Live requests have not been made during implementation; the adapter is covered with mocked responses.
 
-Live MCP transports, actual external-account retrieval, recording real connector responses and neural
-embeddings remain optional future work. The current `app/mcp` module is honest fixture replay with
-`synthetic_fixture` provenance and `Cached` availability, not a network MCP implementation.
+`app/mcp/server.py` now exposes real read-only MCP tools over stdio and loopback Streamable HTTP;
+`app/mcp/client.py` connects the graph's input loaders through that protocol when explicitly selected.
+Durable added interactions live in `app/mcp/store.py`. Dataset/fixture records remain `Cached` even
+when the MCP transport is live. External-account retrieval, OAuth connectors, automatic recording
+and neural embeddings remain future work.
 
 ## Verification
 

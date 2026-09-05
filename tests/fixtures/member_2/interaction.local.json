@@ -1,0 +1,13 @@
+{
+  "id": "notes:demo-meeting",
+  "client_id": "CL-0003",
+  "source": "notes",
+  "version": "1",
+  "occurred_at": "2026-08-26T10:00:00Z",
+  "retrieved_at": "2026-08-26T10:00:00Z",
+  "participants": ["Demo Relationship Manager"],
+  "text": "Client asks to discuss the tax funding plan. RM promised a follow-up summary.",
+  "topics": ["recent_updates", "stated_needs_and_goals", "open_promises"],
+  "provenance": "synthetic_fixture",
+  "availability": "Cached"
+}
