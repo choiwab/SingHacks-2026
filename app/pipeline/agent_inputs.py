@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, date, datetime, time
+from numbers import Real
 from pathlib import Path
 
 from app.agents.contracts import CuratedClientBundle, fingerprint
@@ -42,16 +43,73 @@ def load_curated_bundle(
     facts_by_client, evidence = fact_engine(scoped, as_of)
     raw_facts = _jsonable(facts_by_client[client_id])
     typed_facts = []
+    fact_descriptions = {}
+    fact_ids = {}
+    portfolio_currency = str(scoped["holdings"].iloc[0]["portfolio_ccy"])
     for fact in raw_facts:
         key = fact["id"].rsplit(":", 1)[-1]
         kind = "change" if key.startswith("change-") else key.replace("-", "_")
-        typed_facts.append({**fact, "kind": kind})
+        numbers = fact["numbers"]
+        if key == "deadline" and scoped["planned_cash_needs"].empty:
+            # With no cash need, the engine uses the KYC date; its zero amount
+            # is a placeholder, not a sourced financial measurement.
+            numbers = {"days": numbers["days"]}
+        ids = []
+        # The canonical contract has one numeric value per Fact. Keep the engine's
+        # formulas and complete inputs, and publish its prose separately for agents.
+        for field, value in numbers.items():
+            if isinstance(value, bool) or not isinstance(value, Real):
+                continue
+            monetary = field in {
+                "amount",
+                "amount_in_portfolio_currency",
+                "daily_liquid",
+                "delta",
+                "value",
+            }
+            currency = None
+            if monetary:
+                currency = (
+                    numbers.get("portfolio_currency") or portfolio_currency
+                    if field in {"amount_in_portfolio_currency", "daily_liquid", "value"}
+                    else numbers.get("currency")
+                )
+            identifier = f"{fact['id']}:{field}"
+            typed_facts.append(
+                {
+                    "id": identifier,
+                    "client_id": client_id,
+                    "kind": f"{kind}.{field}",
+                    "value": float(value),
+                    "unit": "percent"
+                    if field.endswith("_pct")
+                    else "days"
+                    if field == "days"
+                    else "currency"
+                    if monetary
+                    else "number",
+                    "currency": currency,
+                    "formula_id": f"legacy.{key}.{field}",
+                    "inputs": numbers,
+                    "evidence_ids": sorted(set(fact["source_rows"] + fact["event_ids"])),
+                    "as_of": as_of.isoformat(),
+                    "confidence": {"high": 1.0, "medium": 0.5, "low": 0.25}[fact["confidence"]],
+                }
+            )
+            if not ids:
+                fact_descriptions[identifier] = fact["what"]
+            ids.append(identifier)
+        fact_ids[fact["id"]] = ids
     evidence_ids = {
         identifier
         for fact in raw_facts
         for identifier in [*fact["source_rows"], *fact["event_ids"]]
     }
     signals = build_signals(client_id, raw_facts)
+    for signal in signals:
+        signal["fact_ids"] = [
+            identifier for original in signal["fact_ids"] for identifier in fact_ids[original]
+        ]
     current = scoped["holdings"].loc[scoped["holdings"]["snapshot_date"] == as_of.isoformat()]
     if "valuation_date" in current and (current["valuation_date"] < as_of.isoformat()).any():
         for signal in signals:
@@ -63,6 +121,7 @@ def load_curated_bundle(
         "client_id": client_id,
         "as_of": as_of.isoformat(),
         "facts": typed_facts,
+        "fact_descriptions": fact_descriptions,
         "signals": signals,
         "evidence": {key: _jsonable(evidence[key]) for key in sorted(evidence_ids)},
     }

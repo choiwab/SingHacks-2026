@@ -24,7 +24,8 @@ from app.pipeline.schemas import (
     SignalSet,
 )
 
-PIPELINE_VERSION = "2"
+# Include the merged denominator/liquidity evidence fixes in immutable run identity.
+PIPELINE_VERSION = "3"
 DEFAULT_CURATED_DIR = Path(__file__).resolve().parents[2] / "data/generated/curated"
 
 

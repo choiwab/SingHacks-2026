@@ -2,8 +2,9 @@
 
 The hard migration from `app/client_flow` is complete. All three agents and graph controls live
 here; communication replay and TF-IDF retrieval live in `app/mcp`. There are no compatibility exports.
-The graph runs independently of the dashboard. The incoming data-team migration removed the
-Monday Brief API; the frontend still needs the replacement API/view-model integration.
+The graph runs independently of the dashboard fixture preview. The pipeline now exposes a
+versioned Demo View Model API, but the frontend has not yet migrated to it. Preview review
+decisions are session-local simulations, separate from the durable graph and API ledgers.
 
 ## Run against the data directory
 

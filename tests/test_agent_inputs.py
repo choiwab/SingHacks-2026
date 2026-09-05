@@ -19,12 +19,23 @@ def test_real_bundle_is_cited_scoped_and_content_versioned():
     assert bundle == same
     assert len(bundle.signals) == 3
     assert len({signal.score for signal in bundle.signals}) > 1
-    assert {fact.kind for fact in bundle.facts} >= {"profile", "change", "mandate_gap", "deadline"}
+    assert {fact.kind.split(".")[0] for fact in bundle.facts} >= {
+        "profile",
+        "change",
+        "mandate_gap",
+        "deadline",
+    }
     for signal in bundle.signals:
         assert signal.score == next(iter(signal.components.values()))
     for fact in bundle.facts:
         assert fact.id.startswith("CL-0003:fact:")
-        assert set(fact.source_rows + fact.event_ids) <= bundle.evidence.keys()
+        assert fact.client_id == bundle.client_id and fact.as_of == bundle.as_of
+        assert fact.formula_id.startswith("legacy.")
+        assert set(fact.evidence_ids) <= bundle.evidence.keys()
+    assert len({fact.id for fact in bundle.facts}) == len(bundle.facts)
+    assert all(fact.value == fact.inputs[fact.id.rsplit(":", 1)[-1]] for fact in bundle.facts)
+    described = bundle.fact_descriptions
+    assert any("71.5% against a 30% maximum" in text for text in described.values())
     change_signal = next(signal for signal in bundle.signals if "portfolio-change" in signal.id)
     assert "not investment returns" in change_signal.uncertainty
     assert "not proof of causation" in change_signal.uncertainty
@@ -38,9 +49,9 @@ def test_historical_bundle_never_cites_future_snapshot_or_event(as_of):
         for field in ("snapshot_date", "event_date"):
             if field in evidence.record:
                 assert date.fromisoformat(evidence.record[field]) <= as_of
-    changes = [fact for fact in bundle.facts if fact.kind == "change"]
+    changes = [fact for fact in bundle.facts if fact.kind.startswith("change.")]
     for fact in changes:
-        assert any(as_of.isoformat() in identifier for identifier in fact.source_rows)
+        assert any(as_of.isoformat() in identifier for identifier in fact.evidence_ids)
 
 
 def test_notes_are_exact_source_records_not_invented_connected_messages():

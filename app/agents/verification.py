@@ -57,6 +57,11 @@ def verify_meeting_pack(
         require(pack.input_versions.get(key) == expected, "pack", f"Stale {key} input version")
 
     facts = {fact.id: fact for fact in bundle.facts}
+    fact_text = {
+        fact.id: bundle.fact_descriptions.get(fact.id)
+        or f"{fact.kind}: {fact.value:g} {fact.currency or fact.unit}."
+        for fact in bundle.facts
+    }
     signals = {signal.id: signal for signal in bundle.signals}
     records = {record.id: record for record in connected.records}
     for evidence in bundle.evidence.values():
@@ -69,15 +74,17 @@ def verify_meeting_pack(
                 require(scoped, evidence.id, f"Evidence has an invalid or future {field}")
     for fact in bundle.facts:
         require(
-            bool(fact.source_rows)
-            and set(fact.source_rows + fact.event_ids) <= bundle.evidence.keys(),
+            bool(fact.evidence_ids)
+            and set(fact.evidence_ids) <= bundle.evidence.keys()
+            and any(bundle.evidence[c].source != "data/event_log.csv" for c in fact.evidence_ids),
             fact.id,
             "Fact evidence is incomplete",
         )
         require(
             all(
                 c in bundle.evidence and bundle.evidence[c].source == "data/event_log.csv"
-                for c in fact.event_ids
+                for c in fact.evidence_ids
+                if c.startswith("event_log:")
             ),
             fact.id,
             "Event explanation is not grounded in the authoritative event log",
@@ -124,7 +131,7 @@ def verify_meeting_pack(
         chunks = [index.chunks[key] for key in claim.citations if key in index.chunks]
         allowed: set[str] = set()
         if claim.kind == "fact":
-            allowed = {fact.what for fact in cited_facts}
+            allowed = {fact_text[fact.id] for fact in cited_facts}
         elif claim.kind == "memory":
             allowed = {chunk["text"] for chunk in chunks}
         elif claim.kind == "uncertainty":
@@ -147,16 +154,16 @@ def verify_meeting_pack(
         else:
             for fact in cited_facts:
                 if claim.id.startswith("talking_point:"):
-                    allowed.add(f"Discuss: {fact.what}")
+                    allowed.add(f"Discuss: {fact_text[fact.id]}")
                 elif claim.id.startswith("question:"):
-                    allowed.add(DISCUSSION_QUESTIONS.get(fact.kind, ""))
+                    allowed.add(DISCUSSION_QUESTIONS.get(fact.kind.split(".")[0], ""))
                 elif claim.id.startswith(("insight:", "advice:")):
                     if not chunks:
-                        allowed.add(rationale(fact.what, None, dataset_note=False))
+                        allowed.add(rationale(fact_text[fact.id], None, dataset_note=False))
                     for chunk in chunks:
                         allowed.add(
                             rationale(
-                                fact.what,
+                                fact_text[fact.id],
                                 chunk["text"],
                                 dataset_note=records[chunk["record_id"]].provenance == "dataset",
                             )

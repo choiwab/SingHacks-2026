@@ -83,7 +83,7 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
         facts = {fact.id: fact for fact in bundle.facts}
         for insight in insights:
             fact_id = insight.facts[0].citations[0]
-            question = DISCUSSION_QUESTIONS.get(facts[fact_id].kind)
+            question = DISCUSSION_QUESTIONS.get(facts[fact_id].kind.split(".")[0])
             if question:
                 questions.append(
                     Claim(
@@ -108,7 +108,13 @@ def rm_briefing_agent(state: AgentState, *, live: bool = False) -> dict[str, Any
             citation for item in insights for f in item.facts for citation in f.citations
         }
         event_ids = sorted(
-            {e for fact in bundle.facts if fact.id in selected_fact_ids for e in fact.event_ids}
+            {
+                e
+                for fact in bundle.facts
+                if fact.id in selected_fact_ids
+                for e in fact.evidence_ids
+                if bundle.evidence[e].source == "data/event_log.csv"
+            }
         )
         for event_id in event_ids:
             event = bundle.evidence[event_id].record

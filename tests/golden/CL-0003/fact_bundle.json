@@ -71,7 +71,15 @@
       "confidence": 1.0,
       "currency": "EUR",
       "evidence_ids": [
-        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+        "holdings:2026-08-26:PF-0005:SYN-AL-0304",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-SP-0506",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107"
       ],
       "formula_id": "legacy.concentration.value",
       "id": "CL-0003:fact:concentration:value",
@@ -89,7 +97,15 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
-        "holdings:2026-08-26:PF-0005:SYN-EQ-0010"
+        "holdings:2026-08-26:PF-0005:SYN-AL-0304",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-SP-0506",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107"
       ],
       "formula_id": "legacy.concentration.weight_pct",
       "id": "CL-0003:fact:concentration:weight_pct",
@@ -107,6 +123,13 @@
       "confidence": 1.0,
       "currency": "EUR",
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "planned_cash_needs:CN-004"
       ],
       "formula_id": "legacy.deadline.amount",
@@ -131,6 +154,13 @@
       "confidence": 1.0,
       "currency": "EUR",
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "planned_cash_needs:CN-004"
       ],
       "formula_id": "legacy.deadline.amount_in_portfolio_currency",
@@ -155,6 +185,13 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "planned_cash_needs:CN-004"
       ],
       "formula_id": "legacy.deadline.coverage_pct",
@@ -179,6 +216,13 @@
       "confidence": 1.0,
       "currency": "EUR",
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "planned_cash_needs:CN-004"
       ],
       "formula_id": "legacy.deadline.daily_liquid",
@@ -203,6 +247,13 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
+        "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "planned_cash_needs:CN-004"
       ],
       "formula_id": "legacy.deadline.days",
@@ -227,9 +278,14 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-AL-0304",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-SP-0506",
         "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "mandates:CONS:equity"
       ],
@@ -253,9 +309,14 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-AL-0304",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-SP-0506",
         "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "mandates:CONS:equity"
       ],
@@ -279,9 +340,14 @@
       "confidence": 1.0,
       "currency": null,
       "evidence_ids": [
+        "holdings:2026-08-26:PF-0005:SYN-AL-0304",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0604",
+        "holdings:2026-08-26:PF-0005:SYN-CA-0605",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0003",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0004",
         "holdings:2026-08-26:PF-0005:SYN-EQ-0010",
+        "holdings:2026-08-26:PF-0005:SYN-FI-0209",
+        "holdings:2026-08-26:PF-0005:SYN-SP-0506",
         "holdings:2026-08-26:PF-0005:SYN-ST-0107",
         "mandates:CONS:equity"
       ],
@@ -323,5 +389,5 @@
       "value": 2.0
     }
   ],
-  "run_id": "f72a9d0769b6"
+  "run_id": "bec440242d60"
 }
