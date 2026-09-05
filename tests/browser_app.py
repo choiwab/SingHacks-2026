@@ -1,6 +1,6 @@
 """Test-only browser server with real persistence and injected deterministic agents.
 
-Run with ``uvicorn --app-dir tests browser_app:create_browser_app --factory``.
+Run with ``PYTHONPATH=. uv run uvicorn --app-dir tests browser_app:create_browser_app --factory``.
 Never import this factory from app.main or use it as the product demo server. The
 verifier below is a deliberately limited test double, not the production Evidence Gate.
 Each process owns a temporary ledger and artifacts, leaving data/generated untouched.

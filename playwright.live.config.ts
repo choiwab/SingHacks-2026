@@ -21,6 +21,7 @@ export default defineConfig({
       command:
         "uv run uvicorn --app-dir tests browser_app:create_browser_app --factory --host 127.0.0.1 --port 8016",
       url: "http://127.0.0.1:8016/api/health",
+      env: { PYTHONPATH: process.cwd() },
       timeout: 120_000,
       reuseExistingServer: false,
     },
