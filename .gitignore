@@ -10,6 +10,7 @@ __pycache__/
 .ruff_cache/
 .generated/
 node_modules/
+.pnpm-store/
 frontend/dist/
 frontend/dist-preview/
 playwright-report/
@@ -20,5 +21,6 @@ data/generated/app_data.json
 data/generated/reviews.sqlite3
 data/generated/reviews.sqlite3-shm
 data/generated/reviews.sqlite3-wal
-
+data/generated/client-flow/
+data/generated/memory/
 data/generated/curated/
