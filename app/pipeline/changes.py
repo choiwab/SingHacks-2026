@@ -32,7 +32,12 @@ def compare_client(
         for key in sorted(old.keys() | new.keys()):
             before = old[key].value if key in old else None
             after = new[key].value if key in new else None
-            if key not in old or key not in new or material(old[key].value, new[key].value):
+            if (
+                key not in old
+                or key not in new
+                or material(old[key].value, new[key].value)
+                or old[key].model_dump(exclude={"value"}) != new[key].model_dump(exclude={"value"})
+            ):
                 fact_changes.append(
                     FactChange(
                         fact_id=key,

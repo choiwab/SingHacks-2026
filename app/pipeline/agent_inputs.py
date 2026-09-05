@@ -19,7 +19,7 @@ from app.pipeline.client_artifacts import _jsonable
 from app.pipeline.sources import load_sources
 
 
-def load_curated_bundle(
+def load_legacy_curated_bundle(
     source_dir: Path, client_id: str, as_of: date, revision: str = "current"
 ) -> CuratedClientBundle:
     """The revision label is metadata only; content determines the published version."""
@@ -126,6 +126,19 @@ def load_curated_bundle(
         "evidence": {key: _jsonable(evidence[key]) for key in sorted(evidence_ids)},
     }
     return CuratedClientBundle.model_validate({**payload, "version": fingerprint(payload)})
+
+
+def load_curated_bundle(
+    source_dir: Path, client_id: str, as_of: date, revision: str = "current"
+) -> CuratedClientBundle:
+    """Load content-addressed Phase A artifacts; revision labels cannot alter source facts."""
+    from app.pipeline.agent_projection import project_agent_bundle
+    from app.pipeline.loaders import ArtifactStore
+    from app.pipeline.runner import run_pipeline
+
+    root = source_dir / "generated/curated"
+    manifest = run_pipeline(source_dir=source_dir, as_of=as_of, curated_dir=root, activate=False)
+    return project_agent_bundle(ArtifactStore(root), client_id, manifest.run_id)
 
 
 def _note_topics(text: str) -> list[str]:

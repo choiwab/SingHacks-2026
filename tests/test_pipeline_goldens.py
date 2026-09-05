@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from app.pipeline.features import legacy_analytics
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.publish import canonical_json
 from app.pipeline.runner import run_pipeline
@@ -8,7 +9,7 @@ GOLDEN = Path(__file__).parent / "golden/CL-0003"
 
 
 def test_margarethe_artifact_goldens(tmp_path, request):
-    run_pipeline(curated_dir=tmp_path)
+    run_pipeline(curated_dir=tmp_path, analytics=legacy_analytics)
     store = ArtifactStore(tmp_path)
     artifacts = {
         "curated_client_bundle": store.load_curated_bundle("CL-0003"),

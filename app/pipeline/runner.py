@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 from datetime import UTC, date, datetime
 from hashlib import sha256
 from pathlib import Path
 
+from app.analytics.phase_a import phase_a_analytics
 from app.pipeline.bundles import build_curated_bundle
 from app.pipeline.changes import compare_client
-from app.pipeline.features import AnalyticsProvider, legacy_analytics
+from app.pipeline.features import AnalyticsProvider
+from app.pipeline.identity import analytics_version
 from app.pipeline.loaders import ArtifactNotFound, ArtifactStore
 from app.pipeline.overlay import apply_overlay
 from app.pipeline.publish import (
@@ -20,9 +23,11 @@ from app.pipeline.publish import (
     publish_run,
     read_latest,
 )
-from app.pipeline.schemas import ContractModel, RunManifest
+from app.pipeline.schemas import ContractModel, DataQualityFinding, RunManifest
 from app.pipeline.sources import source_versions
 from app.pipeline.stages.clean import NormalizationRule, clean_sources
+from app.pipeline.stages.clean import normalize_bond_nominal as default_bond_normalization
+from app.pipeline.stages.clean import normalize_fx as default_fx_normalization
 from app.pipeline.stages.ingest import IngestedSources, ingest_sources
 from app.pipeline.stages.validate import source_evidence, validate_sources
 
@@ -47,29 +52,46 @@ def run_pipeline(
     as_of: date = DEFAULT_AS_OF,
     overlay: Path | None = None,
     curated_dir: Path = DEFAULT_CURATED_DIR,
-    analytics: AnalyticsProvider = legacy_analytics,
+    analytics: AnalyticsProvider = phase_a_analytics,
     pipeline_version: str = PIPELINE_VERSION,
     seed: bool = False,
     activate: bool = True,
-    normalize_fx: NormalizationRule | None = None,
-    normalize_bond_nominal: NormalizationRule | None = None,
+    normalize_fx: NormalizationRule | None = default_fx_normalization,
+    normalize_bond_nominal: NormalizationRule | None = default_bond_normalization,
     look_through: NormalizationRule | None = None,
 ) -> RunManifest:
     """Validate, clean, compute, diff and atomically publish all twenty Clients.
 
     pipeline_version identifies the entire computation, including the analytics provider and
     normalization callbacks. Callers must change it when any of those implementations change.
-    The default version describes the transitional legacy provider, not Phase A analytics.
+    The default provider also fingerprints its implementation and reviewed reference maps.
     activate=False stages an immutable run without selecting it as the dashboard's latest run.
     """
+    requested_version = pipeline_version
+    if analytics is phase_a_analytics:
+        pipeline_version = analytics_version(requested_version)
     hashes, issues = source_versions(source_dir)
-    sources = ingest_sources(source_dir, as_of=as_of)
-    validate_sources(sources)
     if issues:
+        validate_sources(ingest_sources(source_dir, as_of=as_of))
         raise ValueError("; ".join(issues))
-    merged = apply_overlay(sources.tables, sources.notes, overlay)
+    if overlay is not None and not overlay.is_dir():
+        raise ValueError(f"Overlay directory does not exist: {overlay}")
+    overlay_hashes = (
+        {
+            path.name: sha256(path.read_bytes()).hexdigest()
+            for path in overlay.iterdir()
+            if path.is_file()
+        }
+        if overlay is not None
+        else {}
+    )
 
     def check_inputs_unchanged() -> None:
+        if (
+            analytics is phase_a_analytics
+            and analytics_version(requested_version) != pipeline_version
+        ):
+            raise ValueError("Analytics implementation or reference maps changed; retry")
         if source_versions(source_dir) != (hashes, []):
             raise ValueError("Source files changed during pipeline execution; retry")
         if overlay is not None:
@@ -81,12 +103,10 @@ def run_pipeline(
                 }
             except OSError as exc:
                 raise ValueError("Overlay files changed during pipeline execution; retry") from exc
-            if current != merged.overlay_hashes:
+            if current != overlay_hashes:
                 raise ValueError("Overlay files changed during pipeline execution; retry")
 
-    merged_sources = IngestedSources(merged.tables, merged.notes, as_of)
-    quality = validate_sources(merged_sources)
-    run_id = compute_run_id(as_of, hashes, merged.overlay_hashes, pipeline_version=pipeline_version)
+    run_id = compute_run_id(as_of, hashes, overlay_hashes, pipeline_version=pipeline_version)
     store = ArtifactStore(curated_dir)
     try:
         existing = store.load_manifest(run_id)
@@ -97,6 +117,13 @@ def run_pipeline(
         if activate:
             point_latest(curated_dir, run_id, seed=seed)
         return existing
+    sources = ingest_sources(source_dir, as_of=as_of)
+    validate_sources(sources)
+    merged = apply_overlay(sources.tables, sources.notes, overlay)
+    if merged.overlay_hashes != overlay_hashes:
+        raise ValueError("Overlay files changed during pipeline execution; retry")
+    merged_sources = IngestedSources(merged.tables, merged.notes, as_of)
+    quality = validate_sources(merged_sources)
     prior_pointer = read_latest(curated_dir)
     prior_id = prior_pointer["run_id"] if prior_pointer else None
     prior_manifest = store.load_manifest(prior_id) if prior_id else None
@@ -127,6 +154,22 @@ def run_pipeline(
         finding.evidence_ids = [key for key in finding.evidence_ids if key in evidence.entries]
     evidence.run_id = quality.run_id = run_id
     features = analytics(cleaned, run_id)
+    if analytics is phase_a_analytics:
+        from app.analytics.phase_a_quality import phase_a_quality_findings
+
+        quality.findings.extend(phase_a_quality_findings(cleaned))
+        for issue in features.context_issues:
+            client_match = re.match(r"^(CL-\d{4}):", issue)
+            quality.findings.append(
+                DataQualityFinding(
+                    code="ANALYTICS_LIMITATION",
+                    severity="warning",
+                    message=issue,
+                    client_id=client_match[1] if client_match else None,
+                )
+            )
+    if any(set(finding.evidence_ids) - evidence.entries.keys() for finding in quality.findings):
+        raise ValueError("Data Quality Finding references unknown Evidence")
     if set(features.facts) != set(cleaned.clients) or set(features.signals) != set(cleaned.clients):
         raise ValueError("Analytics must return artifacts for every Client")
     changed_files = sorted(

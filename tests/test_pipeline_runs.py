@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.pipeline.features import FeatureArtifacts
+from app.pipeline.features import FeatureArtifacts, legacy_analytics
 from app.pipeline.loaders import ArtifactStore
 from app.pipeline.publish import read_latest, reset_latest
 from app.pipeline.runner import DEFAULT_SOURCE_DIR, run_pipeline
@@ -13,16 +13,20 @@ from app.pipeline.stages.validate import QualityValidationError
 
 
 def test_publish_book_is_byte_identical_and_update_changes_only_margarethe_deadline(tmp_path):
-    seed = run_pipeline(curated_dir=tmp_path, seed=True)
+    seed = run_pipeline(curated_dir=tmp_path, seed=True, analytics=legacy_analytics)
     before = {
         str(path.relative_to(tmp_path)): path.read_bytes() for path in tmp_path.rglob("*.json")
     }
-    repeated = run_pipeline(curated_dir=tmp_path, seed=True)
+    repeated = run_pipeline(curated_dir=tmp_path, seed=True, analytics=legacy_analytics)
     assert seed == repeated
     assert before == {
         str(path.relative_to(tmp_path)): path.read_bytes() for path in tmp_path.rglob("*.json")
     }
-    updated = run_pipeline(curated_dir=tmp_path, overlay=DEFAULT_SOURCE_DIR / "fixtures/update")
+    updated = run_pipeline(
+        curated_dir=tmp_path,
+        overlay=DEFAULT_SOURCE_DIR / "fixtures/update",
+        analytics=legacy_analytics,
+    )
     store = ArtifactStore(tmp_path)
     assert len(updated.client_ids) == 20
     changed = {
@@ -30,7 +34,9 @@ def test_publish_book_is_byte_identical_and_update_changes_only_margarethe_deadl
         for client in updated.client_ids
         if store.load_change_report(client).changed_fact_ids
     }
-    assert changed == {"CL-0003": ["CL-0003:fact:deadline:days"]}
+    assert set(changed) == {"CL-0003"}
+    assert "CL-0003:fact:deadline:days" in changed["CL-0003"]
+    assert all(identifier.startswith("CL-0003:fact:deadline:") for identifier in changed["CL-0003"])
     facts = {fact.id: fact.value for fact in store.load_fact_bundle("CL-0003").facts}
     assert facts["CL-0003:fact:mandate-gap:actual_pct"] == 71.5
     assert facts["CL-0003:fact:mandate-gap:limit_pct"] == 30

@@ -1,8 +1,4 @@
-"""Analytics adapters. Formulas remain owned by app.analytics.
-
-The legacy adapter is transitional: it exposes existing analytics numerics as single Facts.
-Member 4 supplies the Phase A provider for new Signal definitions and historical runs.
-"""
+"""Analytics provider contract and explicit legacy compatibility adapter."""
 
 from __future__ import annotations
 
